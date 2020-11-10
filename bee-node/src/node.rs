@@ -67,7 +67,6 @@ impl<B: Backend> NodeBuilder<B> {
             info!("Add this to your config, and restart the node.");
         }
         let local_keys = self.config.peering.local_keypair.0.clone();
-        // info!("Local PeerId: {:?}", PeerId::from_public_key(local_keys.public()));
 
         let node_builder = BeeNode::<B>::build();
 
@@ -79,6 +78,7 @@ impl<B: Backend> NodeBuilder<B> {
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network.clone(), local_keys, &mut shutdown).await;
+        info!("Own Peer Id = {}", network.local_id());
 
         info!("Starting manual peer manager...");
         spawn(ManualPeerManager::new(self.config.peering.manual.clone(), network.clone()).run());

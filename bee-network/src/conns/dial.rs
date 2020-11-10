@@ -13,50 +13,80 @@ use super::{
     connection::{MuxedConnection, Origin},
     Error,
 };
-use crate::{interaction::events::EventSender, peers::ConnectedPeerList, transport::build_transport};
+use crate::{
+    interaction::events::{EventSender, InternalEvent, InternalEventSender},
+    peers::{BannedAddrList, BannedPeerList, PeerList},
+    transport::build_transport,
+    PeerId, PEER_LIMIT,
+};
 
 use log::*;
 
-use libp2p::{identity, Multiaddr, Transport};
+use libp2p::{identity, multiaddr::Protocol, Multiaddr, Transport};
 
-pub async fn dial_peer(
-    endpoint_address: Multiaddr,
+use std::{net::IpAddr, sync::atomic::Ordering};
+
+// TODO: add `DialError` enum.
+
+pub async fn dial(
+    peer_address: Multiaddr,
+    peer_id: PeerId,
     local_keys: &identity::Keypair,
-    internal_event_sender: EventSender,
-    connected_peers: &ConnectedPeerList,
-) -> Result<(), Error> {
+    internal_event_sender: InternalEventSender,
+    peers: &PeerList,
+    banned_addrs: &BannedAddrList,
+    banned_peers: &BannedPeerList,
+) -> Result<bool, Error> {
+    // Check, if we haven't yet reached the peer limit
+    if peers.num_connected() >= PEER_LIMIT.load(Ordering::Relaxed) {
+        warn!("Dialing aborted. Cause: Peer limit reached.");
+        return Ok(false);
+    }
+
     let transport = build_transport(local_keys)?;
 
-    trace!("Dialing {}...", endpoint_address);
+    trace!("Dialing {} ({})...", peer_address, peer_id);
+
+    let ip_address = match peer_address.iter().next().unwrap() {
+        Protocol::Ip4(ip_addr) => IpAddr::V4(ip_addr),
+        Protocol::Ip6(ip_addr) => IpAddr::V6(ip_addr),
+        _ => unreachable!("wrong multiaddr."),
+    };
+
+    if banned_addrs.contains(&ip_address) {
+        warn!("Dialing aborted. Cause: Banned IP {}.", ip_address);
+        return Ok(false);
+    }
 
     // TODO: error handling
-    match transport.dial(endpoint_address.clone()).expect("dial").await {
-        Ok((peer_id, muxer)) => {
-            if !connected_peers.contains(&peer_id) {
-                let connection = match MuxedConnection::new(peer_id, endpoint_address, muxer, Origin::Outbound) {
-                    Ok(conn) => conn,
-                    Err(e) => {
-                        warn!["Error creating multiplexed connection: {:?}.", e];
+    match transport.dial(peer_address.clone()).expect("dial").await {
+        Ok((received_peer_id, muxer)) => {
+            if received_peer_id != peer_id {
+                if !banned_peers.contains(&peer_id) {
+                    if !peers.contains_peer(&peer_id) {
+                        let connection = MuxedConnection::new(peer_id, peer_address, muxer, Origin::Outbound);
 
-                        return Err(Error::ConnectionAttemptFailed);
+                        trace!(
+                            "Sucessfully created outbound connection to {} ({}).",
+                            connection.peer_address,
+                            connection.peer_id,
+                        );
+
+                        super::spawn_connection_handler(connection, internal_event_sender).await?;
+                    } else {
+                        info!("Already connected to {}", peer_id);
                     }
-                };
-
-                trace!(
-                    "Sucessfully connected to {} ({}).",
-                    connection.endpoint_address,
-                    connection.peer_id,
-                );
-
-                super::spawn_connection_handler(connection, internal_event_sender).await?;
+                } else {
+                    warn!("Tried to connect to a banned peer ({}).", peer_id);
+                }
             } else {
-                trace!("Already connected to {}", peer_id);
+                warn!("Remote returned a different Peer Id than expected.");
             }
 
-            Ok(())
+            Ok(true)
         }
         Err(e) => {
-            warn!("Dialing {} failed: {:?}.", endpoint_address, e);
+            warn!("Dialing {} failed: {:?}.", peer_address, e);
 
             Err(Error::ConnectionAttemptFailed)
         }

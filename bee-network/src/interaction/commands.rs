@@ -11,7 +11,7 @@
 
 use libp2p::{Multiaddr, PeerId};
 
-use std::fmt;
+use std::net::IpAddr;
 
 pub type CommandSender = flume::Sender<Command>;
 pub type CommandReceiver = flume::Receiver<Command>;
@@ -22,22 +22,9 @@ pub fn channel() -> (CommandSender, CommandReceiver) {
 
 #[derive(Debug)]
 pub enum Command {
-    AddEndpoint { address: Multiaddr },
-    RemoveEndpoint { address: Multiaddr },
-    DialPeer { endpoint_address: Multiaddr },
+    ConnectPeer { address: Multiaddr, id: PeerId },
     DisconnectPeer { id: PeerId },
-    // TODO: maybe swap both fields, and rename `peer_id` to `to`?
-    SendMessage { peer_id: PeerId, message: Vec<u8> },
-}
-
-impl fmt::Display for Command {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Command::AddEndpoint { address, .. } => write!(f, "Command::AddEndpoint {{ {} }}", address),
-            Command::RemoveEndpoint { address, .. } => write!(f, "Command::RemoveEndpoint {{ {} }}", address),
-            Command::DialPeer { endpoint_address, .. } => write!(f, "Command::DialPeer {{ {} }}", endpoint_address),
-            Command::DisconnectPeer { id, .. } => write!(f, "Command::DisconnectPeer {{ {} }}", id),
-            Command::SendMessage { peer_id, .. } => write!(f, "Command::SendMessage {{ {} }}", peer_id),
-        }
-    }
+    BanPeer { id: PeerId },
+    BanIp { ip: IpAddr },
+    SendMessage { message: Vec<u8>, to: PeerId },
 }

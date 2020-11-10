@@ -14,20 +14,24 @@ mod dial;
 mod manager;
 
 use crate::{
-    interaction::events::{Event, EventSender},
+    gossip::GossipProtocol,
+    interaction::events::{EventSender, InternalEvent, InternalEventSender},
     peers::{self, DataReceiver},
-    MAX_BUFFER_SIZE,
+    MSG_BUFFER_SIZE,
 };
 
 pub use connection::Origin;
-pub use dial::dial_peer;
+pub use dial::dial;
 pub use manager::ConnectionManager;
 
 use connection::MuxedConnection;
 
 use futures::{prelude::*, select, AsyncRead, AsyncWrite};
 use libp2p::{
-    core::muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap, StreamMuxerBox, SubstreamRef},
+    core::{
+        muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap, StreamMuxerBox, SubstreamRef},
+        upgrade,
+    },
     Multiaddr, PeerId,
 };
 use log::*;
@@ -38,11 +42,11 @@ use std::sync::{atomic::Ordering, Arc};
 
 pub(crate) async fn spawn_connection_handler(
     connection: MuxedConnection,
-    internal_event_sender: EventSender,
+    internal_event_sender: InternalEventSender,
 ) -> Result<(), Error> {
     let MuxedConnection {
         peer_id,
-        endpoint_address,
+        peer_address,
         muxer,
         origin,
         ..
@@ -54,30 +58,43 @@ pub(crate) async fn spawn_connection_handler(
     let internal_event_sender_clone = internal_event_sender.clone();
 
     let substream = match origin {
-        Origin::Outbound => outbound_from_ref_and_wrap(muxer).fuse().await.unwrap(),
-        Origin::Inbound => loop {
-            if let Some(substream) = event_from_ref_and_wrap(muxer.clone())
-                .await
-                .expect("error awaiting inbound substream")
-                .into_inbound_substream()
-            {
-                break substream;
-            }
-        },
+        Origin::Outbound => {
+            // FIXME: unwrap
+            let outbound = outbound_from_ref_and_wrap(muxer).fuse().await.unwrap();
+            // FIXME
+            // upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
+            //     .await
+            //     .unwrap()
+            outbound
+        }
+        Origin::Inbound => {
+            let inbound = loop {
+                if let Some(substream) = event_from_ref_and_wrap(muxer.clone())
+                    .await
+                    .expect("error awaiting inbound substream")
+                    .into_inbound_substream()
+                {
+                    break substream;
+                }
+            };
+
+            // upgrade::apply_inbound(inbound, GossipProtocol).await.unwrap()
+            inbound
+        }
     };
 
     spawn_substream_task(
         peer_id.clone(),
-        endpoint_address.clone(),
+        peer_address.clone(),
         substream,
         message_receiver,
         internal_event_sender_clone,
     );
 
     internal_event_sender
-        .send_async(Event::ConnectionEstablished {
+        .send_async(InternalEvent::ConnectionEstablished {
             peer_id,
-            endpoint_address,
+            peer_address,
             origin,
             message_sender,
         })
@@ -89,21 +106,21 @@ pub(crate) async fn spawn_connection_handler(
 
 fn spawn_substream_task(
     peer_id: PeerId,
-    endpoint_address: Multiaddr,
+    peer_address: Multiaddr,
     mut substream: SubstreamRef<Arc<StreamMuxerBox>>,
     message_receiver: DataReceiver,
-    mut internal_event_sender: EventSender,
+    mut internal_event_sender: InternalEventSender,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut fused_message_receiver = message_receiver.into_stream();
-        let mut buffer = vec![0u8; MAX_BUFFER_SIZE.load(Ordering::Relaxed)];
+        let mut buffer = vec![0u8; MSG_BUFFER_SIZE.load(Ordering::Relaxed)];
 
         loop {
             select! {
                 num_read = recv_message(&mut substream, &mut buffer).fuse() => {
                     if !process_read(
                         peer_id.clone(),
-                        endpoint_address.clone(),
+                        peer_address.clone(),
                         num_read,
                         &mut internal_event_sender,
                         &buffer)
@@ -149,18 +166,18 @@ where
 #[inline]
 async fn process_read(
     peer_id: PeerId,
-    endpoint_address: Multiaddr,
+    peer_address: Multiaddr,
     num_read: usize,
-    internal_event_sender: &mut EventSender,
+    internal_event_sender: &mut InternalEventSender,
     buffer: &[u8],
 ) -> bool {
     if num_read == 0 {
         trace!("Stream dropped by peer (EOF).");
 
         if internal_event_sender
-            .send_async(Event::ConnectionDropped {
+            .send_async(InternalEvent::ConnectionDropped {
                 peer_id: peer_id.clone(),
-                endpoint_address: endpoint_address.clone(),
+                peer_address: peer_address.clone(),
             })
             .await
             .is_err()
@@ -174,9 +191,9 @@ async fn process_read(
         message.copy_from_slice(&buffer[0..num_read]);
 
         if internal_event_sender
-            .send_async(Event::MessageReceived {
-                peer_id: peer_id.clone(),
+            .send_async(InternalEvent::MessageReceived {
                 message,
+                sender: peer_id.clone(),
             })
             .await
             .is_err()
@@ -198,4 +215,7 @@ pub enum Error {
 
     #[error("Sending an event failed.")]
     SendingEventFailed,
+
+    #[error("Upgrading the connection failed.")]
+    ConnectionUpgradeError,
 }

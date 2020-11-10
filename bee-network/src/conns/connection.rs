@@ -9,32 +9,25 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::Error;
-
 use libp2p::{core::muxing::StreamMuxerBox, Multiaddr, PeerId};
 
 use std::fmt;
 
 pub struct MuxedConnection {
     pub peer_id: PeerId,
-    pub endpoint_address: Multiaddr,
+    pub peer_address: Multiaddr,
     pub muxer: StreamMuxerBox,
     pub origin: Origin,
 }
 
 impl MuxedConnection {
-    pub fn new(
-        peer_id: PeerId,
-        endpoint_address: Multiaddr,
-        muxer: StreamMuxerBox,
-        origin: Origin,
-    ) -> Result<Self, Error> {
-        Ok(Self {
+    pub fn new(peer_id: PeerId, peer_address: Multiaddr, muxer: StreamMuxerBox, origin: Origin) -> Self {
+        Self {
             peer_id,
-            endpoint_address,
+            peer_address,
             muxer,
             origin,
-        })
+        }
     }
 }
 

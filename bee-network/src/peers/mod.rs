@@ -9,35 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod connected;
-mod known;
+mod banned;
+mod list;
 mod manager;
 
-pub use connected::*;
-pub use known::*;
+pub use banned::*;
+pub use list::*;
 pub use manager::*;
-
-use thiserror::Error;
-
-/// Errors that can happen when dealing with `Address`es.
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("Error resolving domain name to address.")]
-    Io(#[from] std::io::Error),
-
-    #[error("Error parsing url.")]
-    UrlParseFailure,
-
-    #[error("Unspecified transport protocol.")]
-    UnspecifiedTransportProtocol,
-
-    #[error("Unsupported transport protocol.")]
-    UnsupportedTransportProtocol,
-
-    // TODO: rename to to 'DomainNameResolutionFailure'
-    #[error("Error resolving domain name to address.")]
-    DnsFailure,
-}
 
 pub type DataSender = flume::Sender<Vec<u8>>;
 pub type DataReceiver = flume::Receiver<Vec<u8>>;

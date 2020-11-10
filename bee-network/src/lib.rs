@@ -9,11 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//#![warn(missing_docs)]
-#![recursion_limit = "256"]
+// #![warn(missing_docs)]
+#![recursion_limit = "512"]
 
 mod config;
 mod conns;
+mod gossip;
 mod interaction;
 mod network;
 mod peers;
@@ -24,44 +25,44 @@ pub use config::{NetworkConfig, NetworkConfigBuilder};
 pub use conns::Origin;
 pub use interaction::{
     commands::{self, Command},
-    events::{self, Event, EventReceiver},
+    events::{self, Event},
 };
 #[doc(inline)]
 pub use libp2p::{core::identity::ed25519::Keypair, Multiaddr, PeerId};
 pub use network::Network;
 
-use config::{DEFAULT_MAX_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
+pub type EventReceiver = flume::Receiver<Event>;
+
+use config::{DEFAULT_MSG_BUFFER_SIZE, DEFAULT_PEER_LIMIT, DEFAULT_RECONNECT_MILLIS};
 use conns::ConnectionManager;
-use peers::{ConnectedPeerList, KnownPeerList, PeerManager};
+use interaction::events::InternalEvent;
+use peers::{BannedAddrList, BannedPeerList, PeerList, PeerManager};
 
 use bee_common_ext::shutdown_tokio::Shutdown;
 
 use futures::channel::oneshot;
 use libp2p::identity;
-use log::*;
 
-use std::{
-    fs::File,
-    sync::atomic::{AtomicU64, AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
-pub(crate) static MAX_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_BUFFER_SIZE);
-pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
+pub(crate) static MSG_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MSG_BUFFER_SIZE);
+pub(crate) static RECONNECT_MILLIS: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_MILLIS);
+pub(crate) static PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_PEER_LIMIT);
 
 pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
     let local_keys = identity::Keypair::Ed25519(local_keys);
-    let local_peer = PeerId::from_public_key(local_keys.public());
-    info!("Local Peer Id = {}", local_peer);
+    let local_id = PeerId::from_public_key(local_keys.public());
 
     let (command_sender, command_receiver) = commands::channel();
-    let (event_sender, event_receiver) = events::channel();
-    let (internal_event_sender, internal_event_receiver) = events::channel();
+    let (event_sender, event_receiver) = events::channel::<Event>();
+    let (internal_event_sender, internal_event_receiver) = events::channel::<InternalEvent>();
 
     let (peer_manager_shutdown_sender, peer_manager_shutdown_receiver) = oneshot::channel();
     let (conn_manager_shutdown_sender, conn_manager_shutdown_receiver) = oneshot::channel();
 
-    let known_peers = KnownPeerList::new();
-    let connected_peers = ConnectedPeerList::new();
+    let banned_addrs = BannedAddrList::new();
+    let banned_peers = BannedPeerList::new();
+    let peers = PeerList::new();
 
     let peer_manager = PeerManager::new(
         local_keys.clone(),
@@ -69,8 +70,9 @@ pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shu
         event_sender,
         internal_event_receiver,
         internal_event_sender.clone(),
-        known_peers.clone(),
-        connected_peers.clone(),
+        peers.clone(),
+        banned_addrs.clone(),
+        banned_peers.clone(),
         peer_manager_shutdown_receiver,
     );
 
@@ -79,9 +81,12 @@ pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shu
         config.bind_address.clone(),
         internal_event_sender,
         conn_manager_shutdown_receiver,
-        known_peers,
-        connected_peers,
+        peers,
+        banned_addrs,
+        banned_peers,
     );
+
+    let listen_address = conn_manager.listen_address.clone();
 
     let peer_manager_task = tokio::spawn(peer_manager.run());
     let conn_manager_task = tokio::spawn(conn_manager.run());
@@ -89,8 +94,12 @@ pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shu
     shutdown.add_worker_shutdown(peer_manager_shutdown_sender, peer_manager_task);
     shutdown.add_worker_shutdown(conn_manager_shutdown_sender, conn_manager_task);
 
-    MAX_BUFFER_SIZE.swap(config.max_buffer_size, Ordering::Relaxed);
-    RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
+    MSG_BUFFER_SIZE.swap(config.msg_buffer_size, Ordering::Relaxed);
+    RECONNECT_MILLIS.swap(config.reconnect_millis, Ordering::Relaxed);
+    PEER_LIMIT.swap(config.peer_limit, Ordering::Relaxed);
 
-    (Network::new(config, command_sender), event_receiver)
+    (
+        Network::new(config, command_sender, listen_address, local_id),
+        event_receiver,
+    )
 }
