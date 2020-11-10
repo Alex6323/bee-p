@@ -149,7 +149,7 @@ async fn process_command(
         Command::ConnectPeer { address, id } => {
             connect_peer(
                 address,
-                id,
+                Some(id),
                 local_keys,
                 &peers,
                 &banned_addrs,
@@ -158,7 +158,18 @@ async fn process_command(
             )
             .await?;
         }
-        Command::ConnectUnknownPeer { address: _ } => todo!("connect unkown peer"),
+        Command::ConnectUnknownPeer { address } => {
+            connect_peer(
+                address,
+                None,
+                local_keys,
+                &peers,
+                &banned_addrs,
+                &banned_peers,
+                &internal_event_sender,
+            )
+            .await?;
+        }
         Command::DisconnectPeer { id } => {
             if disconnect_peer(&id, peers)? {
                 event_sender
@@ -222,7 +233,7 @@ async fn process_internal_event(
             if peers.contains_peer(&peer_id) {
                 connect_peer(
                     peer_address,
-                    peer_id,
+                    Some(peer_id),
                     &local_keys,
                     &peers,
                     &banned_addrs,
@@ -258,7 +269,7 @@ async fn process_internal_event(
 
 async fn connect_peer(
     address: Multiaddr,
-    id: PeerId,
+    id: Option<PeerId>,
     local_keys: &identity::Keypair,
     peers: &PeerList,
     banned_addrs: &BannedAddrList,
@@ -270,7 +281,7 @@ async fn connect_peer(
         address.clone(),
         id.clone(),
         local_keys,
-        internal_event_sender.clone(),
+        internal_event_sender,
         peers,
         banned_addrs,
         banned_peers,

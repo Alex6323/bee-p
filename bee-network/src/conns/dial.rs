@@ -14,7 +14,7 @@ use super::{
     Error,
 };
 use crate::{
-    interaction::events::{EventSender, InternalEvent, InternalEventSender},
+    interaction::events::InternalEventSender,
     peers::{BannedAddrList, BannedPeerList, PeerList},
     transport::build_transport,
     PeerId, PEER_LIMIT,
@@ -30,9 +30,9 @@ use std::{net::IpAddr, sync::atomic::Ordering};
 
 pub async fn dial(
     peer_address: Multiaddr,
-    peer_id: PeerId,
+    peer_id: Option<PeerId>,
     local_keys: &identity::Keypair,
-    internal_event_sender: InternalEventSender,
+    internal_event_sender: &InternalEventSender,
     peers: &PeerList,
     banned_addrs: &BannedAddrList,
     banned_peers: &BannedPeerList,
@@ -45,7 +45,7 @@ pub async fn dial(
 
     let transport = build_transport(local_keys)?;
 
-    trace!("Dialing {} ({})...", peer_address, peer_id);
+    trace!("Dialing {} ({:?})...", peer_address, peer_id);
 
     let ip_address = match peer_address.iter().next().unwrap() {
         Protocol::Ip4(ip_addr) => IpAddr::V4(ip_addr),
@@ -59,12 +59,12 @@ pub async fn dial(
     }
 
     // TODO: error handling
-    match transport.dial(peer_address.clone()).expect("dial").await {
-        Ok((received_peer_id, muxer)) => {
-            if received_peer_id != peer_id {
-                if !banned_peers.contains(&peer_id) {
-                    if !peers.contains_peer(&peer_id) {
-                        let connection = MuxedConnection::new(peer_id, peer_address, muxer, Origin::Outbound);
+    match transport.dial(peer_address.clone()).expect("dial error").await {
+        Ok((id, muxer)) => {
+            if peer_id.is_none() || &id != peer_id.as_ref().unwrap() {
+                if !banned_peers.contains(&id) {
+                    if !peers.contains_peer(&id) {
+                        let connection = MuxedConnection::new(id, peer_address, muxer, Origin::Outbound);
 
                         trace!(
                             "Sucessfully created outbound connection to {} ({}).",
@@ -72,12 +72,12 @@ pub async fn dial(
                             connection.peer_id,
                         );
 
-                        super::spawn_connection_handler(connection, internal_event_sender).await?;
+                        super::spawn_connection_handler(connection, internal_event_sender.clone()).await?;
                     } else {
-                        info!("Already connected to {}", peer_id);
+                        info!("Already connected to {}", id);
                     }
                 } else {
-                    warn!("Tried to connect to a banned peer ({}).", peer_id);
+                    warn!("Tried to connect to a banned peer ({}).", id);
                 }
             } else {
                 warn!("Remote returned a different Peer Id than expected.");

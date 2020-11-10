@@ -37,7 +37,7 @@ pub enum InternalEvent {
         peer_address: Multiaddr,
     },
     ReconnectScheduled {
-        peer_id: PeerId,
+        peer_id: Option<PeerId>,
         peer_address: Multiaddr,
     },
     MessageReceived {

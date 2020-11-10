@@ -166,15 +166,16 @@ impl ConnectionManager {
                                 // let internal_event_sender = internal_event_sender.clone();
 
                                 // FIXME: map error
-                                if let Err(_) = spawn_connection_handler(connection, internal_event_sender.clone()).await {
-                                    todo!("spawn_connection_handler error handling")
-                                // Err(WorkerError(Box::new(io::Error::new(
-                                //     io::ErrorKind::InvalidData,
-                                //     "spawn_connection_handler",
-                                // ))))
-                                } else {
-                                    // Ok(())
-                                }
+                                if let Err(_) = spawn_connection_handler(connection, internal_event_sender.clone())
+                                .await {
+                                        todo!("spawn_connection_handler error handling")
+                                    // Err(WorkerError(Box::new(io::Error::new(
+                                    //     io::ErrorKind::InvalidData,
+                                    //     "spawn_connection_handler",
+                                    // ))))
+                                    } else {
+                                        // Ok(())
+                                    }
                             }
                         } else {
                             error!("Listener event stream failure.");
