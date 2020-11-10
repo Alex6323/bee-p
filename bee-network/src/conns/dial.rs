@@ -61,7 +61,7 @@ pub async fn dial(
     // TODO: error handling
     match transport.dial(peer_address.clone()).expect("dial error").await {
         Ok((id, muxer)) => {
-            if peer_id.is_none() || &id != peer_id.as_ref().unwrap() {
+            if peer_id.is_none() || &id == peer_id.as_ref().unwrap() {
                 if !banned_peers.contains(&id) {
                     if !peers.contains_peer(&id) {
                         let connection = MuxedConnection::new(id, peer_address, muxer, Origin::Outbound);
