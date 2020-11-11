@@ -147,11 +147,11 @@ where
     S: AsyncWrite + Unpin,
 {
     if let Err(e) = stream.write_all(message).await {
-        warn!("Writing to stream failed due to {:?}", e);
+        warn!("Writing to stream failed. Error: {:?}", e);
         return;
     }
     if let Err(e) = stream.flush().await {
-        warn!("Flushing a stream failed due to {:?}", e);
+        warn!("Flushing a stream failed. Error: {:?}", e);
         return;
     }
     trace!("Wrote {} bytes to stream.", message.len());
@@ -168,7 +168,7 @@ where
             return num_read;
         }
         Err(e) => {
-            warn!("Reading from a stream failed due to {:?}", e);
+            warn!("Reading from a stream failed. Error: {:?}", e);
             return 0;
         }
     }
@@ -183,33 +183,32 @@ async fn process_read(
     buffer: &[u8],
 ) -> bool {
     if num_read == 0 {
-        trace!("Stream dropped by peer (EOF).");
+        debug!("Stream was closed remotely (EOF).");
 
-        if internal_event_sender
+        if let Err(e) = internal_event_sender
             .send_async(InternalEvent::ConnectionDropped {
                 peer_id: peer_id.clone(),
                 peer_address: peer_address.clone(),
             })
             .await
-            .is_err()
         {
-            warn!("Dropped internal event (OOM?)");
+            warn!("Sending 'ConnectionDropped' event failed. Error: {:?}", e);
         }
 
         false
     } else {
+        // Allocate a properly sized message buffer
         let mut message = vec![0u8; num_read];
         message.copy_from_slice(&buffer[0..num_read]);
 
-        if internal_event_sender
+        if let Err(e) = internal_event_sender
             .send_async(InternalEvent::MessageReceived {
                 message,
                 from: peer_id.clone(),
             })
             .await
-            .is_err()
         {
-            warn!("Dropped internal event (OOM?)");
+            warn!("Sending 'MessageReceived' event failed. Error: {:?}", e);
         }
 
         true
