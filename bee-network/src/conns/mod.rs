@@ -148,9 +148,15 @@ async fn send_message<S>(stream: &mut S, message: &[u8])
 where
     S: AsyncWrite + Unpin,
 {
-    stream.write_all(message).await.expect("error write_all");
-    stream.flush().await.expect("error flush");
-    trace!("wrote {} bytes", message.len());
+    if let Err(e) = stream.write_all(message).await {
+        warn!("Writing to stream failed due to {:?}", e);
+        return;
+    }
+    if let Err(e) = stream.flush().await {
+        warn!("Flushing a stream failed due to {:?}", e);
+        return;
+    }
+    trace!("Wrote {} bytes to stream.", message.len());
 }
 
 #[inline]
@@ -158,9 +164,16 @@ async fn recv_message<S>(stream: &mut S, message: &mut [u8]) -> usize
 where
     S: AsyncRead + Unpin,
 {
-    let num_read = stream.read(message).await.expect("error read");
-    trace!("read {} bytes", num_read);
-    num_read
+    match stream.read(message).await {
+        Ok(num_read) => {
+            trace!("Read {} bytes from stream.", num_read);
+            return num_read;
+        }
+        Err(e) => {
+            warn!("Reading from a stream failed due to {:?}", e);
+            return 0;
+        }
+    }
 }
 
 #[inline]
