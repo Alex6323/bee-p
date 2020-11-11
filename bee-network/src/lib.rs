@@ -86,7 +86,10 @@ pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shu
         peers,
         banned_addrs,
         banned_peers,
-    );
+    )
+    .unwrap_or_else(|e| {
+        panic!("Fatal error: {}", e);
+    });
 
     let listen_address = conn_manager.listen_address.clone();
 

@@ -9,9 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::DataSender;
-
-use bee_common::worker::Error as WorkerError;
+use super::{errors::Error, DataSender};
 
 use dashmap::{mapref::entry::Entry, DashMap};
 use libp2p::PeerId;
@@ -66,17 +64,20 @@ impl PeerList {
             .is_some()
     }
 
-    pub async fn send_message(&mut self, message: Vec<u8>, to: &PeerId) -> Result<bool, WorkerError> {
+    pub async fn send_message(&mut self, message: Vec<u8>, to: &PeerId) -> Result<(), Error> {
         if let Some(mut kv) = self.0.get_mut(to) {
             if let Some(sender) = kv.value_mut() {
-                sender.send_async(message).await.map_err(|e| WorkerError(Box::new(e)))?;
+                sender
+                    .send_async(message)
+                    .await
+                    .map_err(|_| Error::SendMessageFailure(to.clone()))?;
 
-                Ok(true)
+                Ok(())
             } else {
-                Ok(false)
+                Err(Error::DisconnectedPeer(to.clone()))
             }
         } else {
-            Ok(false)
+            Err(Error::UnknownPeer(to.clone()))
         }
     }
 

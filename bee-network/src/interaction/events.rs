@@ -49,24 +49,11 @@ pub enum InternalEvent {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Event {
-    PeerConnected {
-        id: PeerId,
-        address: Multiaddr,
-        origin: Origin,
-    },
+    PeerConnected { id: PeerId, address: Multiaddr },
 
-    PeerDisconnected {
-        id: PeerId,
-    },
+    PeerDisconnected { id: PeerId },
 
-    MessageReceived {
-        message: Vec<u8>,
-        from: PeerId,
-    },
-    PeerBanned {
-        id: PeerId,
-    },
-    AddrBanned {
-        ip: IpAddr,
-    },
+    MessageReceived { message: Vec<u8>, from: PeerId },
+    PeerBanned { id: PeerId },
+    AddrBanned { ip: IpAddr },
 }

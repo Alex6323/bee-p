@@ -163,11 +163,10 @@ impl Protocol {
         config: &ProtocolConfig,
         id: PeerId,
         address: Multiaddr,
-        origin: Origin,
     ) -> (flume::Sender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?
 
-        let peer = Arc::new(Peer::new(id, address, origin));
+        let peer = Arc::new(Peer::new(id, address));
 
         let (receiver_tx, receiver_rx) = flume::unbounded();
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();

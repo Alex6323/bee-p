@@ -11,6 +11,7 @@
 
 mod connection;
 mod dial;
+mod errors;
 mod manager;
 
 use crate::{
@@ -25,6 +26,7 @@ pub use dial::dial;
 pub use manager::ConnectionManager;
 
 use connection::MuxedConnection;
+use errors::Error;
 
 use futures::{prelude::*, select, AsyncRead, AsyncWrite};
 use libp2p::{
@@ -35,7 +37,6 @@ use libp2p::{
     Multiaddr, PeerId,
 };
 use log::*;
-use thiserror::Error as ErrorAttr;
 use tokio::task::JoinHandle;
 
 use std::sync::{atomic::Ordering, Arc};
@@ -59,25 +60,29 @@ pub(crate) async fn spawn_connection_handler(
 
     let substream = match origin {
         Origin::Outbound => {
-            // FIXME: unwrap
-            let outbound = outbound_from_ref_and_wrap(muxer).fuse().await.unwrap();
-            // FIXME
+            let outbound = outbound_from_ref_and_wrap(muxer)
+                .fuse()
+                .await
+                .map_err(|_| Error::CreatingOutboundSubstreamFailed)?;
+
             upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
                 .await
-                .unwrap()
+                .map_err(|_| Error::SubstreamProtocolUpgradeFailed)?
         }
         Origin::Inbound => {
             let inbound = loop {
-                if let Some(substream) = event_from_ref_and_wrap(muxer.clone())
+                if let Some(inbound) = event_from_ref_and_wrap(muxer.clone())
                     .await
-                    .expect("error awaiting inbound substream")
+                    .map_err(|_| Error::CreatingInboundSubstreamFailed)?
                     .into_inbound_substream()
                 {
-                    break substream;
+                    break inbound;
                 }
             };
 
-            upgrade::apply_inbound(inbound, GossipProtocol).await.unwrap()
+            upgrade::apply_inbound(inbound, GossipProtocol)
+                .await
+                .map_err(|_| Error::SubstreamProtocolUpgradeFailed)?
         }
     };
 
@@ -97,7 +102,7 @@ pub(crate) async fn spawn_connection_handler(
             message_sender,
         })
         .await
-        .map_err(|_| Error::SendingEventFailed)?;
+        .map_err(|_| Error::InternalEventSendFailure("ConnectionEstablished"))?;
 
     Ok(())
 }
@@ -116,22 +121,42 @@ fn spawn_substream_task(
         loop {
             select! {
                 num_read = recv_message(&mut substream, &mut buffer).fuse() => {
-                    if !process_read(
-                        peer_id.clone(),
-                        peer_address.clone(),
-                        num_read,
-                        &mut internal_event_sender,
-                        &buffer)
-                        .await
-                    {
-                        break;
+                    match num_read {
+                        Err(e) => {
+                            // TODO: maybe only break if e == StreamClosedByRemote
+                            error!("{:?}", e);
+
+                            if let Err(e) = internal_event_sender
+                                .send_async(InternalEvent::ConnectionDropped {
+                                    peer_id: peer_id.clone(),
+                                    peer_address: peer_address.clone(),
+                                })
+                                .await
+                                .map_err(|_| Error::InternalEventSendFailure("ConnectionDropped"))
+                            {
+                                warn!("{:?}", e);
+                            }
+
+
+                            // Stream to remote stopped => shut down this task
+                            break;
+                        }
+                        Ok(num_read) => {
+                            if let Err(e) = process_read(peer_id.clone(), num_read, &mut internal_event_sender, &buffer).await
+                            {
+                                error!("{:?}", e);
+                            }
+                        }
                     }
                 }
                 message = fused_message_receiver.next() => {
                     if let Some(message) = message {
-                        send_message(&mut substream, &message).await;
+                        if let Err(e) = send_message(&mut substream, &message).await {
+                            error!("{:?}", e);
+                            continue;
+                        }
                     } else {
-                        // Data receiver closed => shutdown this task
+                        // Data receiver closed (due to deallocation) => shut down this task
                         break;
                     }
 
@@ -141,91 +166,49 @@ fn spawn_substream_task(
     })
 }
 
-#[inline]
-async fn send_message<S>(stream: &mut S, message: &[u8])
+async fn send_message<S>(stream: &mut S, message: &[u8]) -> Result<(), Error>
 where
     S: AsyncWrite + Unpin,
 {
-    if let Err(e) = stream.write_all(message).await {
-        warn!("Writing to stream failed. Error: {:?}", e);
-        return;
-    }
-    if let Err(e) = stream.flush().await {
-        warn!("Flushing a stream failed. Error: {:?}", e);
-        return;
-    }
+    stream.write_all(message).await.map_err(|_| Error::MessageSendError)?;
+    stream.flush().await.map_err(|_| Error::MessageSendError)?;
+
     trace!("Wrote {} bytes to stream.", message.len());
+    Ok(())
 }
 
-#[inline]
-async fn recv_message<S>(stream: &mut S, message: &mut [u8]) -> usize
+async fn recv_message<S>(stream: &mut S, message: &mut [u8]) -> Result<usize, Error>
 where
     S: AsyncRead + Unpin,
 {
-    match stream.read(message).await {
-        Ok(num_read) => {
-            trace!("Read {} bytes from stream.", num_read);
-            return num_read;
-        }
-        Err(e) => {
-            warn!("Reading from a stream failed. Error: {:?}", e);
-            return 0;
-        }
+    let num_read = stream.read(message).await.map_err(|_| Error::MessageRecvError)?;
+    if num_read == 0 {
+        // EOF
+        debug!("Stream was closed remotely (EOF).");
+        return Err(Error::StreamClosedByRemote);
     }
+
+    trace!("Read {} bytes from stream.", num_read);
+    Ok(num_read)
 }
 
-#[inline]
 async fn process_read(
     peer_id: PeerId,
-    peer_address: Multiaddr,
     num_read: usize,
     internal_event_sender: &mut InternalEventSender,
     buffer: &[u8],
-) -> bool {
-    if num_read == 0 {
-        debug!("Stream was closed remotely (EOF).");
+) -> Result<(), Error> {
+    // Allocate a properly sized message buffer
+    let mut message = vec![0u8; num_read];
+    message.copy_from_slice(&buffer[0..num_read]);
 
-        if let Err(e) = internal_event_sender
-            .send_async(InternalEvent::ConnectionDropped {
-                peer_id: peer_id.clone(),
-                peer_address: peer_address.clone(),
-            })
-            .await
-        {
-            warn!("Sending 'ConnectionDropped' event failed. Error: {:?}", e);
-        }
+    internal_event_sender
+        .send_async(InternalEvent::MessageReceived {
+            message,
+            from: peer_id.clone(),
+        })
+        .await
+        .map_err(|_| Error::InternalEventSendFailure("MessageReceived"))?;
 
-        false
-    } else {
-        // Allocate a properly sized message buffer
-        let mut message = vec![0u8; num_read];
-        message.copy_from_slice(&buffer[0..num_read]);
-
-        if let Err(e) = internal_event_sender
-            .send_async(InternalEvent::MessageReceived {
-                message,
-                from: peer_id.clone(),
-            })
-            .await
-        {
-            warn!("Sending 'MessageReceived' event failed. Error: {:?}", e);
-        }
-
-        true
-    }
-}
-
-#[derive(Debug, ErrorAttr)]
-pub enum Error {
-    #[error("An async I/O error occured.")]
-    IoError(#[from] std::io::Error),
-
-    #[error("Connection attempt failed.")]
-    ConnectionAttemptFailed,
-
-    #[error("Sending an event failed.")]
-    SendingEventFailed,
-
-    #[error("Upgrading the connection failed.")]
-    ConnectionUpgradeError,
+    Ok(())
 }

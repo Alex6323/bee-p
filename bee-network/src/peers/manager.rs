@@ -9,7 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::{BannedAddrList, BannedPeerList, PeerList};
+use super::{errors::Error, BannedAddrList, BannedPeerList, PeerList};
+
 use crate::{
     conns,
     interaction::{
@@ -25,9 +26,15 @@ use futures::{select, FutureExt, StreamExt};
 use libp2p::{identity, Multiaddr, PeerId};
 use log::*;
 
-use std::{sync::atomic::Ordering, time::Duration};
+use std::{
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
 
 type CommandReceiver = flume::Receiver<Command>;
+
+static NUM_COMMAND_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
+static NUM_EVENT_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
 
 pub struct PeerManager {
     local_keys: identity::Keypair,
@@ -53,8 +60,6 @@ impl PeerManager {
         banned_peers: BannedPeerList,
         shutdown_listener: ShutdownListener,
     ) -> Self {
-        trace!("Starting Peer Manager...");
-
         Self {
             local_keys,
             command_receiver: command_receiver.into_stream(),
@@ -69,7 +74,7 @@ impl PeerManager {
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
-        trace!("Peer Manager running...");
+        trace!("Peer Manager started.");
 
         let PeerManager {
             local_keys,
@@ -92,7 +97,14 @@ impl PeerManager {
                     break;
                 },
                 command = command_receiver.next() => {
-                    if !process_command(
+                    let command = if let Some(command) = command {
+                        command
+                    } else {
+                        error!("Fatal: Command channel unexpectedly stopped.");
+                        break;
+                    };
+
+                    if let Err(e) = process_command(
                         command,
                         &local_keys,
                         &mut peers,
@@ -100,23 +112,32 @@ impl PeerManager {
                         &mut banned_peers,
                         &mut event_sender,
                         &mut internal_event_sender
-                    ).await? {
-                        error!("Error processing command.");
-                        // TODO: count processing failures
+                    ).await {
+                        error!("Error processing command. Error: {}", e);
+                        NUM_COMMAND_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                        continue;
                     }
                 },
-                event = internal_event_receiver.next() => {
-                    if !process_internal_event(
-                        event,
+                internal_event = internal_event_receiver.next() => {
+                    let internal_event = if let Some(internal_event) = internal_event {
+                        internal_event
+                    } else {
+                        error!("Fatal: Internal event channel unexpectedly stopped.");
+                        break;
+                    };
+
+                    if let Err(e) = process_internal_event(
+                        internal_event,
                         &local_keys,
                         &peers,
                         &banned_addrs,
                         &banned_peers,
                         &mut event_sender,
                         &mut internal_event_sender
-                    ).await? {
-                        error!("Error processing event.");
-                        // TODO: count processing failures
+                    ).await {
+                        error!("Error processing internal event. Error: {}", e);
+                        NUM_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                        continue;
                     }
                 },
             }
@@ -128,21 +149,14 @@ impl PeerManager {
 }
 
 async fn process_command(
-    command: Option<Command>,
+    command: Command,
     local_keys: &identity::Keypair,
     peers: &mut PeerList,
     banned_addrs: &mut BannedAddrList,
     banned_peers: &mut BannedPeerList,
     event_sender: &mut EventSender,
     internal_event_sender: &mut InternalEventSender,
-) -> Result<bool, WorkerError> {
-    let command = if let Some(command) = command {
-        command
-    } else {
-        error!("Command channel unexpectedly closed.");
-        return Ok(false);
-    };
-
+) -> Result<(), Error> {
     trace!("Received {:?}.", command);
 
     match command {
@@ -156,7 +170,7 @@ async fn process_command(
                 &banned_peers,
                 &internal_event_sender,
             )
-            .await?;
+            .await
         }
         Command::ConnectUnknownPeer { address } => {
             connect_peer(
@@ -168,43 +182,39 @@ async fn process_command(
                 &banned_peers,
                 &internal_event_sender,
             )
-            .await?;
+            .await
         }
         Command::DisconnectPeer { id } => {
-            if disconnect_peer(&id, peers)? {
+            if disconnect_peer(&id, peers) {
                 event_sender
                     .send_async(Event::PeerDisconnected { id })
                     .await
-                    .map_err(|e| WorkerError(Box::new(e)))?;
+                    .map_err(|_| Error::EventSendFailure("PeerDisconnected"))?;
+            } else {
+                warn!("Failed to disconnect from peer");
+                return Err(Error::DisconnectPeerFailure(id.clone()));
             }
         }
         Command::SendMessage { message, to } => {
             send_message(message, &to, peers).await?;
         }
-        Command::BanIp { ip: _ } => todo!("ban ip"),
-        Command::BanPeer { id: _ } => todo!("ban id"),
+        Command::BanAddr { ip: _ } => todo!("ban addr"),
+        Command::BanPeer { id: _ } => todo!("ban peer"),
     }
 
-    Ok(true)
+    Ok(())
 }
 
 #[inline]
 async fn process_internal_event(
-    internal_event: Option<InternalEvent>,
+    internal_event: InternalEvent,
     local_keys: &identity::Keypair,
     peers: &PeerList,
     banned_addrs: &BannedAddrList,
     banned_peers: &BannedPeerList,
     event_sender: &mut EventSender,
     internal_event_sender: &InternalEventSender,
-) -> Result<bool, WorkerError> {
-    let internal_event = if let Some(internal_event) = internal_event {
-        internal_event
-    } else {
-        error!("Event channel unexpectedly closed.");
-        return Ok(false);
-    };
-
+) -> Result<(), Error> {
     trace!("Received {:?}.", internal_event);
 
     match internal_event {
@@ -215,16 +225,17 @@ async fn process_internal_event(
             message_sender,
         } => {
             if peers.insert_connected_peer(peer_id.clone(), message_sender) {
+                // publish
                 event_sender
                     .send_async(Event::PeerConnected {
                         id: peer_id,
                         address: peer_address,
-                        origin,
                     })
                     .await
-                    .map_err(|e| WorkerError(Box::new(e)))?
+                    .map_err(|_| Error::EventSendFailure("PeerConnected"))?;
             } else {
-                unreachable!("already connected peer")
+                // FIXME
+                unreachable!("already connected peer");
             }
         }
 
@@ -240,14 +251,14 @@ async fn process_internal_event(
                     &banned_peers,
                     &internal_event_sender,
                 )
-                .await?;
+                .await;
             }
         }
 
         InternalEvent::MessageReceived { message, from } => event_sender
             .send_async(Event::MessageReceived { message, from })
             .await
-            .map_err(|e| WorkerError(Box::new(e)))?,
+            .map_err(|_| Error::EventSendFailure("MessageReceived"))?,
 
         InternalEvent::ReconnectScheduled { peer_id, peer_address } => {
             connect_peer(
@@ -259,12 +270,12 @@ async fn process_internal_event(
                 &banned_peers,
                 &internal_event_sender,
             )
-            .await?;
+            .await;
         }
         _ => (),
     }
 
-    Ok(true)
+    Ok(())
 }
 
 async fn connect_peer(
@@ -275,9 +286,8 @@ async fn connect_peer(
     banned_addrs: &BannedAddrList,
     banned_peers: &BannedPeerList,
     internal_event_sender: &InternalEventSender,
-) -> Result<(), WorkerError> {
-    // Dial the peer
-    if conns::dial(
+) {
+    if let Err(e) = conns::dial(
         address.clone(),
         id.clone(),
         local_keys,
@@ -287,10 +297,10 @@ async fn connect_peer(
         banned_peers,
     )
     .await
-    .is_ok()
     {
-    } else {
-        tokio::spawn(send_event_after_delay(
+        warn!("Failed connecting to peer. Error: {:?}", e);
+
+        tokio::spawn(send_reconnect_event_after_delay(
             InternalEvent::ReconnectScheduled {
                 peer_id: id,
                 peer_address: address,
@@ -298,29 +308,28 @@ async fn connect_peer(
             internal_event_sender.clone(),
         ));
     }
-    Ok(())
 }
 
 #[inline]
-fn disconnect_peer(peer_id: &PeerId, peers: &mut PeerList) -> Result<bool, WorkerError> {
-    Ok(peers.remove_peer(peer_id))
+fn disconnect_peer(peer_id: &PeerId, peers: &mut PeerList) -> bool {
+    peers.remove_peer(peer_id)
 }
 
 #[inline]
-async fn send_event_after_delay(
+async fn send_reconnect_event_after_delay(
     internal_event: InternalEvent,
     internal_event_sender: InternalEventSender,
-) -> Result<(), WorkerError> {
+) -> Result<(), Error> {
     // TODO: should we randomize this a bit?
     tokio::time::delay_for(Duration::from_millis(RECONNECT_MILLIS.load(Ordering::Relaxed))).await;
 
     Ok(internal_event_sender
         .send_async(internal_event)
         .await
-        .map_err(|e| WorkerError(Box::new(e)))?)
+        .map_err(|_| Error::InternalEventSendFailure("ReconnectScheduled"))?)
 }
 
 #[inline]
-async fn send_message(message: Vec<u8>, to: &PeerId, peers: &mut PeerList) -> Result<bool, WorkerError> {
-    Ok(peers.send_message(message, to).await?)
+async fn send_message(message: Vec<u8>, to: &PeerId, peers: &mut PeerList) -> Result<(), Error> {
+    peers.send_message(message, to).await
 }

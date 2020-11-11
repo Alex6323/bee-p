@@ -168,7 +168,7 @@ impl<B: Backend> Node<B> {
 
     fn process_event(&mut self, event: Event) {
         match event {
-            Event::PeerConnected { id, address, origin } => self.peer_connected_handler(id, address, origin),
+            Event::PeerConnected { id, address } => self.peer_connected_handler(id, address),
             Event::PeerDisconnected { id } => self.peer_disconnected_handler(id),
             Event::MessageReceived { message, from } => self.peer_message_received_handler(message, from),
             Event::PeerBanned { id } => (),
@@ -178,9 +178,9 @@ impl<B: Backend> Node<B> {
     }
 
     #[inline]
-    fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr, origin: Origin) {
+    fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr) {
         let (receiver_tx, receiver_shutdown_tx) =
-            Protocol::register(&self.tmp_node, &self.config.protocol, id.clone(), address, origin);
+            Protocol::register(&self.tmp_node, &self.config.protocol, id.clone(), address);
 
         self.peers.insert(id, (receiver_tx, receiver_shutdown_tx));
     }

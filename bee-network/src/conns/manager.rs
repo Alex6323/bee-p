@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    interaction::events::{EventSender, InternalEvent, InternalEventSender},
+    interaction::events::InternalEventSender,
     peers::{BannedAddrList, BannedPeerList, PeerList},
     transport::build_transport,
     PEER_LIMIT,
@@ -18,7 +18,8 @@ use crate::{
 
 use super::{
     connection::{MuxedConnection, Origin},
-    spawn_connection_handler, Error,
+    errors::Error,
+    spawn_connection_handler,
 };
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
@@ -32,10 +33,17 @@ use libp2p::{
 };
 use log::*;
 
-use std::{io, net::IpAddr, pin::Pin, sync::atomic::Ordering};
+use std::{
+    io,
+    net::IpAddr,
+    pin::Pin,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 type ListenerUpgrade = Pin<Box<(dyn Future<Output = Result<(PeerId, StreamMuxerBox), io::Error>> + Send + 'static)>>;
 type PeerListener = Pin<Box<dyn Stream<Item = Result<ListenerEvent<ListenerUpgrade, io::Error>, io::Error>> + Send>>;
+
+static NUM_LISTENER_EVENT_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
 
 pub struct ConnectionManager {
     pub listen_address: Multiaddr,
@@ -56,25 +64,25 @@ impl ConnectionManager {
         peers: PeerList,
         banned_addrs: BannedAddrList,
         banned_peers: BannedPeerList,
-    ) -> Self {
-        trace!("Starting Connection Manager...");
-
+    ) -> Result<Self, Error> {
         // Create underlying Tcp connection and negotiate Noise and Mplex/Yamux
-        let transport = build_transport(&local_keys).expect("error building transport");
+        let transport = build_transport(&local_keys).map_err(|_| Error::CreatingTransportFailed)?;
 
-        let mut peer_listener = transport.listen_on(bind_address).expect("Error binding Peer Listener.");
+        let mut peer_listener = transport
+            .listen_on(bind_address.clone())
+            .map_err(|_| Error::BindingAddressFailed(bind_address))?;
 
-        // Determine our own listening address
         let listen_address =
             if let Some(Some(Ok(ListenerEvent::NewAddress(listen_address)))) = peer_listener.next().now_or_never() {
                 trace!("listening address = {}", listen_address);
                 listen_address
             } else {
-                panic!("Not listening on an address!");
+                return Err(Error::NotListeningError);
             };
+
         trace!("Accepting connections on {}.", listen_address);
 
-        Self {
+        Ok(Self {
             listen_address,
             internal_event_sender,
             peers,
@@ -82,11 +90,11 @@ impl ConnectionManager {
             banned_addrs,
             peer_listener,
             shutdown_listener,
-        }
+        })
     }
 
     pub async fn run(self) -> Result<(), WorkerError> {
-        trace!("Connection Manager running...");
+        trace!("Connection Manager started.");
 
         let ConnectionManager {
             internal_event_sender,
@@ -113,7 +121,7 @@ impl ConnectionManager {
                             if let Some((upgrade, peer_address)) = listener_event.into_upgrade() {
 
                                 // process_listener_event(
-                                //     // listener_event,
+                                //     listener_event,
                                 //     upgrade,
                                 //     peer_address,
                                 //     &peers,
@@ -123,23 +131,35 @@ impl ConnectionManager {
                                 // )
                                 // .await//.expect("process_listener_event")
 
+                                // FIXME: unwrap (but is blowup even possible?)
                                 let ip_address = match peer_address.iter().next().unwrap() {
                                     Protocol::Ip4(ip_addr) => IpAddr::V4(ip_addr),
                                     Protocol::Ip6(ip_addr) => IpAddr::V6(ip_addr),
-                                    _ => unreachable!("wrong multiaddr"),
+                                    _ => {
+                                        warn!("Invalid multiaddress.");
+                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                        continue;
+                                    }
                                 };
 
                                 if banned_addrs.contains(&ip_address) {
                                     warn!("Ignoring peer. Cause: '{}' is banned.", ip_address);
-                                    continue; // return; // Ok(());
+                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                    continue;
                                 }
 
-                                // TODO: error handling
-                                let (peer_id, muxer) = upgrade.await.expect("upgrade failed");
+                                let (peer_id, muxer) = match upgrade.await {
+                                    Ok(u) => u,
+                                    Err(_) => {
+                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                        continue;
+                                    }
+                                };
 
                                 if banned_peers.contains(&peer_id) {
                                     warn!("Ignoring peer. Cause: '{}' is banned.", peer_id);
-                                    continue; // return; // Ok(());
+                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                    continue;
                                 }
 
                                 if peers.num_connected() >= PEER_LIMIT.load(Ordering::Relaxed) {
@@ -147,12 +167,14 @@ impl ConnectionManager {
                                         "Ignoring peer. Cause: Peer limit ({}) reached.",
                                         PEER_LIMIT.load(Ordering::Relaxed)
                                     );
-                                    continue; // return; // Ok(());
+                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                    continue;
                                 }
 
                                 if peers.contains_peer(&peer_id) {
                                     trace!("Already connected to {}", peer_id);
-                                    continue; // return; // Ok(());
+                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                    continue;
                                 }
 
                                 let connection = MuxedConnection::new(peer_id, peer_address, muxer, Origin::Inbound);
@@ -163,26 +185,22 @@ impl ConnectionManager {
                                     connection.peer_id,
                                 );
 
-                                // let internal_event_sender = internal_event_sender.clone();
-
-                                // FIXME: map error
-                                if let Err(_) = spawn_connection_handler(connection, internal_event_sender.clone())
-                                .await {
-                                        todo!("spawn_connection_handler error handling")
-                                    // Err(WorkerError(Box::new(io::Error::new(
-                                    //     io::ErrorKind::InvalidData,
-                                    //     "spawn_connection_handler",
-                                    // ))))
-                                    } else {
-                                        // Ok(())
-                                    }
+                                if let Err(e) = spawn_connection_handler(connection, internal_event_sender.clone())
+                                .await
+                                {
+                                    error!("Error spawning connection handler. Error: {}", e);
+                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                    continue;
+                                }
                             }
                         } else {
                             error!("Listener event stream failure.");
-                            // TODO: count such errors
+                            NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                            continue;
                         }
                     } else {
                         error!("Fatal: Listener event stream stopped.");
+                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
                         break;
                     }
                 },

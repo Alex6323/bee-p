@@ -14,11 +14,10 @@ use bee_network::{Multiaddr, Origin, PeerId};
 pub(crate) struct Peer {
     pub(crate) id: PeerId,
     pub(crate) address: Multiaddr,
-    pub(crate) origin: Origin,
 }
 
 impl Peer {
-    pub fn new(id: PeerId, address: Multiaddr, origin: Origin) -> Self {
-        Self { id, address, origin }
+    pub fn new(id: PeerId, address: Multiaddr) -> Self {
+        Self { id, address }
     }
 }
