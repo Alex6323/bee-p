@@ -191,15 +191,32 @@ async fn process_command(
                     .await
                     .map_err(|_| Error::EventSendFailure("PeerDisconnected"))?;
             } else {
-                warn!("Failed to disconnect from peer");
                 return Err(Error::DisconnectPeerFailure(id.clone()));
             }
         }
         Command::SendMessage { message, to } => {
             send_message(message, &to, peers).await?;
         }
-        Command::BanAddr { ip: _ } => todo!("ban addr"),
-        Command::BanPeer { id: _ } => todo!("ban peer"),
+        Command::BanAddr { ip } => {
+            if !banned_addrs.insert(ip) {
+                return Err(Error::AddressAlreadyBanned(ip));
+            }
+        }
+        Command::BanPeer { id } => {
+            if !banned_peers.insert(id.clone()) {
+                return Err(Error::PeerAlreadyBanned(id));
+            }
+        }
+        Command::UnbanAddr { ip } => {
+            if !banned_addrs.remove(&ip) {
+                return Err(Error::AddressAlreadyUnbanned(ip));
+            }
+        }
+        Command::UnbanPeer { id } => {
+            if !banned_peers.remove(&id) {
+                return Err(Error::PeerAlreadyUnbanned(id));
+            }
+        }
     }
 
     Ok(())
