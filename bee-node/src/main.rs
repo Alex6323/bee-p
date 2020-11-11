@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common::logger::logger_init;
+use bee_common_ext::node::{Node as _, NodeBuilder as _};
 use bee_node::{CliArgs, Node, NodeConfigBuilder};
 
 use log::error;
@@ -25,7 +26,7 @@ async fn main() {
 
             logger_init(config.logger.clone()).unwrap();
 
-            match Node::<bee_storage_rocksdb::storage::Storage>::builder(config)
+            match Node::<bee_storage_rocksdb::storage::Storage>::build(config)
                 .finish()
                 .await
             {

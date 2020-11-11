@@ -18,6 +18,7 @@ use crate::{
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
+use bee_network::Network;
 
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -51,6 +52,7 @@ pub(crate) struct MessageRequesterWorker {
 }
 
 async fn process_request(
+    network: &Network,
     requested_messages: &RequestedMessages,
     message_id: MessageId,
     index: MilestoneIndex,
@@ -60,13 +62,18 @@ async fn process_request(
         return;
     }
 
-    if process_request_unchecked(message_id, index, counter).await {
+    if process_request_unchecked(network, message_id, index, counter).await {
         requested_messages.insert(message_id, (index, Instant::now()));
     }
 }
 
 /// Return `true` if the message was requested.
-async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex, counter: &mut usize) -> bool {
+async fn process_request_unchecked(
+    network: &Network,
+    message_id: MessageId,
+    index: MilestoneIndex,
+    counter: &mut usize,
+) -> bool {
     if Protocol::get().peer_manager.peers.is_empty() {
         return false;
     }
@@ -80,7 +87,7 @@ async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex,
 
         if let Some(peer) = Protocol::get().peer_manager.peers.get(peer_id) {
             if peer.has_data(index) {
-                Sender::<MessageRequest>::send(peer_id, MessageRequest::new(message_id.as_ref()));
+                Sender::<MessageRequest>::send(network, peer_id, MessageRequest::new(message_id.as_ref()));
                 return true;
             }
         }
@@ -93,7 +100,7 @@ async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex,
 
         if let Some(peer) = Protocol::get().peer_manager.peers.get(peer_id) {
             if peer.maybe_has_data(index) {
-                Sender::<MessageRequest>::send(peer_id, MessageRequest::new(message_id.as_ref()));
+                Sender::<MessageRequest>::send(network, peer_id, MessageRequest::new(message_id.as_ref()));
                 return true;
             }
         }
@@ -102,14 +109,14 @@ async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex,
     false
 }
 
-async fn retry_requests(requested_messages: &RequestedMessages, counter: &mut usize) {
+async fn retry_requests(network: &Network, requested_messages: &RequestedMessages, counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
     for mut message in requested_messages.iter_mut() {
         let (message_id, (index, instant)) = message.pair_mut();
         let now = Instant::now();
         if (now - *instant).as_secs() > RETRY_INTERVAL_SEC
-            && process_request_unchecked(*message_id, *index, counter).await
+            && process_request_unchecked(network, *message_id, *index, counter).await
         {
             *instant = now;
             retry_counts += 1;
@@ -132,6 +139,7 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
         let requested_messages: RequestedMessages = Default::default();
         node.register_resource(requested_messages);
         let requested_messages = node.resource::<RequestedMessages>();
+        let network = node.resource::<Network>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -143,11 +151,11 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
 
             loop {
                 select! {
-                    _ = timeouts.next() => retry_requests(&*requested_messages,&mut counter).await,
+                    _ = timeouts.next() => retry_requests(&network, &*requested_messages,&mut counter).await,
                     entry = receiver.next() => match entry {
                         Some(MessageRequesterWorkerEvent(message_id, index)) => {
                             trace!("Requesting message {}.", message_id);
-                            process_request(&*requested_messages, message_id, index, &mut counter).await
+                            process_request(&network, &*requested_messages, message_id, index, &mut counter).await
                         },
                         None => break,
                     },

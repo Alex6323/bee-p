@@ -42,7 +42,7 @@ use std::sync::Arc;
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 
 pub struct Protocol {
-    pub(crate) network: Network,
+    // pub(crate) network: Network,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
 }
@@ -51,13 +51,12 @@ impl Protocol {
     pub fn init<N: Node>(
         config: ProtocolConfig,
         database_config: <N::Backend as Backend>::Config,
-        network: Network,
         snapshot: Snapshot,
         network_id: u64,
         node_builder: N::Builder,
     ) -> N::Builder {
         let protocol = Protocol {
-            network: network.clone(),
+            // network: network.clone(),
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),
         };
@@ -76,7 +75,7 @@ impl Protocol {
             .with_worker::<MessageRequesterWorker>()
             .with_worker::<MilestoneRequesterWorker>()
             .with_worker_cfg::<MilestoneValidatorWorker>(config.clone())
-            .with_worker_cfg::<BroadcasterWorker>(network)
+            .with_worker::<BroadcasterWorker>()
             .with_worker::<MessageValidatorWorker>()
             .with_worker::<PropagatorWorker>()
             .with_worker::<MpsWorker>()
@@ -90,6 +89,7 @@ impl Protocol {
 
     pub fn events<N: Node>(node: &N, config: ProtocolConfig) {
         let tangle = node.resource::<MsTangle<N::Backend>>().into_weak();
+        let network = node.resource::<Network>(); // TODO: Use a weak handle?
 
         node.resource::<Bus>()
             .add_listener::<(), _, _>(move |latest_milestone: &LatestMilestoneChanged| {
@@ -101,6 +101,7 @@ impl Protocol {
                     tangle.update_latest_milestone_index(latest_milestone.0.index);
 
                     Protocol::broadcast_heartbeat(
+                        &network,
                         tangle.get_latest_solid_milestone_index(),
                         tangle.get_pruning_index(),
                         latest_milestone.0.index,
@@ -121,6 +122,7 @@ impl Protocol {
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
         let tangle = node.resource::<MsTangle<N::Backend>>().into_weak();
+        let network = node.resource::<Network>(); // TODO: Use a weak handle?
         let requested_milestones = node.resource::<RequestedMilestones>();
 
         node.resource::<Bus>()
@@ -147,6 +149,7 @@ impl Protocol {
                     }
 
                     Protocol::broadcast_heartbeat(
+                        &network,
                         latest_solid_milestone.0.index,
                         tangle.get_pruning_index(),
                         tangle.get_latest_milestone_index(),
@@ -161,7 +164,7 @@ impl Protocol {
 
     pub async fn register<N: Node>(
         node: &N,
-        _config: &ProtocolConfig,
+        config: &ProtocolConfig,
         id: PeerId,
         address: Multiaddr,
     ) -> (flume::Sender<Vec<u8>>, oneshot::Sender<()>) {

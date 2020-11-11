@@ -19,7 +19,7 @@ use crate::{
 
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_network::PeerId;
+use bee_network::{Network, PeerId};
 
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -55,6 +55,7 @@ pub(crate) struct MilestoneRequesterWorker {
 }
 
 async fn process_request(
+    network: &Network,
     requested_milestones: &RequestedMilestones,
     index: MilestoneIndex,
     peer_id: Option<PeerId>,
@@ -64,7 +65,7 @@ async fn process_request(
         return;
     }
 
-    process_request_unchecked(index, peer_id, counter).await;
+    process_request_unchecked(network, index, peer_id, counter).await;
 
     if index.0 != 0 {
         requested_milestones.insert(index, Instant::now());
@@ -72,14 +73,19 @@ async fn process_request(
 }
 
 /// Return `true` if the milestone was requested
-async fn process_request_unchecked(index: MilestoneIndex, peer_id: Option<PeerId>, counter: &mut usize) -> bool {
+async fn process_request_unchecked(
+    network: &Network,
+    index: MilestoneIndex,
+    peer_id: Option<PeerId>,
+    counter: &mut usize,
+) -> bool {
     if Protocol::get().peer_manager.peers.is_empty() {
         return false;
     }
 
     match peer_id {
         Some(peer_id) => {
-            Sender::<MilestoneRequest>::send(&peer_id, MilestoneRequest::new(*index));
+            Sender::<MilestoneRequest>::send(network, &peer_id, MilestoneRequest::new(*index));
             true
         }
         None => {
@@ -92,7 +98,7 @@ async fn process_request_unchecked(index: MilestoneIndex, peer_id: Option<PeerId
 
                 if let Some(peer) = Protocol::get().peer_manager.peers.get(peer_id) {
                     if peer.maybe_has_data(index) {
-                        Sender::<MilestoneRequest>::send(&peer_id, MilestoneRequest::new(*index));
+                        Sender::<MilestoneRequest>::send(network, &peer_id, MilestoneRequest::new(*index));
                         return true;
                     }
                 }
@@ -103,13 +109,15 @@ async fn process_request_unchecked(index: MilestoneIndex, peer_id: Option<PeerId
     }
 }
 
-async fn retry_requests(requested_milestones: &RequestedMilestones, counter: &mut usize) {
+async fn retry_requests(network: &Network, requested_milestones: &RequestedMilestones, counter: &mut usize) {
     let mut retry_counts: usize = 0;
 
     for mut milestone in requested_milestones.iter_mut() {
         let (index, instant) = milestone.pair_mut();
         let now = Instant::now();
-        if (now - *instant).as_secs() > RETRY_INTERVAL_SEC && process_request_unchecked(*index, None, counter).await {
+        if (now - *instant).as_secs() > RETRY_INTERVAL_SEC
+            && process_request_unchecked(network, *index, None, counter).await
+        {
             *instant = now;
             retry_counts += 1;
         };
@@ -133,6 +141,7 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
         let (tx, rx) = flume::unbounded();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let network = node.resource::<Network>();
         let requested_milestones: RequestedMilestones = Default::default();
         node.register_resource(requested_milestones);
         let requested_milestones = node.resource::<RequestedMilestones>();
@@ -147,12 +156,12 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
 
             loop {
                 select! {
-                    _ = timeouts.next() => retry_requests(&*requested_milestones, &mut counter).await,
+                    _ = timeouts.next() => retry_requests(&network, &*requested_milestones, &mut counter).await,
                     entry = receiver.next() => match entry {
                         Some(MilestoneRequesterWorkerEvent(index, peer_id)) => {
                             if !tangle.contains_milestone(index.into()) {
                                 debug!("Requesting milestone {}.", *index);
-                                process_request(&*requested_milestones, index, peer_id, &mut counter).await;
+                                process_request(&network, &*requested_milestones, index, peer_id, &mut counter).await;
                             }
                         },
                         None => break,

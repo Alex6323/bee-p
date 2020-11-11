@@ -74,7 +74,6 @@ impl<B: Backend> NodeConfigBuilder<B> {
     }
 }
 
-#[derive(Clone)]
 pub struct NodeConfig<B: Backend> {
     pub network_id: (String, u64),
     pub logger: LoggerConfig,
@@ -83,4 +82,18 @@ pub struct NodeConfig<B: Backend> {
     pub protocol: ProtocolConfig,
     pub snapshot: SnapshotConfig,
     pub database: B::Config,
+}
+
+impl<B: Backend> Clone for NodeConfig<B> {
+    fn clone(&self) -> Self {
+        Self {
+            network_id: self.network_id.clone(),
+            logger: self.logger.clone(),
+            network: self.network.clone(),
+            peering: self.peering.clone(),
+            protocol: self.protocol.clone(),
+            snapshot: self.snapshot.clone(),
+            database: self.database.clone(),
+        }
+    }
 }

@@ -18,7 +18,7 @@ use crate::{
 };
 
 use bee_message::MessageId;
-use bee_network::{Command::SendMessage, PeerId};
+use bee_network::{Command::SendMessage, Network, PeerId};
 use bee_storage::storage::Backend;
 
 use log::warn;
@@ -32,10 +32,10 @@ pub(crate) struct Sender<P: Packet> {
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl Sender<$type> {
-            pub(crate) fn send(id: &PeerId, packet: $type) {
-                match Protocol::get().network.unbounded_send(SendMessage {
-                    message: tlv_into_bytes(packet),
+            pub(crate) fn send(network: &Network, id: &PeerId, packet: $type) {
+                match network.unbounded_send(SendMessage {
                     to: id.clone(),
+                    message: tlv_into_bytes(packet),
                 }) {
                     Ok(_) => {
                         // self.peer.metrics.$incrementor();
@@ -105,12 +105,14 @@ impl Protocol {
     // Heartbeat
 
     pub fn send_heartbeat(
+        network: &Network,
         to: PeerId,
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
     ) {
         Sender::<Heartbeat>::send(
+            network,
             &to,
             Heartbeat::new(
                 *latest_solid_milestone_index,
@@ -123,12 +125,14 @@ impl Protocol {
     }
 
     pub fn broadcast_heartbeat(
+        network: &Network,
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
     ) {
         for entry in Protocol::get().peer_manager.peers.iter() {
             Protocol::send_heartbeat(
+                network,
                 entry.key().clone(),
                 latest_solid_milestone_index,
                 pruning_milestone_index,

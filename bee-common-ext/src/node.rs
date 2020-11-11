@@ -34,8 +34,8 @@ pub trait Node: Send + Sized + 'static {
     type Builder: NodeBuilder<Self>;
     type Backend: Backend;
 
-    fn build() -> Self::Builder {
-        Self::Builder::default()
+    fn build(config: <Self::Builder as NodeBuilder<Self>>::Config) -> Self::Builder {
+        Self::Builder::new(config)
     }
 
     async fn stop(mut self) -> Result<(), shutdown::Error>
@@ -67,7 +67,12 @@ pub trait Node: Send + Sized + 'static {
 }
 
 #[async_trait(?Send)]
-pub trait NodeBuilder<N: Node>: Default {
+pub trait NodeBuilder<N: Node> {
+    type Error;
+    type Config;
+
+    fn new(config: Self::Config) -> Self;
+
     fn with_worker<W: Worker<N> + 'static>(self) -> Self
     where
         W::Config: Default;
@@ -76,7 +81,7 @@ pub trait NodeBuilder<N: Node>: Default {
 
     fn with_resource<R: Any + Send + Sync>(self, res: R) -> Self;
 
-    async fn finish(self) -> N;
+    async fn finish(self) -> Result<N, Self::Error>;
 }
 
 static RES_ID: AtomicUsize = AtomicUsize::new(0);

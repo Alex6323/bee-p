@@ -21,16 +21,15 @@ use log::warn;
 
 pub struct ManualPeerManager {
     config: ManualPeeringConfig,
-    network: Network,
 }
 
 impl ManualPeerManager {
-    pub fn new(config: ManualPeeringConfig, network: Network) -> Self {
-        Self { config, network }
+    pub fn new(config: ManualPeeringConfig) -> Self {
+        Self { config }
     }
 
-    fn connect_peer(&mut self, address: Multiaddr, id: PeerId) {
-        if let Err(e) = self.network.unbounded_send(ConnectPeer { address, id }) {
+    fn connect_peer(&mut self, network: &Network, address: Multiaddr, id: PeerId) {
+        if let Err(e) = network.unbounded_send(ConnectPeer { address, id }) {
             warn!("Failed to add peer: {}", e);
         }
     }
@@ -38,7 +37,7 @@ impl ManualPeerManager {
 
 #[async_trait]
 impl PeerManager for ManualPeerManager {
-    async fn run(mut self) {
+    async fn run(mut self, network: &Network) {
         // TODO config file watcher
         // TODO use limit
         for mut address in self.config.peers.clone() {
@@ -46,7 +45,7 @@ impl PeerManager for ManualPeerManager {
             // cli, ...)
             if let Some(Protocol::P2p(multihash)) = address.pop() {
                 let id = PeerId::from_multihash(multihash).expect("Invalid Multiaddr.");
-                self.connect_peer(address, id);
+                self.connect_peer(network, address, id);
             } else {
                 unreachable!("Invalid Multiaddr.");
             }
