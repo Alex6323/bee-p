@@ -37,8 +37,7 @@ impl Message {
     pub fn id(&self) -> MessageId {
         let mut hasher = VarBlake2b::new(MESSAGE_ID_LENGTH).unwrap();
 
-        // Packing to bytes can't fail.
-        hasher.update(self.pack_new().unwrap());
+        hasher.update(self.pack_new());
 
         let mut bytes = [0u8; MESSAGE_ID_LENGTH];
         hasher.finalize_variable(|res| bytes.copy_from_slice(res));
