@@ -131,13 +131,8 @@ impl Node {
 #[inline]
 async fn process_event(event: Event, message: &str, network: &mut Network, peers: &mut HashSet<PeerId>) {
     match event {
-        Event::PeerConnected {
-            id, address, origin, ..
-        } => {
-            info!(
-                "[EXAMPLE] Connected peer '{}' with address '{}' [{}].",
-                id, address, origin
-            );
+        Event::PeerConnected { id, address, .. } => {
+            info!("[EXAMPLE] Connected peer '{}' with address '{}'.", id, address);
 
             info!("[EXAMPLE] Sending message: \"{}\"", message);
             if let Err(e) = network
