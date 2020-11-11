@@ -57,7 +57,6 @@ pub async fn dial(
         return Err(Error::DialedBannedAddress(ip_address.clone()));
     }
 
-    // TODO: error handling
     let (id, muxer) = transport
         .dial(peer_address.clone())
         .map_err(|_| Error::DialingFailed(peer_address.clone()))?

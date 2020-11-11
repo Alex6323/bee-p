@@ -86,12 +86,8 @@ impl PeerList {
     }
 
     pub fn num_connected(&self) -> usize {
-        let mut count = 0;
-        self.0.iter().for_each(move |kv| {
-            if kv.value().is_some() {
-                count += 1
-            }
-        });
-        count
+        self.0
+            .iter()
+            .fold(0, |count, kv| if kv.value().is_some() { count + 1 } else { count })
     }
 }
