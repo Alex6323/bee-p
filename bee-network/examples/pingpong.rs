@@ -63,12 +63,14 @@ async fn main() {
 
     // for (peer_address, peer_id) in &config.peers {
     for peer_address in &config.peers {
-        network
+        if let Err(e) = network
             .send(ConnectUnknownPeer {
                 address: peer_address.clone(),
             })
             .await
-            .unwrap();
+        {
+            warn!("Connecting to unknown peer failed. Error: {:?}", e);
+        }
     }
 
     info!("[EXAMPLE] ...finished.");
@@ -81,7 +83,6 @@ struct Node {
     network: Network,
     events: flume::r#async::RecvStream<'static, Event>,
     peers: HashSet<PeerId>,
-    handshakes: HashMap<String, Vec<PeerId>>,
     shutdown: Shutdown,
 }
 
@@ -92,7 +93,6 @@ impl Node {
             mut network,
             mut events,
             mut peers,
-            mut handshakes,
             shutdown,
         } = self;
 
@@ -109,14 +109,16 @@ impl Node {
                     if let Some(event) = event {
                         info!("Received {:?}.", event);
 
-                        process_event(event, &config.message, &mut network, &mut peers, &mut handshakes).await;
+                        process_event(event, &config.message, &mut network, &mut peers).await;
                     }
                 },
             }
         }
 
         info!("[EXAMPLE] Stopping node...");
-        shutdown.execute().await.expect("shutdown error");
+        if let Err(e) = shutdown.execute().await {
+            warn!("Sending shutdown signal failed. Error: {:?}", e);
+        }
 
         info!("[EXAMPLE] Shutdown complete.");
     }
@@ -127,13 +129,7 @@ impl Node {
 }
 
 #[inline]
-async fn process_event(
-    event: Event,
-    message: &str,
-    network: &mut Network,
-    peers: &mut HashSet<PeerId>,
-    handshakes: &mut HashMap<String, Vec<PeerId>>,
-) {
+async fn process_event(event: Event, message: &str, network: &mut Network, peers: &mut HashSet<PeerId>) {
     match event {
         Event::PeerConnected {
             id, address, origin, ..
@@ -144,13 +140,15 @@ async fn process_event(
             );
 
             info!("[EXAMPLE] Sending message: \"{}\"", message);
-            network
+            if let Err(e) = network
                 .send(SendMessage {
                     message: Utf8Message::new(message).as_bytes(),
                     to: id.clone(),
                 })
                 .await
-                .expect("error sending message to peer");
+            {
+                warn!("Sending message to peer failed. Error: {:?}", e);
+            }
 
             spam_endpoint(network.clone(), id);
         }
@@ -191,13 +189,15 @@ fn spam_endpoint(mut network: Network, peer_id: PeerId) {
 
             let message = Utf8Message::new(&i.to_string());
 
-            network
+            if let Err(e) = network
                 .send(SendMessage {
                     message: message.as_bytes(),
                     to: peer_id.clone(),
                 })
                 .await
-                .expect("error sending number");
+            {
+                warn!("Sending message to peer failed. Error: {:?}", e);
+            }
         }
     });
 }
@@ -225,7 +225,6 @@ impl NodeBuilder {
             network,
             events: events.into_stream(),
             peers: HashSet::new(),
-            handshakes: HashMap::new(),
             shutdown,
         }
     }
