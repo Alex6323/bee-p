@@ -28,11 +28,11 @@ impl FromStr for MultiaddrPeerId {
     type Err = ();
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let sep_index = input.rfind('/').expect("parse error");
+        let sep_index = input.rfind("/p2p/").expect("parse error");
         let (multiaddr, peer_id) = input.split_at(sep_index);
 
         let multiaddr = Multiaddr::from_str(&multiaddr[..]).expect("from_str");
-        let peer_id = PeerId::from_str(&peer_id[1..]).expect("from_str");
+        let peer_id = PeerId::from_str(&peer_id[5..]).expect("from_str");
 
         Ok(Self(multiaddr, peer_id))
     }
