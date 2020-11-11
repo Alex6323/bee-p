@@ -24,9 +24,8 @@ impl Insert<MessageId, Message> for Storage {
     async fn insert(&self, message_id: &MessageId, message: &Message) -> Result<(), <Self as Backend>::Error> {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        // Packing to bytes can't fail.
         self.inner
-            .put_cf(&cf_message_id_to_message, message_id, message.pack_new().unwrap())?;
+            .put_cf(&cf_message_id_to_message, message_id, message.pack_new())?;
 
         Ok(())
     }
@@ -69,12 +68,8 @@ impl Insert<OutputId, Output> for Storage {
     async fn insert(&self, output_id: &OutputId, output: &Output) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        // Packing to bytes can't fail.
-        self.inner.put_cf(
-            &cf_output_id_to_output,
-            output_id.pack_new().unwrap(),
-            output.pack_new().unwrap(),
-        )?;
+        self.inner
+            .put_cf(&cf_output_id_to_output, output_id.pack_new(), output.pack_new())?;
 
         Ok(())
     }
@@ -85,12 +80,8 @@ impl Insert<OutputId, Spent> for Storage {
     async fn insert(&self, output_id: &OutputId, spent: &Spent) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        // Packing to bytes can't fail.
-        self.inner.put_cf(
-            &cf_output_id_to_spent,
-            output_id.pack_new().unwrap(),
-            spent.pack_new().unwrap(),
-        )?;
+        self.inner
+            .put_cf(&cf_output_id_to_spent, output_id.pack_new(), spent.pack_new())?;
 
         Ok(())
     }
@@ -101,9 +92,7 @@ impl Insert<Unspent, ()> for Storage {
     async fn insert(&self, unspent: &Unspent, (): &()) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
-        // Packing to bytes can't fail.
-        self.inner
-            .put_cf(&cf_output_id_unspent, unspent.pack_new().unwrap(), [])?;
+        self.inner.put_cf(&cf_output_id_unspent, unspent.pack_new(), [])?;
 
         Ok(())
     }

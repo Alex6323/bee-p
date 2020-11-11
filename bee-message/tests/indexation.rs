@@ -37,7 +37,7 @@ fn pack_unpack() {
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
     )
     .unwrap();
-    let bytes = indexation_1.pack_new().unwrap();
+    let bytes = indexation_1.pack_new();
     let indexation_2 = Indexation::unpack(&mut bytes.as_slice()).unwrap();
 
     assert_eq!(indexation_1.packed_len(), bytes.len());
@@ -53,7 +53,7 @@ fn unpack_invalid_index_len() {
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
     )
     .unwrap();
-    let mut bytes = indexation.pack_new().unwrap();
+    let mut bytes = indexation.pack_new();
     bytes[0..2].copy_from_slice(&1000u16.to_le_bytes());
 
     assert!(matches!(
@@ -69,7 +69,7 @@ fn unpack_invalid_data_len() {
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
     )
     .unwrap();
-    let mut bytes = indexation.pack_new().unwrap();
+    let mut bytes = indexation.pack_new();
     bytes[14..18].copy_from_slice(&1000u32.to_le_bytes());
 
     assert!(matches!(
@@ -85,7 +85,7 @@ fn unpack_non_utf8_index() {
         &[0x42, 0xff, 0x84, 0xa2, 0x42, 0xff, 0x84, 0xa2],
     )
     .unwrap();
-    let bytes = indexation.pack_new().unwrap();
+    let bytes = indexation.pack_new();
 
     assert!(
         matches!(Indexation::unpack(&mut bytes.as_slice()).err(), Some(Error::Utf8String(std::string::FromUtf8Error{..})))
