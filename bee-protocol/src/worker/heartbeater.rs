@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::{protocol::Protocol, tangle::MsTangle, worker::TangleWorker};
+
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 
@@ -17,7 +19,7 @@ use futures::stream::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::time::Duration;
+use std::{any::TypeId, time::Duration};
 
 const _HEARTBEAT_SEND_INTERVAL_SEC: u64 = 30;
 const _HEARTBEAT_RECEIVE_INTERVAL_SEC: u64 = 100;
@@ -31,7 +33,13 @@ impl<N: Node> Worker<N> for HeartbeaterWorker {
     type Config = ();
     type Error = WorkerError;
 
+    fn dependencies() -> &'static [TypeId] {
+        vec![TypeId::of::<TangleWorker>()].leak()
+    }
+
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let tangle = node.resource::<MsTangle<N::Backend>>();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -39,7 +47,12 @@ impl<N: Node> Worker<N> for HeartbeaterWorker {
                 ShutdownStream::new(shutdown, interval(Duration::from_secs(CHECK_HEARTBEATS_INTERVAL_SEC)));
 
             while ticker.next().await.is_some() {
-                // TODO impl
+                // TODO real impl
+                Protocol::broadcast_heartbeat(
+                    tangle.get_latest_solid_milestone_index(),
+                    tangle.get_pruning_index(),
+                    tangle.get_latest_milestone_index(),
+                );
             }
 
             info!("Stopped.");
