@@ -13,10 +13,11 @@ use crate::{payload::Payload, Error, MessageId, Vertex, MESSAGE_ID_LENGTH};
 
 use bee_common::packable::{Packable, Read, Write};
 
-use blake2::{Blake2b, Digest};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use serde::{Deserialize, Serialize};
-
-use core::convert::TryInto;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
@@ -32,13 +33,15 @@ impl Message {
     }
 
     pub fn id(&self) -> MessageId {
-        let mut hasher = Blake2b::new();
+        let mut hasher = VarBlake2b::new(MESSAGE_ID_LENGTH).unwrap();
 
         // Packing to bytes can't fail.
-        hasher.update(&self.pack_new().unwrap());
+        hasher.update(self.pack_new().unwrap());
 
-        // We know for sure the bytes have the right size.
-        MessageId::new(hasher.finalize()[0..MESSAGE_ID_LENGTH].try_into().unwrap())
+        let mut bytes = [0u8; MESSAGE_ID_LENGTH];
+        hasher.finalize_variable(|res| bytes.copy_from_slice(res));
+
+        MessageId::new(bytes)
     }
 
     pub fn parent1(&self) -> &MessageId {

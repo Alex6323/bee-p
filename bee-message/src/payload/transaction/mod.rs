@@ -30,11 +30,14 @@ pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock
 
 use bee_common::packable::{Packable, Read, Write};
 
-use blake2::{Blake2b, Digest};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
-use core::{cmp::Ordering, convert::TryInto, slice::Iter};
+use core::{cmp::Ordering, slice::Iter};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Transaction {
@@ -48,15 +51,15 @@ impl Transaction {
     }
 
     pub fn id(&self) -> TransactionId {
-        let mut bytes = Vec::with_capacity(self.packed_len());
-        let mut hasher = Blake2b::new();
+        let mut hasher = VarBlake2b::new(TRANSACTION_ID_LENGTH).unwrap();
 
         // Packing to bytes can't fail.
-        self.pack(&mut bytes).unwrap();
-        hasher.update(&bytes);
+        hasher.update(self.pack_new().unwrap());
 
-        // We know for sure the bytes have the right size.
-        TransactionId::new(hasher.finalize()[0..TRANSACTION_ID_LENGTH].try_into().unwrap())
+        let mut bytes = [0u8; TRANSACTION_ID_LENGTH];
+        hasher.finalize_variable(|res| bytes.copy_from_slice(res));
+
+        TransactionId::new(bytes)
     }
 
     pub fn essence(&self) -> &TransactionEssence {
