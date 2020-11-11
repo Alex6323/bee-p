@@ -14,9 +14,9 @@ mod dial;
 mod manager;
 
 use crate::{
-    gossip::{GossipProtocol, NegotiatedSubstream},
-    interaction::events::{EventSender, InternalEvent, InternalEventSender},
+    interaction::events::{InternalEvent, InternalEventSender},
     peers::{self, DataReceiver},
+    protocols::gossip::{GossipProtocol, GossipSubstream},
     MSG_BUFFER_SIZE,
 };
 
@@ -29,7 +29,7 @@ use connection::MuxedConnection;
 use futures::{prelude::*, select, AsyncRead, AsyncWrite};
 use libp2p::{
     core::{
-        muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap, StreamMuxerBox, SubstreamRef},
+        muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap},
         upgrade,
     },
     Multiaddr, PeerId,
@@ -65,7 +65,6 @@ pub(crate) async fn spawn_connection_handler(
             upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
                 .await
                 .unwrap()
-            // outbound
         }
         Origin::Inbound => {
             let inbound = loop {
@@ -79,7 +78,6 @@ pub(crate) async fn spawn_connection_handler(
             };
 
             upgrade::apply_inbound(inbound, GossipProtocol).await.unwrap()
-            // inbound
         }
     };
 
@@ -107,7 +105,7 @@ pub(crate) async fn spawn_connection_handler(
 fn spawn_substream_task(
     peer_id: PeerId,
     peer_address: Multiaddr,
-    mut substream: NegotiatedSubstream,
+    mut substream: GossipSubstream,
     message_receiver: DataReceiver,
     mut internal_event_sender: InternalEventSender,
 ) -> JoinHandle<()> {

@@ -14,11 +14,11 @@
 
 mod config;
 mod conns;
-mod gossip;
 mod interaction;
 mod multiaddr_ext;
 mod network;
 mod peers;
+mod protocols;
 mod transport;
 
 // Exports
