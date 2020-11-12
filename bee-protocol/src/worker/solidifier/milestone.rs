@@ -70,9 +70,8 @@ async fn trigger_solidification_unchecked<B: Backend>(
                 )
                 .await;
             }
-
-            *next_ms_index = target_index + MilestoneIndex(1);
         }
+        *next_ms_index = target_index + MilestoneIndex(1);
     }
 }
 
