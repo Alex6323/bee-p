@@ -11,6 +11,8 @@
 
 use crate::{milestone::MilestoneIndex, tangle::Flags};
 
+use bee_common::packable::{OptionError, Packable, Read, Write};
+
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // TODO Should it really be copy ?
@@ -135,5 +137,76 @@ impl MessageMetadata {
             .duration_since(UNIX_EPOCH)
             .expect("Clock may have gone backwards")
             .as_millis() as u64;
+    }
+}
+
+#[derive(Debug)]
+pub enum MessageMetadataError {
+    Io(std::io::Error),
+    OptionIndex(<Option<MilestoneIndex> as Packable>::Error),
+}
+
+impl From<std::io::Error> for MessageMetadataError {
+    fn from(error: std::io::Error) -> Self {
+        MessageMetadataError::Io(error)
+    }
+}
+
+impl From<OptionError<std::io::Error>> for MessageMetadataError {
+    fn from(error: OptionError<std::io::Error>) -> Self {
+        MessageMetadataError::OptionIndex(error)
+    }
+}
+
+impl Packable for MessageMetadata {
+    type Error = MessageMetadataError;
+
+    fn packed_len(&self) -> usize {
+        self.flags.packed_len()
+            + self.milestone_index.packed_len()
+            + self.arrival_timestamp.packed_len()
+            + self.solidification_timestamp.packed_len()
+            + self.confirmation_timestamp.packed_len()
+            + self.cone_index.packed_len()
+            + self.otrsi.packed_len()
+            + self.ytrsi.packed_len()
+    }
+
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
+        self.flags.pack(writer)?;
+        self.milestone_index.pack(writer)?;
+        self.arrival_timestamp.pack(writer)?;
+        self.solidification_timestamp.pack(writer)?;
+        self.confirmation_timestamp.pack(writer)?;
+        self.cone_index.pack(writer)?;
+        self.otrsi.pack(writer)?;
+        self.ytrsi.pack(writer)?;
+
+        Ok(())
+    }
+
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        let flags = Flags::unpack(reader)?;
+        let milestone_index = MilestoneIndex::unpack(reader)?;
+        let arrival_timestamp = u64::unpack(reader)?;
+        let solidification_timestamp = u64::unpack(reader)?;
+        let confirmation_timestamp = u64::unpack(reader)?;
+        let cone_index = Option::<MilestoneIndex>::unpack(reader)?;
+        let otrsi = Option::<MilestoneIndex>::unpack(reader)?;
+        let ytrsi = Option::<MilestoneIndex>::unpack(reader)?;
+
+        Ok(Self {
+            flags,
+            milestone_index,
+            arrival_timestamp,
+            solidification_timestamp,
+            confirmation_timestamp,
+            cone_index,
+            otrsi,
+            ytrsi,
+        })
     }
 }
