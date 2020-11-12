@@ -67,9 +67,7 @@ impl Packable for UTXOInput {
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        self.0.pack(writer)?;
-
-        Ok(())
+        self.0.pack(writer)
     }
 
     fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
