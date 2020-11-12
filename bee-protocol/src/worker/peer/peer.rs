@@ -75,10 +75,10 @@ impl PeerWorker {
 
         //                 Protocol::get()
         //                     .bus
-        //                     .dispatch(HandshakeCompleted(self.peer.epid, address));
+        //                     .dispatch(HandshakeCompleted(self.peer.id, address));
         //
         //                 Protocol::send_heartbeat(
-        //                     self.peer.epid,
+        //                     self.peer.id,
         //                     tangle.get_latest_solid_milestone_index(),
         //                     tangle.get_pruning_index(),
         //                     tangle.get_latest_milestone_index(),

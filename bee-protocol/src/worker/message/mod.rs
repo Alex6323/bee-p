@@ -75,9 +75,9 @@ pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
 //         spawn(async move {
 //             let message: [u8; 1024] = [0; 1024];
 //             let message = MessagePacket::new(&message);
-//             let epid = EndpointId::new();
+//             let peer_id = EndpointId::new();
 //             let event = HasherWorkerEvent {
-//                 from: epid,
+//                 from: peer_id,
 //                 message_packet: message,
 //             };
 //             hasher_worker_sender.unbounded_send(event).unwrap();
