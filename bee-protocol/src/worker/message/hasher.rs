@@ -23,7 +23,7 @@ use bee_crypto::ternary::{
     sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
     HASH_LENGTH,
 };
-use bee_network::EndpointId;
+use bee_network::PeerId;
 use bee_ternary::{Btrit, T5B1Buf, TritBuf};
 
 use async_trait::async_trait;
@@ -41,7 +41,7 @@ use std::{any::TypeId, pin::Pin};
 const BATCH_SIZE_THRESHOLD: usize = 3;
 
 pub(crate) struct HasherWorkerEvent {
-    pub(crate) from: EndpointId,
+    pub(crate) from: PeerId,
     pub(crate) message_packet: MessagePacket,
 }
 

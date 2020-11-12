@@ -29,7 +29,7 @@ use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder},
 };
-use bee_network::{EndpointId, Network, Origin};
+use bee_network::{Multiaddr, Network, Origin, PeerId};
 use bee_snapshot::LocalSnapshot;
 use bee_storage::storage::Backend;
 
@@ -37,7 +37,7 @@ use futures::channel::oneshot;
 use log::{debug, error, info};
 use tokio::spawn;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 
@@ -161,13 +161,12 @@ impl Protocol {
     pub fn register<N: Node>(
         node: &N,
         config: &ProtocolConfig,
-        epid: EndpointId,
-        address: SocketAddr,
-        origin: Origin,
+        id: PeerId,
+        address: Multiaddr,
     ) -> (flume::Sender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?
 
-        let peer = Arc::new(Peer::new(epid, address, origin));
+        let peer = Arc::new(Peer::new(id, address));
 
         let (receiver_tx, receiver_rx) = flume::unbounded();
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();

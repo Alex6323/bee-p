@@ -18,7 +18,7 @@ use crate::{
 };
 
 use bee_message::MessageId;
-use bee_network::{Command::SendMessage, EndpointId};
+use bee_network::{Command::SendMessage, PeerId};
 use bee_storage::storage::Backend;
 
 use log::warn;
@@ -32,17 +32,17 @@ pub(crate) struct Sender<P: Packet> {
 macro_rules! implement_sender_worker {
     ($type:ty, $sender:tt, $incrementor:tt) => {
         impl Sender<$type> {
-            pub(crate) fn send(epid: &EndpointId, packet: $type) {
+            pub(crate) fn send(id: &PeerId, packet: $type) {
                 match Protocol::get().network.unbounded_send(SendMessage {
-                    receiver_epid: *epid,
                     message: tlv_into_bytes(packet),
+                    to: id.clone(),
                 }) {
                     Ok(_) => {
                         // self.peer.metrics.$incrementor();
                         // Protocol::get().metrics.$incrementor();
                     }
                     Err(e) => {
-                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), epid, e);
+                        warn!("Sending {} to {} failed: {:?}.", stringify!($type), id, e);
                     }
                 }
             }
@@ -65,7 +65,7 @@ impl Protocol {
         milestone_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         requested_milestones: &RequestedMilestones,
         index: MilestoneIndex,
-        to: Option<EndpointId>,
+        to: Option<PeerId>,
     ) {
         if !requested_milestones.contains_key(&index) && !tangle.contains_milestone(index) {
             if let Err(e) = milestone_requester.send(MilestoneRequesterWorkerEvent(index, to)) {
@@ -78,7 +78,7 @@ impl Protocol {
         tangle: &MsTangle<B>,
         milestone_requester: &flume::Sender<MilestoneRequesterWorkerEvent>,
         requested_milestones: &RequestedMilestones,
-        to: Option<EndpointId>,
+        to: Option<PeerId>,
     ) {
         Protocol::request_milestone(tangle, milestone_requester, requested_milestones, MilestoneIndex(0), to)
     }
@@ -105,7 +105,7 @@ impl Protocol {
     // Heartbeat
 
     pub fn send_heartbeat(
-        to: EndpointId,
+        to: PeerId,
         latest_solid_milestone_index: MilestoneIndex,
         pruning_milestone_index: MilestoneIndex,
         latest_milestone_index: MilestoneIndex,
@@ -129,7 +129,7 @@ impl Protocol {
     ) {
         for entry in Protocol::get().peer_manager.handshaked_peers.iter() {
             Protocol::send_heartbeat(
-                *entry.key(),
+                entry.key().clone(),
                 latest_solid_milestone_index,
                 pruning_milestone_index,
                 latest_milestone_index,

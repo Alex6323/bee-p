@@ -9,72 +9,102 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-//#![warn(missing_docs)]
+// #![warn(missing_docs)]
+#![recursion_limit = "512"]
 
-pub use command::Command;
+mod config;
+mod conns;
+mod interaction;
+mod multiaddr_ext;
+mod network;
+mod peers;
+mod protocols;
+mod transport;
+
+// Exports
 pub use config::{NetworkConfig, NetworkConfigBuilder};
-pub use endpoint::EndpointId;
-pub use event::{Event, EventReceiver};
-pub use tcp::Origin;
-
+pub use conns::Origin;
+pub use interaction::{
+    commands::{self, Command},
+    events::{self, Event},
+};
+#[doc(inline)]
+pub use libp2p::{core::identity::ed25519::Keypair, Multiaddr, PeerId};
+pub use multiaddr_ext::MultiaddrPeerId;
 pub use network::Network;
 
-mod command;
-mod config;
-mod endpoint;
-mod event;
-mod network;
-mod tcp;
-mod util;
+pub type EventReceiver = flume::Receiver<Event>;
 
-use config::{DEFAULT_MAX_TCP_BUFFER_SIZE, DEFAULT_RECONNECT_INTERVAL};
-use endpoint::{EndpointContactList, EndpointWorker};
-use tcp::TcpServer;
+use config::{DEFAULT_MSG_BUFFER_SIZE, DEFAULT_PEER_LIMIT, DEFAULT_RECONNECT_MILLIS};
+use conns::ConnectionManager;
+use interaction::events::InternalEvent;
+use peers::{BannedAddrList, BannedPeerList, PeerList, PeerManager};
 
 use bee_common_ext::shutdown_tokio::Shutdown;
 
 use futures::channel::oneshot;
+use libp2p::identity;
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
-pub(crate) static MAX_TCP_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MAX_TCP_BUFFER_SIZE);
-pub(crate) static RECONNECT_INTERVAL: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_INTERVAL);
+pub(crate) static MSG_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MSG_BUFFER_SIZE);
+pub(crate) static RECONNECT_MILLIS: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_MILLIS);
+pub(crate) static PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_PEER_LIMIT);
 
-pub async fn init(config: NetworkConfig, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
-    let (command_sender, command_receiver) = command::channel();
-    let (event_sender, event_receiver) = event::channel();
-    let (internal_event_sender, internal_event_receiver) = event::channel();
-    let (endpoint_worker_shutdown_sender, endpoint_worker_shutdown_receiver) = oneshot::channel();
-    let (tcp_server_shutdown_sender, tcp_server_shutdown_receiver) = oneshot::channel();
+pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
+    let local_keys = identity::Keypair::Ed25519(local_keys);
+    let local_id = PeerId::from_public_key(local_keys.public());
 
-    let endpoint_contacts = EndpointContactList::new();
+    let (command_sender, command_receiver) = commands::channel();
+    let (event_sender, event_receiver) = events::channel::<Event>();
+    let (internal_event_sender, internal_event_receiver) = events::channel::<InternalEvent>();
 
-    let endpoint_worker = EndpointWorker::new(
+    let (peer_manager_shutdown_sender, peer_manager_shutdown_receiver) = oneshot::channel();
+    let (conn_manager_shutdown_sender, conn_manager_shutdown_receiver) = oneshot::channel();
+
+    let banned_addrs = BannedAddrList::new();
+    let banned_peers = BannedPeerList::new();
+    let peers = PeerList::new();
+
+    let peer_manager = PeerManager::new(
+        local_keys.clone(),
         command_receiver,
         event_sender,
         internal_event_receiver,
         internal_event_sender.clone(),
-        endpoint_contacts.clone(),
-        endpoint_worker_shutdown_receiver,
+        peers.clone(),
+        banned_addrs.clone(),
+        banned_peers.clone(),
+        peer_manager_shutdown_receiver,
     );
 
-    let binding_address = config.socket_address();
-    let tcp_server = TcpServer::new(
-        binding_address,
+    let conn_manager = ConnectionManager::new(
+        local_keys,
+        config.bind_address.clone(),
         internal_event_sender,
-        tcp_server_shutdown_receiver,
-        endpoint_contacts,
+        conn_manager_shutdown_receiver,
+        peers,
+        banned_addrs,
+        banned_peers,
     )
-    .await;
+    .unwrap_or_else(|e| {
+        panic!("Fatal error: {}", e);
+    });
 
-    let endpoint_worker = tokio::spawn(endpoint_worker.run());
-    let tcp_server = tokio::spawn(tcp_server.run());
+    let listen_address = conn_manager.listen_address.clone();
 
-    shutdown.add_worker_shutdown(endpoint_worker_shutdown_sender, endpoint_worker);
-    shutdown.add_worker_shutdown(tcp_server_shutdown_sender, tcp_server);
+    let peer_manager_task = tokio::spawn(peer_manager.run());
+    let conn_manager_task = tokio::spawn(conn_manager.run());
 
-    MAX_TCP_BUFFER_SIZE.swap(config.max_tcp_buffer_size, Ordering::Relaxed);
-    RECONNECT_INTERVAL.swap(config.reconnect_interval, Ordering::Relaxed);
+    shutdown.add_worker_shutdown(peer_manager_shutdown_sender, peer_manager_task);
+    shutdown.add_worker_shutdown(conn_manager_shutdown_sender, conn_manager_task);
 
-    (Network::new(config, command_sender), event_receiver)
+    MSG_BUFFER_SIZE.swap(config.msg_buffer_size, Ordering::Relaxed);
+    RECONNECT_MILLIS.swap(config.reconnect_millis, Ordering::Relaxed);
+    PEER_LIMIT.swap(config.peer_limit, Ordering::Relaxed);
+
+    (
+        Network::new(config, command_sender, listen_address, local_id),
+        event_receiver,
+    )
 }

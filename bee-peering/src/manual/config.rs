@@ -11,15 +11,18 @@
 
 use serde::Deserialize;
 
+use bee_network::{Multiaddr, MultiaddrPeerId, PeerId};
+
+use std::str::FromStr;
+
 // TODO add acceptAnyConnection
 
 const DEFAULT_LIMIT: u8 = 5;
-const DEFAULT_PEERS: Vec<String> = Vec::new();
 
 #[derive(Default, Deserialize)]
 pub struct ManualPeeringConfigBuilder {
     pub(crate) limit: Option<u8>,
-    pub(crate) peers: Option<Vec<String>>,
+    pub(crate) peers: Vec<String>,
 }
 
 impl ManualPeeringConfigBuilder {
@@ -32,17 +35,24 @@ impl ManualPeeringConfigBuilder {
         self
     }
 
-    pub fn add_peer(mut self, peer: &str) {
-        if self.peers.is_none() {
-            self.peers.replace(Vec::new());
-        }
-        self.peers.unwrap().push(peer.to_owned());
+    pub fn add_peer(mut self, peer_address_id: &str) {
+        self.peers.push(peer_address_id.to_owned());
     }
 
     pub fn finish(self) -> ManualPeeringConfig {
+        let peers = self
+            .peers
+            .iter()
+            .map(|s| {
+                MultiaddrPeerId::from_str(s)
+                    .expect("error parsing MultiaddrPeerId")
+                    .split()
+            })
+            .collect();
+
         ManualPeeringConfig {
             limit: self.limit.unwrap_or(DEFAULT_LIMIT),
-            peers: self.peers.unwrap_or(DEFAULT_PEERS),
+            peers,
         }
     }
 }
@@ -50,7 +60,7 @@ impl ManualPeeringConfigBuilder {
 #[derive(Clone)]
 pub struct ManualPeeringConfig {
     pub(crate) limit: u8,
-    pub(crate) peers: Vec<String>,
+    pub(crate) peers: Vec<(Multiaddr, PeerId)>,
 }
 
 impl ManualPeeringConfig {

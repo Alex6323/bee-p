@@ -9,12 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+mod banned;
+mod errors;
+mod list;
+mod manager;
 
-pub fn timestamp_millis() -> u64 {
-    let unix_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("system clock error");
+pub use banned::*;
+pub use errors::Error;
+pub use list::*;
+pub use manager::*;
 
-    unix_time.as_secs() * 1000 + u64::from(unix_time.subsec_millis())
+pub type DataSender = flume::Sender<Vec<u8>>;
+pub type DataReceiver = flume::Receiver<Vec<u8>>;
+
+pub fn channel() -> (DataSender, DataReceiver) {
+    flume::unbounded()
 }

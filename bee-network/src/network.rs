@@ -10,8 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    command::{Command, CommandSender},
     config::NetworkConfig,
+    interaction::commands::{Command, CommandSender},
+    Multiaddr, PeerId,
 };
 
 use thiserror::Error;
@@ -30,13 +31,22 @@ pub enum Error {
 pub struct Network {
     config: Arc<NetworkConfig>,
     command_sender: CommandSender,
+    listen_address: Multiaddr,
+    local_id: PeerId,
 }
 
 impl Network {
-    pub(crate) fn new(config: NetworkConfig, command_sender: CommandSender) -> Self {
+    pub(crate) fn new(
+        config: NetworkConfig,
+        command_sender: CommandSender,
+        listen_address: Multiaddr,
+        local_id: PeerId,
+    ) -> Self {
         Self {
             config: Arc::new(config),
             command_sender,
+            listen_address,
+            local_id,
         }
     }
 
@@ -57,5 +67,13 @@ impl Network {
 
     pub fn config(&self) -> &NetworkConfig {
         &self.config
+    }
+
+    pub fn listen_address(&self) -> &Multiaddr {
+        &self.listen_address
+    }
+
+    pub fn local_id(&self) -> &PeerId {
+        &self.local_id
     }
 }

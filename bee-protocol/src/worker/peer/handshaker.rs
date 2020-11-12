@@ -31,7 +31,6 @@ use log::{error, info, trace, warn};
 use tokio::spawn;
 
 use std::{
-    net::SocketAddr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -52,7 +51,6 @@ pub(crate) enum PeerHandshakerWorkerError {}
 enum HandshakeStatus {
     Awaiting,
     Done,
-    Duplicate,
 }
 
 pub struct PeerHandshakerWorker {
@@ -116,7 +114,7 @@ impl PeerHandshakerWorker {
         //     warn!("[{}] Failed to send handshake: {:?}.", self.peer.address, e);
         // }
 
-        let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address);
+        let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address.clone());
 
         while let Some((header, bytes)) = message_handler.fetch_message().await {
             if let Err(e) = self
@@ -125,7 +123,7 @@ impl PeerHandshakerWorker {
             {
                 error!("[{}] Processing message failed: {:?}.", self.peer.address, e);
             }
-            if let HandshakeStatus::Done | HandshakeStatus::Duplicate = self.status {
+            if let HandshakeStatus::Done = self.status {
                 break;
             }
         }
@@ -137,7 +135,7 @@ impl PeerHandshakerWorker {
                         Protocol::get()
                             .peer_manager
                             .handshaked_peers
-                            .get(&self.peer.epid)
+                            .get(&self.peer.id)
                             .unwrap()
                             .value()
                             .clone(),
@@ -147,26 +145,6 @@ impl PeerHandshakerWorker {
                     )
                     .run(tangle.clone(), message_handler),
                 );
-            }
-            HandshakeStatus::Duplicate => {
-                info!("[{}] Closing duplicate connection.", self.peer.epid);
-
-                // TODO: uncomment the following block once we have the epid for which this connection is a duplicate
-                // of.
-
-                // if let Err(e) = self
-                //     .network
-                //     .unbounded_send(MarkDuplicate {
-                //         duplicate_epid: self.peer.epid,
-                //         original_epid: epid,
-                //     });
-                // {
-                //     warn!("[{}] Resolving duplicate connection failed: {}.", self.peer.epid, e);
-                // }
-
-                // if let Err(e) = self.network.unbounded_send(DisconnectEndpoint { epid: self.peer.epid }) {
-                //     warn!("[{}] Disconnecting peer failed: {}.", self.peer.epid, e);
-                // }
             }
             _ => (),
         }

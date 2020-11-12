@@ -13,17 +13,17 @@
 
 use crate::peer::{HandshakedPeer, Peer};
 
-use bee_network::EndpointId;
+use bee_network::{Multiaddr, PeerId};
 
 use dashmap::DashMap;
 use tokio::sync::RwLock;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 pub(crate) struct PeerManager {
-    pub(crate) peers: DashMap<EndpointId, Arc<Peer>>,
-    pub(crate) handshaked_peers: DashMap<EndpointId, Arc<HandshakedPeer>>,
-    pub(crate) handshaked_peers_keys: RwLock<Vec<EndpointId>>,
+    pub(crate) peers: DashMap<PeerId, Arc<Peer>>,
+    pub(crate) handshaked_peers: DashMap<PeerId, Arc<HandshakedPeer>>,
+    pub(crate) handshaked_peers_keys: RwLock<Vec<PeerId>>,
 }
 
 impl PeerManager {
@@ -36,25 +36,25 @@ impl PeerManager {
     }
 
     pub(crate) fn add(&self, peer: Arc<Peer>) {
-        self.peers.insert(peer.epid, peer);
+        self.peers.insert(peer.id.clone(), peer);
     }
 
-    pub(crate) async fn handshake(&self, epid: &EndpointId, address: SocketAddr) {
-        if self.peers.remove(epid).is_some() {
+    pub(crate) async fn handshake(&self, id: &PeerId, address: Multiaddr) {
+        if self.peers.remove(id).is_some() {
             // TODO check if not already added
 
-            let peer = Arc::new(HandshakedPeer::new(*epid, address));
+            let peer = Arc::new(HandshakedPeer::new(id.clone(), address));
 
-            self.handshaked_peers.insert(*epid, peer.clone());
-            self.handshaked_peers_keys.write().await.push(*epid);
+            self.handshaked_peers.insert(id.clone(), peer.clone());
+            self.handshaked_peers_keys.write().await.push(id.clone());
         }
     }
 
-    pub(crate) async fn remove(&self, epid: &EndpointId) {
+    pub(crate) async fn remove(&self, id: &PeerId) {
         // TODO both ?
-        self.peers.remove(epid);
+        self.peers.remove(id);
 
-        self.handshaked_peers_keys.write().await.retain(|e| e != epid);
+        self.handshaked_peers_keys.write().await.retain(|peer_id| peer_id != id);
     }
 
     pub(crate) fn connected_peers(&self) -> u8 {

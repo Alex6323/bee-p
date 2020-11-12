@@ -19,7 +19,7 @@ use crate::{
 use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
-use bee_network::EndpointId;
+use bee_network::PeerId;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -28,7 +28,7 @@ use log::info;
 use std::any::TypeId;
 
 pub(crate) struct MilestoneResponderWorkerEvent {
-    pub(crate) epid: EndpointId,
+    pub(crate) peer_id: PeerId,
     pub(crate) request: MilestoneRequest,
 }
 
@@ -55,7 +55,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            while let Some(MilestoneResponderWorkerEvent { epid, request }) = receiver.next().await {
+            while let Some(MilestoneResponderWorkerEvent { peer_id, request }) = receiver.next().await {
                 let index = match request.index {
                     0 => tangle.get_latest_milestone_index(),
                     _ => request.index.into(),
@@ -66,7 +66,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                         let mut bytes = Vec::new();
 
                         if message.pack(&mut bytes).is_ok() {
-                            Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
+                            Sender::<MessagePacket>::send(&peer_id, MessagePacket::new(&bytes));
                         }
                     }
                 }

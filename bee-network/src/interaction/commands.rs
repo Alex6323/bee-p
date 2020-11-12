@@ -9,6 +9,25 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod net;
+use libp2p::{Multiaddr, PeerId};
 
-pub use net::*;
+use std::net::IpAddr;
+
+pub type CommandSender = flume::Sender<Command>;
+pub type CommandReceiver = flume::Receiver<Command>;
+
+pub fn channel() -> (CommandSender, CommandReceiver) {
+    flume::unbounded()
+}
+
+#[derive(Debug)]
+pub enum Command {
+    ConnectPeer { address: Multiaddr, id: PeerId },
+    ConnectUnknownPeer { address: Multiaddr },
+    DisconnectPeer { id: PeerId },
+    SendMessage { message: Vec<u8>, to: PeerId },
+    BanAddr { ip: IpAddr },
+    BanPeer { id: PeerId },
+    UnbanAddr { ip: IpAddr },
+    UnbanPeer { id: PeerId },
+}
