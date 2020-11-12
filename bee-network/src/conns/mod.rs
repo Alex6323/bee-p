@@ -23,10 +23,10 @@ use crate::{
 
 pub use connection::Origin;
 pub use dial::dial;
+pub use errors::Error;
 pub use manager::ConnectionManager;
 
 use connection::MuxedConnection;
-use errors::Error;
 
 use futures::{prelude::*, select, AsyncRead, AsyncWrite};
 use libp2p::{

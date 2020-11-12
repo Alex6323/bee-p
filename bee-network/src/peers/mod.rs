@@ -15,6 +15,7 @@ mod list;
 mod manager;
 
 pub use banned::*;
+pub use errors::Error;
 pub use list::*;
 pub use manager::*;
 

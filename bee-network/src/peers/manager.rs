@@ -33,8 +33,8 @@ use std::{
 
 type CommandReceiver = flume::Receiver<Command>;
 
-static NUM_COMMAND_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
-static NUM_EVENT_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
+pub static NUM_COMMAND_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
+pub static NUM_EVENT_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
 
 pub struct PeerManager {
     local_keys: identity::Keypair,
@@ -238,8 +238,8 @@ async fn process_internal_event(
         InternalEvent::ConnectionEstablished {
             peer_id,
             peer_address,
-            origin,
             message_sender,
+            ..
         } => {
             if peers.insert_connected_peer(peer_id.clone(), message_sender) {
                 // publish
@@ -317,13 +317,17 @@ async fn connect_peer(
     {
         warn!("Failed connecting to peer. Error: {:?}", e);
 
-        tokio::spawn(send_reconnect_event_after_delay(
-            InternalEvent::ReconnectScheduled {
-                peer_id: id,
-                peer_address: address,
-            },
-            internal_event_sender.clone(),
-        ));
+        // Only attempt to reconnect if the dialing itself failed for some reason, but for any other error that might
+        // have happend
+        if let conns::Error::DialingFailed(_) = e {
+            tokio::spawn(send_reconnect_event_after_delay(
+                InternalEvent::ReconnectScheduled {
+                    peer_id: id,
+                    peer_address: address,
+                },
+                internal_event_sender.clone(),
+            ));
+        }
     }
 }
 
