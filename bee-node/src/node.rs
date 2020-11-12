@@ -12,7 +12,7 @@
 #![warn(missing_docs)]
 
 use crate::{
-    banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, plugin, storage::Backend,
+    banner::print_banner_and_version, config::NodeConfig, inner::BeeNode, storage::Backend,
     version_checker::VersionCheckerWorker,
 };
 
@@ -21,7 +21,7 @@ use bee_common_ext::{
     node::{Node as _, NodeBuilder as _},
     shutdown_tokio::Shutdown,
 };
-use bee_network::{self, Command::ConnectPeer, Event, Multiaddr, Network, Origin, PeerId};
+use bee_network::{self, Event, Multiaddr, PeerId};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::Protocol;
 
@@ -33,7 +33,7 @@ use log::{error, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 type NetworkEventStream = ShutdownStream<Fuse<flume::r#async::RecvStream<'static, Event>>>;
 
@@ -117,7 +117,6 @@ impl<B: Backend> NodeBuilder<B> {
         Ok(Node {
             config: self.config,
             tmp_node: bee_node,
-            network,
             network_events: ShutdownStream::new(ctrl_c_listener(), events.into_stream()),
             shutdown,
             peers: HashMap::new(),
@@ -129,7 +128,6 @@ impl<B: Backend> NodeBuilder<B> {
 pub struct Node<B: Backend> {
     tmp_node: BeeNode<B>,
     // TODO those 2 fields are related; consider bundling them
-    network: Network,
     network_events: NetworkEventStream,
     #[allow(dead_code)]
     shutdown: Shutdown,
@@ -144,7 +142,7 @@ impl<B: Backend> Node<B> {
         while let Some(event) = self.network_events.next().await {
             trace!("Received event {:?}.", event);
 
-            self.process_event(event);
+            self.process_event(event).await;
         }
 
         info!("Stopping...");
@@ -166,21 +164,21 @@ impl<B: Backend> Node<B> {
         NodeBuilder { config }
     }
 
-    fn process_event(&mut self, event: Event) {
+    async fn process_event(&mut self, event: Event) {
         match event {
-            Event::PeerConnected { id, address } => self.peer_connected_handler(id, address),
+            Event::PeerConnected { id, address } => self.peer_connected_handler(id, address).await,
             Event::PeerDisconnected { id } => self.peer_disconnected_handler(id),
             Event::MessageReceived { message, from } => self.peer_message_received_handler(message, from),
-            Event::PeerBanned { id } => (),
-            Event::AddrBanned { ip } => (),
+            Event::PeerBanned { .. } => (),
+            Event::AddrBanned { .. } => (),
             _ => warn!("Unsupported event {:?}.", event),
         }
     }
 
     #[inline]
-    fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr) {
+    async fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr) {
         let (receiver_tx, receiver_shutdown_tx) =
-            Protocol::register(&self.tmp_node, &self.config.protocol, id.clone(), address);
+            Protocol::register(&self.tmp_node, &self.config.protocol, id.clone(), address).await;
 
         self.peers.insert(id, (receiver_tx, receiver_shutdown_tx));
     }

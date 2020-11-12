@@ -29,7 +29,7 @@ use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder},
 };
-use bee_network::{Multiaddr, Network, Origin, PeerId};
+use bee_network::{Multiaddr, Network, PeerId};
 use bee_snapshot::LocalSnapshot;
 use bee_storage::storage::Backend;
 
@@ -158,7 +158,7 @@ impl Protocol {
         *PROTOCOL.read().as_ref().expect("Uninitialized protocol.")
     }
 
-    pub fn register<N: Node>(
+    pub async fn register<N: Node>(
         node: &N,
         _config: &ProtocolConfig,
         id: PeerId,
@@ -171,7 +171,7 @@ impl Protocol {
         let (receiver_tx, receiver_rx) = flume::unbounded();
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        Protocol::get().peer_manager.add(peer.clone());
+        Protocol::get().peer_manager.add(peer.clone()).await;
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
         let requested_milestones = node.resource::<RequestedMilestones>();
