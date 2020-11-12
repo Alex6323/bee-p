@@ -15,8 +15,9 @@ use crate::packet::Packet;
 
 use std::ops::Range;
 
-const VARIABLE_MIN_SIZE: usize = 292;
-const VARIABLE_MAX_SIZE: usize = 1604;
+const VARIABLE_MIN_SIZE: usize = 77;
+// TODO from RFC
+const VARIABLE_MAX_SIZE: usize = 1024;
 
 /// A packet to send a message.
 #[derive(Default)]
@@ -93,13 +94,13 @@ mod tests {
 
     #[test]
     fn size_range() {
-        assert_eq!(Message::size_range().contains(&291), false);
-        assert_eq!(Message::size_range().contains(&292), true);
-        assert_eq!(Message::size_range().contains(&293), true);
+        assert_eq!(Message::size_range().contains(&76), false);
+        assert_eq!(Message::size_range().contains(&77), true);
+        assert_eq!(Message::size_range().contains(&78), true);
 
-        assert_eq!(Message::size_range().contains(&1603), true);
-        assert_eq!(Message::size_range().contains(&1604), true);
-        assert_eq!(Message::size_range().contains(&1605), false);
+        assert_eq!(Message::size_range().contains(&1023), true);
+        assert_eq!(Message::size_range().contains(&1024), true);
+        assert_eq!(Message::size_range().contains(&1025), false);
     }
 
     #[test]

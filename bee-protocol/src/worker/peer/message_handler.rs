@@ -256,7 +256,7 @@ mod tests {
         test(1, 5, 10).await;
     }
 
-    /// Test that messages are produced correctly when each mes// let epid: EndpointId =
+    /// Test that messages are produced correctly when each mes// let peer_id: PeerId =
     /// Url::from_url_str("tcp://[::1]:16000").await.unwrap().into();sage fits exactly into an event.
     #[tokio::test]
     async fn one_message_per_event() {

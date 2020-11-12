@@ -22,11 +22,14 @@ use crate::{
 
 use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
-use bee_message::{payload::Payload, Message, MessageId};
+use bee_message::{payload::Payload, Message, MessageId, MESSAGE_ID_LENGTH};
 use bee_network::PeerId;
 
 use async_trait::async_trait;
-use blake2::{Blake2b, Digest};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use futures::stream::StreamExt;
 use log::{error, info, trace, warn};
 
@@ -72,7 +75,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
-            let mut blake2b = Blake2b::default();
+            let mut blake2b = VarBlake2b::new(MESSAGE_ID_LENGTH).unwrap();
 
             while let Some(ProcessorWorkerEvent {
                 pow_score: _pow_score,
@@ -90,14 +93,14 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     Err(e) => {
                         trace!("Invalid message: {:?}.", e);
                         Protocol::get().metrics.invalid_messages_inc();
-                        return;
+                        continue;
                     }
                 };
 
                 blake2b.update(&message_packet.bytes);
-                // TODO Do we have to copy ?
                 let mut bytes = [0u8; 32];
-                bytes.copy_from_slice(&blake2b.finalize_reset());
+                // TODO Do we have to copy ?
+                blake2b.finalize_variable_reset(|digest| bytes.copy_from_slice(&digest));
                 let message_id = MessageId::from(bytes);
 
                 let requested = requested_messages.contains_key(&message_id);
@@ -106,7 +109,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 // if !requested && message_id.weight() < config.mwm {
                 //     trace!("Insufficient weight magnitude: {}.", message_id.weight());
                 //     Protocol::get().metrics.invalid_messages_inc();
-                //     return;
+                //     continue;
                 // }
 
                 let mut metadata = MessageMetadata::arrived();

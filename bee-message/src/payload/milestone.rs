@@ -46,7 +46,7 @@ impl Packable for Milestone {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        self.essence.packed_len() + self.signatures.len() * MILESTONE_SIGNATURE_LENGTH
+        self.essence.packed_len() + 0u8.packed_len() + self.signatures.len() * MILESTONE_SIGNATURE_LENGTH
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
@@ -142,6 +142,7 @@ impl Packable for MilestoneEssence {
             + self.parent1.packed_len()
             + self.parent2.packed_len()
             + MILESTONE_MERKLE_PROOF_LENGTH
+            + 0u8.packed_len()
             + self.public_keys.len() * MILESTONE_PUBLIC_KEY_LENGTH
     }
 
