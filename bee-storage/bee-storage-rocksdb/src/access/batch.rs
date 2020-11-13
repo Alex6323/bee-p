@@ -25,7 +25,6 @@ use rocksdb::{WriteBatch, WriteOptions};
 #[derive(Default)]
 pub struct StorageBatch {
     inner: WriteBatch,
-    // TODO use them to avoid allocating during a same batch
     key_buf: Vec<u8>,
     value_buf: Vec<u8>,
 }
@@ -53,11 +52,13 @@ impl Batch<MessageId, Message> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        let mut message_buf = Vec::with_capacity(message.packed_len());
+        batch.value_buf.clear();
         // Packing to bytes can't fail.
-        message.pack(&mut message_buf).unwrap();
+        message.pack(&mut batch.value_buf).unwrap();
 
-        batch.inner.put_cf(&cf_message_id_to_message, message_id, message_buf);
+        batch
+            .inner
+            .put_cf(&cf_message_id_to_message, message_id, &batch.value_buf);
 
         Ok(())
     }
@@ -80,11 +81,13 @@ impl Batch<MessageId, MessageMetadata> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
 
-        let mut metadata_buf = Vec::with_capacity(metadata.packed_len());
+        batch.value_buf.clear();
         // Packing to bytes can't fail.
-        metadata.pack(&mut metadata_buf).unwrap();
+        metadata.pack(&mut batch.value_buf).unwrap();
 
-        batch.inner.put_cf(&cf_message_id_to_metadata, message_id, metadata_buf);
+        batch
+            .inner
+            .put_cf(&cf_message_id_to_metadata, message_id, &batch.value_buf);
 
         Ok(())
     }
@@ -107,10 +110,11 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
-        let mut key = parent.as_ref().to_vec();
-        key.extend_from_slice(child.as_ref());
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(parent.as_ref());
+        batch.key_buf.extend_from_slice(child.as_ref());
 
-        batch.inner.put_cf(&cf_message_id_to_message_id, key, []);
+        batch.inner.put_cf(&cf_message_id_to_message_id, &batch.key_buf, []);
 
         Ok(())
     }
@@ -122,10 +126,11 @@ impl Batch<(MessageId, MessageId), ()> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
-        let mut key = parent.as_ref().to_vec();
-        key.extend_from_slice(child.as_ref());
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(parent.as_ref());
+        batch.key_buf.extend_from_slice(child.as_ref());
 
-        batch.inner.delete_cf(&cf_message_id_to_message_id, key);
+        batch.inner.delete_cf(&cf_message_id_to_message_id, &batch.key_buf);
 
         Ok(())
     }
@@ -140,10 +145,11 @@ impl Batch<(HashedIndex, MessageId), ()> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut key = index.as_ref().to_vec();
-        key.extend_from_slice(message_id.as_ref());
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(index.as_ref());
+        batch.key_buf.extend_from_slice(message_id.as_ref());
 
-        batch.inner.put_cf(&cf_index_to_message_id, key, []);
+        batch.inner.put_cf(&cf_index_to_message_id, &batch.key_buf, []);
 
         Ok(())
     }
@@ -155,10 +161,11 @@ impl Batch<(HashedIndex, MessageId), ()> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut key = index.as_ref().to_vec();
-        key.extend_from_slice(message_id.as_ref());
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(index.as_ref());
+        batch.key_buf.extend_from_slice(message_id.as_ref());
 
-        batch.inner.delete_cf(&cf_index_to_message_id, key);
+        batch.inner.delete_cf(&cf_index_to_message_id, &batch.key_buf);
 
         Ok(())
     }
@@ -173,14 +180,16 @@ impl Batch<OutputId, Output> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        batch.key_buf.clear();
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
-        let mut output_buf = Vec::with_capacity(output.packed_len());
+        output_id.pack(&mut batch.key_buf).unwrap();
+        batch.value_buf.clear();
         // Packing to bytes can't fail.
-        output.pack(&mut output_buf).unwrap();
+        output.pack(&mut batch.value_buf).unwrap();
 
-        batch.inner.put_cf(&cf_output_id_to_output, output_id_buf, output_buf);
+        batch
+            .inner
+            .put_cf(&cf_output_id_to_output, &batch.key_buf, &batch.value_buf);
 
         Ok(())
     }
@@ -188,11 +197,11 @@ impl Batch<OutputId, Output> for Storage {
     fn batch_delete(&self, batch: &mut Self::Batch, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        batch.key_buf.clear();
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        output_id.pack(&mut batch.key_buf).unwrap();
 
-        batch.inner.delete_cf(&cf_output_id_to_output, output_id_buf);
+        batch.inner.delete_cf(&cf_output_id_to_output, &batch.key_buf);
 
         Ok(())
     }
@@ -207,14 +216,16 @@ impl Batch<OutputId, Spent> for Storage {
     ) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        batch.key_buf.clear();
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
-        let mut spent_buf = Vec::with_capacity(spent.packed_len());
+        output_id.pack(&mut batch.key_buf).unwrap();
+        batch.value_buf.clear();
         // Packing to bytes can't fail.
-        spent.pack(&mut spent_buf).unwrap();
+        spent.pack(&mut batch.value_buf).unwrap();
 
-        batch.inner.put_cf(&cf_output_id_to_spent, output_id_buf, spent_buf);
+        batch
+            .inner
+            .put_cf(&cf_output_id_to_spent, &batch.key_buf, &batch.value_buf);
 
         Ok(())
     }
@@ -222,11 +233,11 @@ impl Batch<OutputId, Spent> for Storage {
     fn batch_delete(&self, batch: &mut Self::Batch, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        batch.key_buf.clear();
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        output_id.pack(&mut batch.key_buf).unwrap();
 
-        batch.inner.delete_cf(&cf_output_id_to_spent, output_id_buf);
+        batch.inner.delete_cf(&cf_output_id_to_spent, &batch.key_buf);
 
         Ok(())
     }
@@ -236,11 +247,11 @@ impl Batch<Unspent, ()> for Storage {
     fn batch_insert(&self, batch: &mut Self::Batch, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
-        let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
+        batch.key_buf.clear();
         // Packing to bytes can't fail.
-        unspent.pack(&mut unspent_buf).unwrap();
+        unspent.pack(&mut batch.key_buf).unwrap();
 
-        batch.inner.put_cf(&cf_output_id_unspent, unspent_buf, []);
+        batch.inner.put_cf(&cf_output_id_unspent, &batch.key_buf, []);
 
         Ok(())
     }
@@ -248,11 +259,11 @@ impl Batch<Unspent, ()> for Storage {
     fn batch_delete(&self, batch: &mut Self::Batch, unspent: &Unspent) -> Result<(), Self::Error> {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
-        let mut unspent_buf = Vec::with_capacity(unspent.packed_len());
+        batch.key_buf.clear();
         // Packing to bytes can't fail.
-        unspent.pack(&mut unspent_buf).unwrap();
+        unspent.pack(&mut batch.key_buf).unwrap();
 
-        batch.inner.delete_cf(&cf_output_id_unspent, unspent_buf);
+        batch.inner.delete_cf(&cf_output_id_unspent, &batch.key_buf);
 
         Ok(())
     }

@@ -26,7 +26,7 @@ async fn access() {
     let message_id = random_message_id();
     let message_1 = random_message();
 
-    assert!(!storage.exist(&message_id).await.unwrap());
+    assert!(!Exist::<MessageId, Message>::exist(&storage, &message_id).await.unwrap());
     assert!(Fetch::<MessageId, Message>::fetch(&storage, &message_id)
         .await
         .unwrap()
@@ -34,20 +34,20 @@ async fn access() {
 
     storage.insert(&message_id, &message_1).await.unwrap();
 
-    assert!(storage.exist(&message_id).await.unwrap());
+    assert!(Exist::<MessageId, Message>::exist(&storage, &message_id).await.unwrap());
 
     let message_2 = Fetch::<MessageId, Message>::fetch(&storage, &message_id)
         .await
         .unwrap()
         .unwrap();
 
-    assert_eq!(message_1.pack_new().unwrap(), message_2.pack_new().unwrap());
+    assert_eq!(message_1.pack_new(), message_2.pack_new());
 
     Delete::<MessageId, Message>::delete(&storage, &message_id)
         .await
         .unwrap();
 
-    assert!(!storage.exist(&message_id).await.unwrap());
+    assert!(!Exist::<MessageId, Message>::exist(&storage, &message_id).await.unwrap());
     assert!(Fetch::<MessageId, Message>::fetch(&storage, &message_id)
         .await
         .unwrap()
@@ -68,7 +68,7 @@ async fn access() {
             .batch_insert(&mut batch, &random_message_id(), &random_message())
             .unwrap();
         if i % 2 == 0 {
-            storage.batch_delete(&mut batch, message_id).unwrap();
+            Batch::<MessageId, Message>::batch_delete(&storage, &mut batch, message_id).unwrap();
         }
     }
 
@@ -76,9 +76,9 @@ async fn access() {
 
     for (i, message_id) in message_ids.iter().enumerate() {
         if i % 2 == 0 {
-            assert!(!storage.exist(message_id).await.unwrap());
+            assert!(!Exist::<MessageId, Message>::exist(&storage, message_id).await.unwrap());
         } else {
-            assert!(storage.exist(message_id).await.unwrap());
+            assert!(Exist::<MessageId, Message>::exist(&storage, message_id).await.unwrap());
         }
     }
 }
