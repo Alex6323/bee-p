@@ -16,7 +16,7 @@ use bee_storage::{
     storage::Backend,
 };
 use bee_storage_rocksdb::{config::RocksDBConfigBuilder, storage::Storage};
-use bee_test::message::{random_message, random_message_id};
+use bee_test::rand::message::{random_message, random_message_id};
 
 #[tokio::test]
 async fn access() {
