@@ -15,7 +15,7 @@ use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use core::convert::{TryFrom, TryInto};
+use core::{convert::TryInto, str::FromStr};
 
 pub const MESSAGE_ID_LENGTH: usize = 32;
 
@@ -28,15 +28,15 @@ impl From<[u8; MESSAGE_ID_LENGTH]> for MessageId {
     }
 }
 
-impl TryFrom<&str> for MessageId {
-    type Error = Error;
+impl FromStr for MessageId {
+    type Err = Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let bytes: [u8; MESSAGE_ID_LENGTH] = hex::decode(value)
-            .map_err(|_| Self::Error::InvalidHex)?
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let bytes: [u8; MESSAGE_ID_LENGTH] = hex::decode(s)
+            .map_err(|_| Self::Err::InvalidHex)?
             .as_slice()
             .try_into()
-            .map_err(|_| Self::Error::InvalidHex)?;
+            .map_err(|_| Self::Err::InvalidHex)?;
 
         Ok(MessageId::from(bytes))
     }
