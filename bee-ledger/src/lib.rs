@@ -31,9 +31,7 @@ use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder},
 };
-use bee_protocol::{config::ProtocolCoordinatorConfig, event::LatestSolidMilestoneChanged, MilestoneIndex};
-
-use log::warn;
+use bee_protocol::{config::ProtocolCoordinatorConfig, MilestoneIndex};
 
 use std::sync::Arc;
 
@@ -49,7 +47,7 @@ where
     node_builder.with_worker_cfg::<LedgerWorker>((MilestoneIndex(index), coo_config, bus.clone()))
 }
 
-pub fn events<N: Node>(node: &N, bus: Arc<Bus<'static>>) {
+pub fn events<N: Node>(_node: &N, _bus: Arc<Bus<'static>>) {
     // let ledger_worker = node.worker::<LedgerWorker>().unwrap().tx.clone();
     //
     // bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {

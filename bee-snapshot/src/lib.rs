@@ -31,13 +31,13 @@ pub use error::Error;
 pub use header::SnapshotHeader;
 pub use snapshot::LocalSnapshot;
 
-use bee_common_ext::{event::Bus, node::Node};
+use bee_common_ext::node::Node;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
 use log::info;
 
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 // TODO change return type
 

@@ -22,16 +22,14 @@ use bee_common_ext::{
 };
 use bee_message::{payload::Payload, MessageId};
 use bee_protocol::{config::ProtocolCoordinatorConfig, tangle::MsTangle, MilestoneIndex, StorageWorker, TangleWorker};
-use bee_storage::access::{Batch, BatchBuilder};
+use bee_storage::access::BatchBuilder;
 
 use async_trait::async_trait;
 use blake2::Blake2b;
 use futures::stream::StreamExt;
 use log::{error, info};
 
-use std::{any::TypeId, ops::Deref, sync::Arc};
-
-const MERKLE_PROOF_LENGTH: usize = 384;
+use std::{any::TypeId, sync::Arc};
 
 // TODO refactor errors
 
@@ -49,7 +47,7 @@ async fn confirm<N: Node>(
     storage: &ResHandle<N::Backend>,
     message_id: MessageId,
     index: &mut MilestoneIndex,
-    coo_config: &ProtocolCoordinatorConfig,
+    _coo_config: &ProtocolCoordinatorConfig,
     bus: &Arc<Bus<'static>>,
 ) -> Result<(), Error>
 where
@@ -77,7 +75,7 @@ where
         milestone.essence().timestamp(),
     );
 
-    let mut batch = N::Backend::batch_begin();
+    let batch = N::Backend::batch_begin();
 
     if let Err(e) = visit_dfs::<N>(tangle, storage, message_id, &mut metadata).await {
         error!(
@@ -116,7 +114,8 @@ where
         return Err(Error::InvalidMessagesCount);
     }
 
-    storage.batch_commit(batch, true);
+    // TODO unwrap
+    storage.batch_commit(batch, true).await.unwrap();
 
     // TODO update meta only when sure everything is fine
 

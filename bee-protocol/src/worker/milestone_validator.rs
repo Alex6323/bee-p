@@ -13,7 +13,6 @@ use crate::{
     config::ProtocolConfig,
     event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::{key_manager::KeyManager, Milestone, MilestoneIndex},
-    protocol::Protocol,
     tangle::MsTangle,
     worker::{
         MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneRequesterWorker,
@@ -42,7 +41,7 @@ pub(crate) enum Error {
     SignaturesPublicKeysCountMismatch(usize, usize),
     InsufficientPublicKeysCount(usize, usize),
     // TODO include PK
-    UnknownPublicKey,
+    // UnknownPublicKey,
 }
 
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) MessageId);
@@ -102,7 +101,7 @@ where
         let mut essence_bytes = Vec::with_capacity(milestone.essence().packed_len());
         milestone.essence().pack(&mut essence_bytes).unwrap();
 
-        for (index, public_key) in milestone.essence().public_keys().iter().enumerate() {
+        for (_index, _public_key) in milestone.essence().public_keys().iter().enumerate() {
             // if !public_keys.contains(public_key) {
             //     return Err(Error::UnknownPublicKey);
             // }

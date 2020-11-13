@@ -14,7 +14,7 @@ use crate::{
     metadata::WhiteFlagMetadata,
     output::Output,
     spent::Spent,
-    storage::{self, Backend},
+    storage::{ Backend},
 };
 
 use bee_common_ext::node::{Node, ResHandle};
@@ -26,19 +26,17 @@ use bee_message::{
     Message, MessageId,
 };
 use bee_protocol::tangle::MsTangle;
-use bee_storage::access::Fetch;
 
 use std::{
     collections::{HashMap, HashSet},
-    ops::Deref,
 };
 
-const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
+// const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[inline]
 async fn on_message<N: Node>(
     tangle: &MsTangle<N::Backend>,
-    storage: &ResHandle<N::Backend>,
+    _storage: &ResHandle<N::Backend>,
     message_id: &MessageId,
     message: &Message,
     metadata: &mut WhiteFlagMetadata,
