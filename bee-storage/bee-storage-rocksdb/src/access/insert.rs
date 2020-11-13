@@ -17,6 +17,7 @@ use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::Insert;
 
 #[async_trait::async_trait]
@@ -26,6 +27,18 @@ impl Insert<MessageId, Message> for Storage {
 
         self.inner
             .put_cf(&cf_message_id_to_message, message_id, message.pack_new())?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Insert<MessageId, MessageMetadata> for Storage {
+    async fn insert(&self, message_id: &MessageId, metadata: &MessageMetadata) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+
+        self.inner
+            .put_cf(&cf_message_id_to_metadata, message_id, metadata.pack_new())?;
 
         Ok(())
     }

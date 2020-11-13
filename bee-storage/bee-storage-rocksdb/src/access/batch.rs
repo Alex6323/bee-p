@@ -17,6 +17,7 @@ use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::{Batch, BatchBuilder};
 
 use rocksdb::{WriteBatch, WriteOptions};
@@ -65,6 +66,33 @@ impl Batch<MessageId, Message> for Storage {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
         batch.inner.delete_cf(&cf_message_id_to_message, message_id);
+
+        Ok(())
+    }
+}
+
+impl Batch<MessageId, MessageMetadata> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        message_id: &MessageId,
+        metadata: &MessageMetadata,
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+
+        let mut metadata_buf = Vec::with_capacity(metadata.packed_len());
+        // Packing to bytes can't fail.
+        metadata.pack(&mut metadata_buf).unwrap();
+
+        batch.inner.put_cf(&cf_message_id_to_metadata, message_id, metadata_buf);
+
+        Ok(())
+    }
+
+    fn batch_delete(&self, batch: &mut Self::Batch, message_id: &MessageId) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+
+        batch.inner.delete_cf(&cf_message_id_to_metadata, message_id);
 
         Ok(())
     }

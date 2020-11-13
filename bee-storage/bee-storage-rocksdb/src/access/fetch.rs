@@ -20,6 +20,7 @@ use bee_message::{
     },
     Message, MessageId, MESSAGE_ID_LENGTH,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::Fetch;
 
 use std::convert::TryInto;
@@ -34,6 +35,22 @@ impl Fetch<MessageId, Message> for Storage {
 
         if let Some(res) = self.inner.get_cf(&cf_message_id_to_message, message_id)? {
             Ok(Some(Message::unpack(&mut res.as_slice()).unwrap()))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Fetch<MessageId, MessageMetadata> for Storage {
+    async fn fetch(&self, message_id: &MessageId) -> Result<Option<MessageMetadata>, <Self as Backend>::Error>
+    where
+        Self: Sized,
+    {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+
+        if let Some(res) = self.inner.get_cf(&cf_message_id_to_metadata, message_id)? {
+            Ok(Some(MessageMetadata::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)
         }

@@ -17,6 +17,7 @@ use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::Delete;
 
 #[async_trait::async_trait]
@@ -25,6 +26,17 @@ impl Delete<MessageId, Message> for Storage {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
         self.inner.delete_cf(&cf_message_id_to_message, message_id)?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<MessageId, MessageMetadata> for Storage {
+    async fn delete(&self, message_id: &MessageId) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+
+        self.inner.delete_cf(&cf_message_id_to_metadata, message_id)?;
 
         Ok(())
     }

@@ -17,6 +17,7 @@ use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::Exist;
 
 #[async_trait::async_trait]
@@ -28,6 +29,18 @@ impl Exist<MessageId, Message> for Storage {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
         Ok(self.inner.get_cf(&cf_message_id_to_message, message_id)?.is_some())
+    }
+}
+
+#[async_trait::async_trait]
+impl Exist<MessageId, MessageMetadata> for Storage {
+    async fn exist(&self, message_id: &MessageId) -> Result<bool, <Self as Backend>::Error>
+    where
+        Self: Sized,
+    {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+
+        Ok(self.inner.get_cf(&cf_message_id_to_metadata, message_id)?.is_some())
     }
 }
 
