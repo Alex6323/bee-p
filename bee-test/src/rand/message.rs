@@ -11,6 +11,7 @@
 
 use crate::rand::{
     bytes::{random_bytes, random_bytes_32},
+    integer::random_integer,
     string::random_string,
 };
 
@@ -18,8 +19,6 @@ use bee_message::{
     payload::{indexation::Indexation, Payload},
     Message, MessageId,
 };
-
-use rand::Rng;
 
 pub fn random_message_id() -> MessageId {
     MessageId::new(random_bytes_32())
@@ -36,10 +35,11 @@ pub fn random_payload() -> Payload {
 
 pub fn random_message_with_parents(parent1: MessageId, parent2: MessageId) -> Message {
     Message::builder()
+        .with_network_id(random_integer())
         .with_parent1(parent1)
         .with_parent2(parent2)
         .with_payload(random_payload())
-        .with_nonce(rand::thread_rng().gen::<u64>())
+        .with_nonce(random_integer())
         .finish()
         .unwrap()
 }
