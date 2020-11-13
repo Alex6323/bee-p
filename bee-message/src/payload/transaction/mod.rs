@@ -18,8 +18,7 @@ mod unlock;
 
 use crate::Error;
 
-use constants::INPUT_OUTPUT_COUNT_RANGE;
-
+pub use constants::{INPUT_OUTPUT_COUNT_MAX, INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTPUT_INDEX_RANGE};
 pub use essence::{TransactionEssence, TransactionEssenceBuilder};
 pub use input::{Input, UTXOInput};
 pub use output::{

@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bytes;
-pub mod input;
-pub mod integer;
-pub mod message;
-pub mod output;
-pub mod string;
-pub mod transaction;
+use crate::rand::{integer::random_integer_range, transaction::random_transaction_id};
+
+use bee_message::payload::transaction::{OutputId, INPUT_OUTPUT_INDEX_RANGE};
+
+pub fn random_output_id() -> OutputId {
+    OutputId::new(random_transaction_id(), random_integer_range(INPUT_OUTPUT_INDEX_RANGE)).unwrap()
+}

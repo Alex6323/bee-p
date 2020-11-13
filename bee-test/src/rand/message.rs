@@ -24,13 +24,13 @@ pub fn random_message_id() -> MessageId {
     MessageId::new(random_bytes_32())
 }
 
-pub fn random_indexation() -> Payload {
-    Indexation::new(random_string(32), &random_bytes(64)).unwrap().into()
+pub fn random_indexation() -> Indexation {
+    Indexation::new(random_string(32), &random_bytes(64)).unwrap()
 }
 
 pub fn random_payload() -> Payload {
     // TODO complete with other types
-    random_indexation()
+    random_indexation().into()
 }
 
 pub fn random_message_with_parents(parent1: MessageId, parent2: MessageId) -> Message {

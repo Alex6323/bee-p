@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod bytes;
-pub mod input;
-pub mod integer;
-pub mod message;
-pub mod output;
-pub mod string;
-pub mod transaction;
+use crate::rand::bytes::random_bytes_32;
+
+use bee_message::payload::transaction::TransactionId;
+
+pub fn random_transaction_id() -> TransactionId {
+    TransactionId::new(random_bytes_32())
+}
