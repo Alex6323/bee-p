@@ -10,13 +10,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use rand::{
-    distributions::{Distribution, Standard},
+    distributions::{uniform::SampleUniform, Distribution, Standard},
     Rng,
 };
+
+use std::ops::Range;
 
 pub fn random_integer<T>() -> T
 where
     Standard: Distribution<T>,
 {
-    rand::thread_rng().gen::<T>()
+    rand::thread_rng().gen()
+}
+
+pub fn random_integer_range<T>(range: Range<T>) -> T
+where
+    T: SampleUniform,
+{
+    rand::thread_rng().gen_range(range.start, range.end)
 }
