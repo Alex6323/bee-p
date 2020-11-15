@@ -40,8 +40,8 @@ pub(crate) enum Error {
     TooFewSignatures(usize, usize),
     SignaturesPublicKeysCountMismatch(usize, usize),
     InsufficientPublicKeysCount(usize, usize),
-    // TODO include PK
-    // UnknownPublicKey,
+    /* TODO include PK
+     * UnknownPublicKey, */
 }
 
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) MessageId);

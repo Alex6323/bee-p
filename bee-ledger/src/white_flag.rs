@@ -9,13 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    error::Error,
-    metadata::WhiteFlagMetadata,
-    output::Output,
-    spent::Spent,
-    storage::{ Backend},
-};
+use crate::{error::Error, metadata::WhiteFlagMetadata, output::Output, spent::Spent, storage::Backend};
 
 use bee_common_ext::node::{Node, ResHandle};
 use bee_message::{
@@ -27,9 +21,7 @@ use bee_message::{
 };
 use bee_protocol::tangle::MsTangle;
 
-use std::{
-    collections::{HashMap, HashSet},
-};
+use std::collections::{HashMap, HashSet};
 
 // const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
