@@ -9,9 +9,15 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-pub mod batch;
-pub mod delete;
-pub mod exist;
-pub mod fetch;
-pub mod insert;
-pub mod stream;
+use crate::storage::Backend;
+
+use futures::stream::Stream;
+
+#[async_trait::async_trait]
+pub trait AsStream<'a, K, V>: Backend {
+    type Stream: Stream;
+
+    async fn stream(&'a self) -> Result<Self::Stream, Self::Error>
+    where
+        Self: Sized;
+}
