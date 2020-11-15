@@ -11,9 +11,11 @@
 
 use crate::storage::Backend;
 
+use futures::stream::Stream;
+
 #[async_trait::async_trait]
-pub trait Stream<'a, K, V>: Backend {
-    type Stream: futures::stream::Stream;
+pub trait AsStream<'a, K, V>: Backend {
+    type Stream: Stream;
 
     async fn stream(&'a self) -> Result<Self::Stream, Self::Error>
     where

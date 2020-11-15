@@ -186,7 +186,7 @@ version = "0.1.0-alpha"
 [[package]]
 name = "bee-common"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#ca62b39d65b569d975296124c366accdc35ea40d"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#612fa2b9547c10f0c03a947d491db228af0fdabf"
 dependencies = [
  "chrono",
  "fern",
@@ -199,7 +199,7 @@ dependencies = [
 [[package]]
 name = "bee-common-derive"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#ca62b39d65b569d975296124c366accdc35ea40d"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#612fa2b9547c10f0c03a947d491db228af0fdabf"
 dependencies = [
  "quote",
  "syn",
@@ -224,7 +224,7 @@ dependencies = [
 [[package]]
 name = "bee-crypto"
 version = "0.2.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#ca62b39d65b569d975296124c366accdc35ea40d"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#612fa2b9547c10f0c03a947d491db228af0fdabf"
 dependencies = [
  "bee-ternary",
  "byteorder",
@@ -374,7 +374,7 @@ dependencies = [
 [[package]]
 name = "bee-signing"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#ca62b39d65b569d975296124c366accdc35ea40d"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#612fa2b9547c10f0c03a947d491db228af0fdabf"
 dependencies = [
  "bee-common-derive",
  "bee-crypto",
@@ -451,9 +451,10 @@ dependencies = [
 
 [[package]]
 name = "bee-ternary"
-version = "0.3.3-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=dev#ca62b39d65b569d975296124c366accdc35ea40d"
+version = "0.3.4-alpha"
+source = "git+https://github.com/iotaledger/bee.git?branch=dev#612fa2b9547c10f0c03a947d491db228af0fdabf"
 dependencies = [
+ "autocfg",
  "num-traits",
  "serde",
 ]
@@ -1920,7 +1921,7 @@ checksum = "0840c1c50fd55e521b247f949c241c9997709f23bd7f023b9762cd561e935656"
 dependencies = [
  "log",
  "mio",
- "miow 0.3.5",
+ "miow 0.3.6",
  "winapi 0.3.9",
 ]
 
@@ -1949,9 +1950,9 @@ dependencies = [
 
 [[package]]
 name = "miow"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07b88fb9795d4d36d62a012dfbf49a8f5cf12751f36d31a9dbe66d528e58979e"
+checksum = "5a33c1b55807fbed163481b5ba66db4b2fa6cde694a5027be10fb724206c5897"
 dependencies = [
  "socket2",
  "winapi 0.3.9",
@@ -2125,9 +2126,9 @@ dependencies = [
 
 [[package]]
 name = "parity-multiaddr"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22fe99b938abd57507e37f8d4ef30cd74b33c71face2809b37b8beb71bab15ab"
+checksum = "60d477bda9666bc37e5ac9e7e7ee3684f745ec33e6e86a5b48640e0407acda26"
 dependencies = [
  "arrayref",
  "bs58 0.4.0",
@@ -3205,9 +3206,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-segmentation"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
+checksum = "db8716a166f290ff49dabc18b44aa407cb7c6dbe1aa0971b44b8a24b0ca35aae"
 
 [[package]]
 name = "unicode-width"

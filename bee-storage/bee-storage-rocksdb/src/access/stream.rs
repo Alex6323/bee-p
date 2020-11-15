@@ -13,9 +13,12 @@ use crate::storage::*;
 
 use bee_common::packable::Packable;
 use bee_message::{Message, MessageId};
-use bee_storage::access::Stream;
+use bee_storage::access::AsStream;
 
-use futures::task::{Context, Poll};
+use futures::{
+    stream::Stream,
+    task::{Context, Poll},
+};
 use pin_project::pin_project;
 use rocksdb::{DBIterator, IteratorMode};
 
@@ -42,7 +45,7 @@ impl<'a, K, V> StorageStream<'a, K, V> {
 }
 
 #[async_trait::async_trait]
-impl<'a> Stream<'a, MessageId, Message> for Storage {
+impl<'a> AsStream<'a, MessageId, Message> for Storage {
     type Stream = StorageStream<'a, MessageId, Message>;
 
     async fn stream(&'a self) -> Result<Self::Stream, <Self as Backend>::Error>
@@ -58,7 +61,7 @@ impl<'a> Stream<'a, MessageId, Message> for Storage {
     }
 }
 
-impl<'a> futures::stream::Stream for StorageStream<'a, MessageId, Message> {
+impl<'a> Stream for StorageStream<'a, MessageId, Message> {
     type Item = (MessageId, Message);
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {

@@ -21,4 +21,4 @@ pub use delete::Delete;
 pub use exist::Exist;
 pub use fetch::Fetch;
 pub use insert::Insert;
-pub use stream::Stream;
+pub use stream::AsStream;
