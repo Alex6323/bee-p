@@ -13,7 +13,7 @@ use crate::milestone::{key_range::KeyRange, MilestoneIndex};
 
 use serde::Deserialize;
 
-const DEFAULT_MWM: u8 = 14;
+const DEFAULT_MINIMUM_POW_SCORE: f64 = 4000.0;
 const DEFAULT_COO_PUBLIC_KEY_COUNT: usize = 2;
 const DEFAULT_COO_PUBLIC_KEY_RANGES: [(&str, MilestoneIndex, MilestoneIndex); 2] = [
     (
@@ -47,7 +47,7 @@ struct ProtocolWorkersConfigBuilder {
 
 #[derive(Default, Deserialize)]
 pub struct ProtocolConfigBuilder {
-    mwm: Option<u8>,
+    minimum_pow_score: Option<f64>,
     coordinator: ProtocolCoordinatorConfigBuilder,
     workers: ProtocolWorkersConfigBuilder,
     handshake_window: Option<u64>,
@@ -58,8 +58,8 @@ impl ProtocolConfigBuilder {
         Self::default()
     }
 
-    pub fn mwm(mut self, mwm: u8) -> Self {
-        self.mwm.replace(mwm);
+    pub fn minimum_pow_score(mut self, minimum_pow_score: f64) -> Self {
+        self.minimum_pow_score.replace(minimum_pow_score);
         self
     }
 
@@ -90,7 +90,7 @@ impl ProtocolConfigBuilder {
 
     pub fn finish(self) -> ProtocolConfig {
         ProtocolConfig {
-            mwm: self.mwm.unwrap_or(DEFAULT_MWM),
+            minimum_pow_score: self.minimum_pow_score.unwrap_or(DEFAULT_MINIMUM_POW_SCORE),
             coordinator: ProtocolCoordinatorConfig {
                 public_key_count: self
                     .coordinator
@@ -131,7 +131,7 @@ pub struct ProtocolWorkersConfig {
 
 #[derive(Clone)]
 pub struct ProtocolConfig {
-    pub(crate) mwm: u8,
+    pub(crate) minimum_pow_score: f64,
     pub(crate) coordinator: ProtocolCoordinatorConfig,
     pub(crate) workers: ProtocolWorkersConfig,
     pub(crate) handshake_window: u64,
