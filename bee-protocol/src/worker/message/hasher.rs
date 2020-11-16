@@ -23,11 +23,15 @@ use bee_crypto::ternary::{
     sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
     HASH_LENGTH,
 };
-use bee_network::EndpointId;
+use bee_message::MESSAGE_ID_LENGTH;
+use bee_network::PeerId;
 use bee_ternary::{Btrit, T5B1Buf, TritBuf};
 
 use async_trait::async_trait;
-use blake2::{Blake2b, Digest};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use futures::{
     stream::{Fuse, Stream, StreamExt},
     task::{Context, Poll},
@@ -41,7 +45,7 @@ use std::{any::TypeId, pin::Pin};
 const BATCH_SIZE_THRESHOLD: usize = 3;
 
 pub(crate) struct HasherWorkerEvent {
-    pub(crate) from: EndpointId,
+    pub(crate) from: PeerId,
     pub(crate) message_packet: MessagePacket,
 }
 
@@ -118,7 +122,7 @@ pub(crate) struct BatchStream {
     cache: HashCache,
     hasher: BatchHasher<T5B1Buf>,
     events: Vec<HasherWorkerEvent>,
-    blake2b: Blake2b,
+    blake2b: VarBlake2b,
 }
 
 impl BatchStream {
@@ -132,7 +136,7 @@ impl BatchStream {
             cache: HashCache::new(cache_size),
             hasher: BatchHasher::new(HASH_LENGTH, CurlPRounds::Rounds81),
             events: Vec::with_capacity(BATCH_SIZE),
-            blake2b: Blake2b::default(),
+            blake2b: VarBlake2b::new(MESSAGE_ID_LENGTH).unwrap(),
         }
     }
 }
@@ -186,10 +190,10 @@ impl Stream for BatchStream {
                     // TODO const
                     // TODO check
                     blake2b.update(&event.message_packet.bytes[..event.message_packet.bytes.len() - 8]);
-                    let pow_digest = blake2b.finalize_reset();
-                    // TODO with_capacity is private atm
-                    let mut pow_input = TritBuf::new();
-                    b1t6::encode(&pow_digest).iter().for_each(|t| pow_input.push(t));
+                    let mut pow_input = TritBuf::with_capacity(243);
+                    blake2b.finalize_variable_reset(|pow_digest| {
+                        b1t6::encode(&pow_digest).iter().for_each(|t| pow_input.push(t))
+                    });
                     b1t6::encode(&event.message_packet.bytes[event.message_packet.bytes.len() - 8..])
                         .iter()
                         .for_each(|t| pow_input.push(t));

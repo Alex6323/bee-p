@@ -16,11 +16,10 @@ use crate::{
     worker::TangleWorker,
 };
 
-use bee_common::packable::Packable;
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
-use bee_network::EndpointId;
+use bee_network::PeerId;
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -29,7 +28,7 @@ use log::info;
 use std::any::TypeId;
 
 pub(crate) struct MessageResponderWorkerEvent {
-    pub(crate) epid: EndpointId,
+    pub(crate) peer_id: PeerId,
     pub(crate) request: MessageRequest,
 }
 
@@ -56,12 +55,12 @@ impl<N: Node> Worker<N> for MessageResponderWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            while let Some(MessageResponderWorkerEvent { epid, request }) = receiver.next().await {
+            while let Some(MessageResponderWorkerEvent { peer_id, request }) = receiver.next().await {
                 if let Some(message) = tangle.get(&MessageId::from(request.message_id)).await {
                     let mut bytes = Vec::new();
 
                     if message.pack(&mut bytes).is_ok() {
-                        Sender::<MessagePacket>::send(&epid, MessagePacket::new(&bytes));
+                        Sender::<MessagePacket>::send(&peer_id, MessagePacket::new(&bytes));
                     }
                 }
             }

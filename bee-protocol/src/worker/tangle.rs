@@ -13,6 +13,7 @@ use crate::{tangle::MsTangle, worker::storage::StorageWorker, MilestoneIndex};
 
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
+use bee_message::MessageId;
 use bee_snapshot::SnapshotHeader;
 
 use async_trait::async_trait;
@@ -54,6 +55,8 @@ impl<N: Node> Worker<N> for TangleWorker {
         //     // TODO no more indices ? What about TRSI ?
         //     tangle.add_solid_entry_point(*message_id, MilestoneIndex(0));
         // }
+
+        tangle.add_solid_entry_point(MessageId::null(), MilestoneIndex(0));
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             use futures::StreamExt;

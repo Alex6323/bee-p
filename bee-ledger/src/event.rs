@@ -9,10 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_protocol::Milestone;
+use bee_protocol::MilestoneIndex;
 
 pub struct MilestoneConfirmed {
-    pub milestone: Milestone,
+    pub index: MilestoneIndex,
     pub timestamp: u64,
     pub messages_referenced: usize,
     pub messages_excluded_no_transaction: usize,

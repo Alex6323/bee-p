@@ -13,7 +13,6 @@ use crate::{
     config::ProtocolConfig,
     event::{LatestMilestoneChanged, LatestSolidMilestoneChanged},
     milestone::{key_manager::KeyManager, Milestone, MilestoneIndex},
-    protocol::Protocol,
     tangle::MsTangle,
     worker::{
         MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent, MilestoneRequesterWorker,
@@ -21,9 +20,8 @@ use crate::{
     },
 };
 
-use bee_common::packable::Packable;
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_message::{payload::Payload, MessageId};
 
 use async_trait::async_trait;
@@ -42,8 +40,8 @@ pub(crate) enum Error {
     TooFewSignatures(usize, usize),
     SignaturesPublicKeysCountMismatch(usize, usize),
     InsufficientPublicKeysCount(usize, usize),
-    // TODO include PK
-    UnknownPublicKey,
+    /* TODO include PK
+     * UnknownPublicKey, */
 }
 
 pub(crate) struct MilestoneValidatorWorkerEvent(pub(crate) MessageId);
@@ -103,7 +101,7 @@ where
         let mut essence_bytes = Vec::with_capacity(milestone.essence().packed_len());
         milestone.essence().pack(&mut essence_bytes).unwrap();
 
-        for (index, public_key) in milestone.essence().public_keys().iter().enumerate() {
+        for (_index, _public_key) in milestone.essence().public_keys().iter().enumerate() {
             // if !public_keys.contains(public_key) {
             //     return Err(Error::UnknownPublicKey);
             // }
@@ -150,6 +148,8 @@ where
             config.coordinator.public_key_ranges.into_boxed_slice(),
         );
 
+        let bus = node.resource::<Bus>();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -169,9 +169,7 @@ where
                             // to check when a milestone gets solidified if it's
                             // already vadidated.
                             if meta.flags().is_solid() {
-                                Protocol::get()
-                                    .bus
-                                    .dispatch(LatestSolidMilestoneChanged(milestone.clone()));
+                                bus.dispatch(LatestSolidMilestoneChanged(milestone.clone()));
                                 if let Err(e) =
                                     milestone_cone_updater.send(MilestoneConeUpdaterWorkerEvent(milestone.clone()))
                                 {
@@ -180,7 +178,7 @@ where
                             }
 
                             if milestone.index > tangle.get_latest_milestone_index() {
-                                Protocol::get().bus.dispatch(LatestMilestoneChanged(milestone.clone()));
+                                bus.dispatch(LatestMilestoneChanged(milestone.clone()));
                             }
 
                             if requested_milestones.remove(&milestone.index).is_some() {

@@ -17,8 +17,8 @@
 //! terminals and connect those instances by specifying commandline arguments.
 //!
 //! ```bash
-//! cargo r --example pingpong -- --bind 127.0.0.1:1337 --peers tcp://127.0.0.1:1338 --msg ping
-//! cargo r --example pingpong -- --bind 127.0.0.1:1338 --peers tcp://127.0.0.1:1337 --msg pong
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1337 --peers /ip4/127.0.0.1/tcp/1338 --msg ping
+//! cargo r --example pingpong -- --bind /ip4/127.0.0.1/tcp/1338 --peers /ip4/127.0.0.1/tcp/1337 --msg pong
 //! ```
 
 #![allow(dead_code, unused_imports)]
@@ -28,7 +28,7 @@ mod common;
 use common::*;
 
 use bee_common_ext::shutdown_tokio::Shutdown;
-use bee_network::{Command::*, EndpointId, Event, EventReceiver, Network, NetworkConfig, Origin};
+use bee_network::{Command::*, Event, EventReceiver, Keypair, Multiaddr, Network, NetworkConfig, PeerId};
 
 use futures::{
     channel::oneshot,
@@ -45,26 +45,35 @@ use std::{
     time::Duration,
 };
 
-const RECONNECT_INTERVAL: u64 = 5; // 5 seconds
+const RECONNECT_MILLIS: u64 = 5000;
 
 #[tokio::main]
 async fn main() {
     let args = Args::from_args();
-    let config = args.config();
+    let config = args.into_config();
 
-    logger::init(log::LevelFilter::Debug);
+    logger::init(log::LevelFilter::Trace);
 
     let node = Node::builder(config).finish().await;
 
     let mut network = node.network.clone();
     let config = node.config.clone();
 
-    info!("[pingpong] Adding static peers...");
-    for url in &config.peers {
-        network.send(AddEndpoint { url: url.clone() }).await.unwrap();
+    info!("[EXAMPLE] Adding static peers...");
+
+    // for (peer_address, peer_id) in &config.peers {
+    for peer_address in &config.peers {
+        if let Err(e) = network
+            .send(ConnectUnknownPeer {
+                address: peer_address.clone(),
+            })
+            .await
+        {
+            warn!("Connecting to unknown peer failed. Error: {:?}", e);
+        }
     }
 
-    info!("[pingpong] ...finished.");
+    info!("[EXAMPLE] ...finished.");
 
     node.run().await;
 }
@@ -73,8 +82,8 @@ struct Node {
     config: Config,
     network: Network,
     events: flume::r#async::RecvStream<'static, Event>,
-    endpoints: HashSet<EndpointId>,
-    handshakes: HashMap<String, Vec<EndpointId>>,
+    peers: HashSet<PeerId>,
+    shutdown: Shutdown,
 }
 
 impl Node {
@@ -83,12 +92,11 @@ impl Node {
             config,
             mut network,
             mut events,
-            mut endpoints,
-            mut handshakes,
-            ..
+            mut peers,
+            shutdown,
         } = self;
 
-        info!("[pingpong] Node running.");
+        info!("[EXAMPLE] Node running.");
 
         let mut ctrl_c = ctrl_c_listener().fuse();
 
@@ -99,17 +107,20 @@ impl Node {
                 },
                 event = events.next() => {
                     if let Some(event) = event {
-                        info!("Received {}.", event);
+                        info!("Received {:?}.", event);
 
-                        process_event(event, &config.message, &mut network, &mut endpoints, &mut handshakes).await;
+                        process_event(event, &config.message, &mut network, &mut peers).await;
                     }
                 },
             }
         }
 
-        info!("[pingpong] Stopping node...");
+        info!("[EXAMPLE] Stopping node...");
+        if let Err(e) = shutdown.execute().await {
+            warn!("Sending shutdown signal failed. Error: {:?}", e);
+        }
 
-        info!("[pingpong] Shutdown complete.");
+        info!("[EXAMPLE] Shutdown complete.");
     }
 
     pub fn builder(config: Config) -> NodeBuilder {
@@ -118,91 +129,37 @@ impl Node {
 }
 
 #[inline]
-async fn process_event(
-    event: Event,
-    message: &str,
-    network: &mut Network,
-    endpoints: &mut HashSet<EndpointId>,
-    handshakes: &mut HashMap<String, Vec<EndpointId>>,
-) {
+async fn process_event(event: Event, message: &str, network: &mut Network, peers: &mut HashSet<PeerId>) {
     match event {
-        Event::EndpointAdded { epid } => {
-            info!("[pingpong] Added endpoint {}.", epid);
+        Event::PeerConnected { id, address, .. } => {
+            info!("[EXAMPLE] Connected peer '{}' with address '{}'.", id, address);
 
-            network
-                .send(ConnectEndpoint { epid })
-                .await
-                .expect("error sending Connect command");
-        }
-
-        Event::EndpointRemoved { epid, .. } => {
-            info!("[pingpong] Removed endpoint {}.", epid);
-        }
-
-        Event::EndpointConnected { epid, origin, .. } => {
-            info!("[pingpong] Connected endpoint {} ({}).", epid, origin);
-
-            let message = Utf8Message::new(message);
-
-            network
+            info!("[EXAMPLE] Sending message: \"{}\"", message);
+            if let Err(e) = network
                 .send(SendMessage {
-                    receiver_epid: epid,
-                    message: message.as_bytes(),
+                    message: Utf8Message::new(message).as_bytes(),
+                    to: id.clone(),
                 })
                 .await
-                .expect("error sending message to peer");
-        }
-
-        Event::MessageReceived { epid, message, .. } => {
-            if !endpoints.contains(&epid) {
-                // NOTE: first message is assumed to be the handshake message
-                let handshake = Utf8Message::from_bytes(&message);
-                info!("[pingpong] Received handshake '{}' ({})", handshake, epid);
-
-                let epids = handshakes.entry(handshake.to_string()).or_insert_with(Vec::new);
-                if !epids.contains(&epid) {
-                    epids.push(epid);
-                }
-
-                if epids.len() > 1 {
-                    info!(
-                        "[pingpong] '{0}' and '{1}' are duplicate connections. Dropping '{1}'...",
-                        epids[0], epids[1]
-                    );
-
-                    network
-                        .send(MarkDuplicate {
-                            duplicate_epid: epids[1],
-                            original_epid: epids[0],
-                        })
-                        .await
-                        .expect("error sending 'MarkDuplicate'");
-
-                    network
-                        .send(DisconnectEndpoint { epid: epids[1] })
-                        .await
-                        .expect("error sending 'DisconnectEndpoint' command");
-                }
-
-                endpoints.insert(epid);
-
-                spam_endpoint(network.clone(), epid);
-            } else {
-                let message = Utf8Message::from_bytes(&message);
-                info!("[pingpong] Received message '{}' ({})", message, epid);
+            {
+                warn!("Sending message to peer failed. Error: {:?}", e);
             }
+
+            spam_endpoint(network.clone(), id);
         }
 
-        Event::EndpointDisconnected { epid, .. } => {
-            info!("[pingpong] Disconnected endpoint {}.", epid);
-
-            endpoints.remove(&epid);
-
-            // TODO: remove epid from self.handshakes
-            // handshakes.remove(???);
+        Event::PeerDisconnected { id } => {
+            info!("[EXAMPLE] Disconnected peer {}.", id);
         }
 
-        _ => warn!("Unsupported event {}.", event),
+        Event::MessageReceived { message, from } => {
+            info!("[EXAMPLE] Received message from {} (length: {}).", from, message.len());
+
+            let message = Utf8Message::from_bytes(&message);
+            info!("[EXAMPLE] Received message \"{}\"", message);
+        }
+
+        _ => warn!("Unsupported event {:?}.", event),
     }
 }
 
@@ -218,8 +175,8 @@ fn ctrl_c_listener() -> oneshot::Receiver<()> {
     receiver
 }
 
-fn spam_endpoint(mut network: Network, epid: EndpointId) {
-    info!("[pingpong] Now sending spam messages to {}", epid);
+fn spam_endpoint(mut network: Network, peer_id: PeerId) {
+    info!("[EXAMPLE] Now sending spam messages to {}", peer_id);
 
     tokio::spawn(async move {
         for i in 0u64.. {
@@ -227,13 +184,15 @@ fn spam_endpoint(mut network: Network, epid: EndpointId) {
 
             let message = Utf8Message::new(&i.to_string());
 
-            network
+            if let Err(e) = network
                 .send(SendMessage {
-                    receiver_epid: epid,
                     message: message.as_bytes(),
+                    to: peer_id.clone(),
                 })
                 .await
-                .expect("error sending number");
+            {
+                warn!("Sending message to peer failed. Error: {:?}", e);
+            }
         }
     });
 }
@@ -244,24 +203,24 @@ struct NodeBuilder {
 
 impl NodeBuilder {
     pub async fn finish(self) -> Node {
-        let network_config = NetworkConfig::builder()
-            .binding_address(&self.config.binding_address.ip().to_string())
-            .binding_port(self.config.binding_address.port())
-            .reconnect_interval(RECONNECT_INTERVAL)
+        let network_config = NetworkConfig::build()
+            .bind_address(&self.config.bind_address.to_string())
+            .reconnect_millis(RECONNECT_MILLIS)
             .finish();
 
         let mut shutdown = Shutdown::new();
 
-        info!("[pingpong] Initializing network...");
-        let (network, events) = bee_network::init(network_config, &mut shutdown).await;
+        info!("[EXAMPLE] Initializing network...");
+        let local_keys = Keypair::generate();
+        let (network, events) = bee_network::init(network_config, local_keys, &mut shutdown).await;
 
-        info!("[pingpong] Node initialized.");
+        info!("[EXAMPLE] Node initialized.");
         Node {
             config: self.config,
             network,
             events: events.into_stream(),
-            handshakes: HashMap::new(),
-            endpoints: HashSet::new(),
+            peers: HashSet::new(),
+            shutdown,
         }
     }
 }

@@ -13,5 +13,5 @@ pub mod access;
 pub mod compaction;
 pub mod compression;
 pub mod config;
-pub mod persistable;
+pub mod error;
 pub mod storage;

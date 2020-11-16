@@ -9,52 +9,36 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-// TODO get peer info
+use crate::peer::Peer;
 
-use crate::peer::{HandshakedPeer, Peer};
-
-use bee_network::EndpointId;
+use bee_network::PeerId;
 
 use dashmap::DashMap;
 use tokio::sync::RwLock;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 pub(crate) struct PeerManager {
-    pub(crate) peers: DashMap<EndpointId, Arc<Peer>>,
-    pub(crate) handshaked_peers: DashMap<EndpointId, Arc<HandshakedPeer>>,
-    pub(crate) handshaked_peers_keys: RwLock<Vec<EndpointId>>,
+    pub(crate) peers: DashMap<PeerId, Arc<Peer>>,
+    pub(crate) peers_keys: RwLock<Vec<PeerId>>,
 }
 
 impl PeerManager {
     pub(crate) fn new() -> Self {
         Self {
             peers: Default::default(),
-            handshaked_peers: Default::default(),
-            handshaked_peers_keys: Default::default(),
+            peers_keys: Default::default(),
         }
     }
 
-    pub(crate) fn add(&self, peer: Arc<Peer>) {
-        self.peers.insert(peer.epid, peer);
+    pub(crate) async fn add(&self, peer: Arc<Peer>) {
+        self.peers_keys.write().await.push(peer.id.clone());
+        self.peers.insert(peer.id.clone(), peer);
     }
 
-    pub(crate) async fn handshake(&self, epid: &EndpointId, address: SocketAddr) {
-        if self.peers.remove(epid).is_some() {
-            // TODO check if not already added
-
-            let peer = Arc::new(HandshakedPeer::new(*epid, address));
-
-            self.handshaked_peers.insert(*epid, peer.clone());
-            self.handshaked_peers_keys.write().await.push(*epid);
-        }
-    }
-
-    pub(crate) async fn remove(&self, epid: &EndpointId) {
-        // TODO both ?
-        self.peers.remove(epid);
-
-        self.handshaked_peers_keys.write().await.retain(|e| e != epid);
+    pub(crate) async fn remove(&self, id: &PeerId) {
+        self.peers.remove(id);
+        self.peers_keys.write().await.retain(|peer_id| peer_id != id);
     }
 
     pub(crate) fn connected_peers(&self) -> u8 {

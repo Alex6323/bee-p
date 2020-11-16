@@ -9,23 +9,20 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{access::OpError, storage::*};
+use crate::storage::*;
 
 use bee_common::packable::Packable;
-use bee_ledger::{output::Output, spent::Spent};
+use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::Exist;
-
-use blake2::Blake2b;
 
 #[async_trait::async_trait]
 impl Exist<MessageId, Message> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, message_id: &MessageId) -> Result<bool, Self::Error>
+    async fn exist(&self, message_id: &MessageId) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -36,75 +33,85 @@ impl Exist<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Exist<MessageId, Vec<MessageId>> for Storage {
-    type Error = OpError;
+impl Exist<MessageId, MessageMetadata> for Storage {
+    async fn exist(&self, message_id: &MessageId) -> Result<bool, <Self as Backend>::Error>
+    where
+        Self: Sized,
+    {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
 
-    async fn exist(&self, parent: &MessageId) -> Result<bool, Self::Error>
+        Ok(self.inner.get_cf(&cf_message_id_to_metadata, message_id)?.is_some())
+    }
+}
+
+#[async_trait::async_trait]
+impl Exist<(MessageId, MessageId), ()> for Storage {
+    async fn exist(&self, (parent, child): &(MessageId, MessageId)) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
-        let mut iterator = self.inner.prefix_iterator_cf(&cf_message_id_to_message_id, parent);
-        let exist = iterator.next().is_some();
+        let mut key = parent.as_ref().to_vec();
+        key.extend_from_slice(child.as_ref());
 
-        match iterator.status() {
-            Ok(_) => Ok(exist),
-            Err(e) => Err(e)?,
-        }
+        Ok(self.inner.get_cf(&cf_message_id_to_message_id, key)?.is_some())
     }
 }
 
 #[async_trait::async_trait]
-impl Exist<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, index: &HashedIndex<Blake2b>) -> Result<bool, Self::Error>
+impl Exist<(HashedIndex, MessageId), ()> for Storage {
+    async fn exist(&self, (index, message_id): &(HashedIndex, MessageId)) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
-        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut iterator = self.inner.prefix_iterator_cf(&cf_payload_index_to_message_id, index);
-        let exist = iterator.next().is_some();
+        let mut key = index.as_ref().to_vec();
+        key.extend_from_slice(message_id.as_ref());
 
-        match iterator.status() {
-            Ok(_) => Ok(exist),
-            Err(e) => Err(e)?,
-        }
+        Ok(self.inner.get_cf(&cf_index_to_message_id, key)?.is_some())
     }
 }
 
 #[async_trait::async_trait]
 impl Exist<OutputId, Output> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, output_id: &OutputId) -> Result<bool, Self::Error>
+    async fn exist(&self, output_id: &OutputId) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        Ok(self.inner.get_cf(&cf_output_id_to_output, output_id_buf)?.is_some())
+        Ok(self
+            .inner
+            .get_cf(&cf_output_id_to_output, output_id.pack_new())?
+            .is_some())
     }
 }
 
 #[async_trait::async_trait]
 impl Exist<OutputId, Spent> for Storage {
-    type Error = OpError;
-
-    async fn exist(&self, output_id: &OutputId) -> Result<bool, Self::Error>
+    async fn exist(&self, output_id: &OutputId) -> Result<bool, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
+        Ok(self
+            .inner
+            .get_cf(&cf_output_id_to_spent, output_id.pack_new())?
+            .is_some())
+    }
+}
 
-        Ok(self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)?.is_some())
+#[async_trait::async_trait]
+impl Exist<Unspent, ()> for Storage {
+    async fn exist(&self, unspent: &Unspent) -> Result<bool, <Self as Backend>::Error>
+    where
+        Self: Sized,
+    {
+        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        Ok(self.inner.get_cf(&cf_output_id_unspent, unspent.pack_new())?.is_some())
     }
 }

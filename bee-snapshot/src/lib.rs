@@ -31,13 +31,13 @@ pub use error::Error;
 pub use header::SnapshotHeader;
 pub use snapshot::LocalSnapshot;
 
-use bee_common_ext::{event::Bus, node::Node};
+use bee_common_ext::node::Node;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
 
 use chrono::{offset::TimeZone, Utc};
 use log::info;
 
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 // TODO change return type
 
@@ -68,10 +68,10 @@ pub async fn init<N: Node>(
     Ok((node_builder, snapshot))
 }
 
-pub fn events<N: Node>(_node: &N, _bus: Arc<Bus<'static>>) {
+pub fn events<N: Node>(_node: &N) {
     // let snapshot_worker = node.worker::<worker::SnapshotWorker>().unwrap().tx.clone();
     //
-    // bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+    // node.resource::<Bus>().add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
     //     if let Err(e) = snapshot_worker.send(worker::SnapshotWorkerEvent(latest_solid_milestone.0.clone())) {
     //         warn!(
     //             "Failed to send milestone {} to snapshot worker: {:?}.",

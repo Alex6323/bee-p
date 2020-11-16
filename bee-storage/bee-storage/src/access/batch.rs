@@ -12,31 +12,18 @@
 use crate::storage::Backend;
 
 #[async_trait::async_trait]
-pub trait BatchBuilder<'a, S: Backend, K, V>: Sized {
-    type Error: std::fmt::Debug;
+pub trait BatchBuilder: Backend + Sized {
+    type Batch: Default + Send + Sized;
 
-    fn try_insert(&mut self, key: &K, value: &V) -> Result<(), Self::Error>;
-
-    fn try_delete(&mut self, key: &K) -> Result<(), Self::Error>;
-
-    fn insert(&mut self, key: &K, value: &V) {
-        self.try_insert(key, value).unwrap()
+    fn batch_begin() -> Self::Batch {
+        Self::Batch::default()
     }
 
-    fn delete(&mut self, key: &K) {
-        self.try_delete(key).unwrap()
-    }
+    async fn batch_commit(&self, batch: Self::Batch, durability: bool) -> Result<(), Self::Error>;
 }
 
-pub trait BeginBatch<'a>: Backend + Sized {
-    type BatchBuilder;
+pub trait Batch<K, V>: Backend + BatchBuilder + Sized {
+    fn batch_insert(&self, batch: &mut Self::Batch, key: &K, value: &V) -> Result<(), Self::Error>;
 
-    fn begin_batch(&'a self) -> Self::BatchBuilder;
-}
-
-#[async_trait::async_trait]
-pub trait CommitBatch {
-    type Error;
-
-    async fn commit_batch(self, durability: bool) -> Result<(), Self::Error>;
+    fn batch_delete(&self, batch: &mut Self::Batch, key: &K) -> Result<(), Self::Error>;
 }

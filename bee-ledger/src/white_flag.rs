@@ -9,30 +9,33 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::metadata::WhiteFlagMetadata;
+use crate::{error::Error, metadata::WhiteFlagMetadata, output::Output, spent::Spent, storage::Backend};
 
-use bee_common_ext::node::ResHandle;
-use bee_message::{payload::Payload, Message, MessageId};
+use bee_common_ext::node::{Node, ResHandle};
+use bee_message::{
+    payload::{
+        transaction::{Input, OutputId},
+        Payload,
+    },
+    Message, MessageId,
+};
 use bee_protocol::tangle::MsTangle;
-use bee_storage::storage::Backend;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
-
-#[derive(Debug)]
-pub(crate) enum Error {
-    MissingMessage,
-}
+// const IOTA_SUPPLY: u64 = 2_779_530_283_277_761;
 
 #[inline]
-fn on_message<B: Backend>(
-    tangle: &MsTangle<B>,
-    storage: &ResHandle<B>,
+async fn on_message<N: Node>(
+    tangle: &MsTangle<N::Backend>,
+    _storage: &ResHandle<N::Backend>,
     message_id: &MessageId,
     message: &Message,
     metadata: &mut WhiteFlagMetadata,
-) {
+) -> Result<(), Error>
+where
+    N::Backend: Backend,
+{
     let mut conflicting = false;
 
     metadata.num_messages_referenced += 1;
@@ -40,12 +43,63 @@ fn on_message<B: Backend>(
     if let Some(Payload::Transaction(transaction)) = message.payload() {
         let transaction_id = transaction.id();
         let essence = transaction.essence();
-        let inputs = essence.inputs();
-        let outputs = essence.outputs();
 
-        for input in inputs {}
+        let mut outputs = HashMap::with_capacity(essence.inputs().len());
 
-        for output in outputs {}
+        // TODO check transaction syntax here ?
+
+        for input in essence.inputs() {
+            if let Input::UTXO(utxo_input) = input {
+                let output_id = utxo_input.output_id();
+
+                if metadata.spent_outputs.contains_key(output_id) {
+                    conflicting = true;
+                    break;
+                }
+
+                if let Some(output) = metadata.created_outputs.get(output_id).cloned() {
+                    outputs.insert(output_id, output);
+                    continue;
+                }
+
+            // if let Some(output) = Fetch::<OutputId, Output>::fetch(storage.deref(), output_id)
+            //     .await
+            //     .map_err(|e| Error::Storage(Box::new(e)))?
+            // {
+            //     if !storage::is_output_unspent(storage.deref(), output_id).await? {
+            //         conflicting = true;
+            //         break;
+            //     }
+            //     outputs.insert(output_id, output);
+            // } else {
+            //     return Err(Error::OutputNotFound(*output_id));
+            // }
+            } else {
+                return Err(Error::UnsupportedInputType);
+            };
+        }
+
+        // TODO semantic validation
+
+        if conflicting {
+            metadata.num_messages_excluded_conflicting += 1;
+        } else {
+            for (index, output) in essence.outputs().iter().enumerate() {
+                // Can't fail because we know the index is valid.
+                let output_id = OutputId::new(transaction_id, index as u16).unwrap();
+                metadata
+                    .created_outputs
+                    .insert(output_id, Output::new(*message_id, output.clone()));
+            }
+            for (output_id, _) in outputs {
+                metadata.created_outputs.remove(output_id);
+                metadata
+                    .spent_outputs
+                    .insert(*output_id, Spent::new(transaction_id, metadata.index));
+            }
+            metadata.messages_included.push(*message_id);
+            // metadata.spent_outputs.extend(spent_outputs.into_iter());
+        }
     } else {
         metadata.num_messages_excluded_no_transaction += 1;
     }
@@ -53,16 +107,22 @@ fn on_message<B: Backend>(
     tangle.update_metadata(message_id, |message_metadata| {
         message_metadata.flags_mut().set_conflicting(conflicting);
         message_metadata.set_milestone_index(metadata.index);
+        // TODO pass actual ms timestamp
         message_metadata.confirm();
     });
+
+    Ok(())
 }
 
-pub(crate) async fn visit_dfs<B: Backend>(
-    tangle: &MsTangle<B>,
-    storage: &ResHandle<B>,
+pub(crate) async fn visit_dfs<N: Node>(
+    tangle: &MsTangle<N::Backend>,
+    storage: &ResHandle<N::Backend>,
     root: MessageId,
     metadata: &mut WhiteFlagMetadata,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    N::Backend: Backend,
+{
     let mut messages_ids = vec![root];
     let mut visited = HashSet::new();
 
@@ -73,7 +133,7 @@ pub(crate) async fn visit_dfs<B: Backend>(
             Some(meta) => meta,
             None => {
                 if !tangle.is_solid_entry_point(message_id) {
-                    return Err(Error::MissingMessage);
+                    return Err(Error::MissingMessage(*message_id));
                 } else {
                     visited.insert(*message_id);
                     messages_ids.pop();
@@ -94,8 +154,7 @@ pub(crate) async fn visit_dfs<B: Backend>(
                 let parent2 = message.parent2();
 
                 if visited.contains(parent1) && visited.contains(parent2) {
-                    // TODO check valid and strict semantic
-                    on_message(tangle, storage, message_id, &message, metadata);
+                    on_message::<N>(tangle, storage, message_id, &message, metadata).await?;
                     visited.insert(*message_id);
                     messages_ids.pop();
                 } else if !visited.contains(parent1) {
@@ -106,7 +165,7 @@ pub(crate) async fn visit_dfs<B: Backend>(
             }
             None => {
                 if !tangle.is_solid_entry_point(message_id) {
-                    return Err(Error::MissingMessage);
+                    return Err(Error::MissingMessage(*message_id));
                 } else {
                     visited.insert(*message_id);
                     messages_ids.pop();

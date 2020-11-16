@@ -20,8 +20,8 @@ use crate::{
         BroadcasterWorker, HasherWorker, HeartbeaterWorker, KickstartWorker, MessageRequesterWorker,
         MessageResponderWorker, MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker,
         MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        MpsWorker, PeerHandshakerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones, StatusWorker,
-        StorageWorker, TangleWorker, TipPoolCleanerWorker,
+        MpsWorker, PeerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones, StatusWorker, StorageWorker,
+        TangleWorker, TipPoolCleanerWorker,
     },
 };
 
@@ -29,7 +29,7 @@ use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder},
 };
-use bee_network::{EndpointId, Network, Origin};
+use bee_network::{Multiaddr, Network, PeerId};
 use bee_snapshot::LocalSnapshot;
 use bee_storage::storage::Backend;
 
@@ -37,13 +37,12 @@ use futures::channel::oneshot;
 use log::{debug, error, info};
 use tokio::task::spawn;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 
 pub struct Protocol {
     pub(crate) network: Network,
-    pub(crate) bus: Arc<Bus<'static>>,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
 }
@@ -55,11 +54,9 @@ impl Protocol {
         network: Network,
         snapshot: &LocalSnapshot,
         node_builder: N::Builder,
-        bus: Arc<Bus<'static>>,
     ) -> N::Builder {
         let protocol = Protocol {
             network: network.clone(),
-            bus,
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),
         };
@@ -90,24 +87,27 @@ impl Protocol {
             .with_worker::<HeartbeaterWorker>()
     }
 
-    pub fn events<N: Node>(node: &N, config: ProtocolConfig, bus: Arc<Bus<'static>>) {
-        let tangle = node.resource::<MsTangle<N::Backend>>();
+    pub fn events<N: Node>(node: &N, config: ProtocolConfig) {
+        let tangle = node.resource::<MsTangle<N::Backend>>().into_weak();
 
-        bus.add_listener(move |latest_milestone: &LatestMilestoneChanged| {
-            info!(
-                "New milestone {} {}.",
-                *latest_milestone.0.index, latest_milestone.0.message_id
-            );
-            tangle.update_latest_milestone_index(latest_milestone.0.index);
+        node.resource::<Bus>()
+            .add_listener::<(), _, _>(move |latest_milestone: &LatestMilestoneChanged| {
+                info!(
+                    "New milestone {} {}.",
+                    *latest_milestone.0.index, latest_milestone.0.message_id
+                );
+                tangle.upgrade().map(|tangle| {
+                    tangle.update_latest_milestone_index(latest_milestone.0.index);
 
-            Protocol::broadcast_heartbeat(
-                tangle.get_latest_solid_milestone_index(),
-                tangle.get_pruning_index(),
-                latest_milestone.0.index,
-            );
-        });
+                    Protocol::broadcast_heartbeat(
+                        tangle.get_latest_solid_milestone_index(),
+                        tangle.get_pruning_index(),
+                        latest_milestone.0.index,
+                    );
+                });
+            });
 
-        // bus.add_listener(|latest_solid_milestone: &LatestSolidMilestoneChanged| {
+        // node.resource::<Bus>().add_listener(|latest_solid_milestone: &LatestSolidMilestoneChanged| {
         //     // TODO block_on ?
         //     // TODO uncomment on Chrysalis Pt1.
         //     block_on(Protocol::broadcast_heartbeat(
@@ -119,66 +119,72 @@ impl Protocol {
         let milestone_solidifier = node.worker::<MilestoneSolidifierWorker>().unwrap().tx.clone();
         let milestone_requester = node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone();
 
-        let tangle = node.resource::<MsTangle<N::Backend>>();
+        let tangle = node.resource::<MsTangle<N::Backend>>().into_weak();
         let requested_milestones = node.resource::<RequestedMilestones>();
 
-        bus.add_listener(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
-            debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
-            tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
+        node.resource::<Bus>()
+            .add_listener::<(), _, _>(move |latest_solid_milestone: &LatestSolidMilestoneChanged| {
+                tangle.upgrade().map(|tangle| {
+                    debug!("New solid milestone {}.", *latest_solid_milestone.0.index);
+                    tangle.update_latest_solid_milestone_index(latest_solid_milestone.0.index);
 
-            let ms_sync_count = config.workers.ms_sync_count;
-            let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
+                    let ms_sync_count = config.workers.ms_sync_count;
+                    let next_ms = latest_solid_milestone.0.index + MilestoneIndex(ms_sync_count);
 
-            if tangle.contains_milestone(next_ms) {
-                if let Err(e) = milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms)) {
-                    error!("Sending solidification event failed: {}", e);
-                }
-            } else {
-                Protocol::request_milestone(&tangle, &milestone_requester, &*requested_milestones, next_ms, None);
-            }
+                    if tangle.contains_milestone(next_ms) {
+                        if let Err(e) = milestone_solidifier.send(MilestoneSolidifierWorkerEvent(next_ms)) {
+                            error!("Sending solidification event failed: {}", e);
+                        }
+                    } else {
+                        Protocol::request_milestone(
+                            &tangle,
+                            &milestone_requester,
+                            &*requested_milestones,
+                            next_ms,
+                            None,
+                        );
+                    }
 
-            Protocol::broadcast_heartbeat(
-                latest_solid_milestone.0.index,
-                tangle.get_pruning_index(),
-                tangle.get_latest_milestone_index(),
-            );
-        });
+                    Protocol::broadcast_heartbeat(
+                        latest_solid_milestone.0.index,
+                        tangle.get_pruning_index(),
+                        tangle.get_latest_milestone_index(),
+                    );
+                });
+            });
     }
 
     pub(crate) fn get() -> &'static Protocol {
         *PROTOCOL.read().as_ref().expect("Uninitialized protocol.")
     }
 
-    pub fn register<N: Node>(
+    pub async fn register<N: Node>(
         node: &N,
-        config: &ProtocolConfig,
-        epid: EndpointId,
-        address: SocketAddr,
-        origin: Origin,
+        _config: &ProtocolConfig,
+        id: PeerId,
+        address: Multiaddr,
     ) -> (flume::Sender<Vec<u8>>, oneshot::Sender<()>) {
         // TODO check if not already added ?
 
-        let peer = Arc::new(Peer::new(epid, address, origin));
+        let peer = Arc::new(Peer::new(id, address));
 
         let (receiver_tx, receiver_rx) = flume::unbounded();
         let (receiver_shutdown_tx, receiver_shutdown_rx) = oneshot::channel();
 
-        Protocol::get().peer_manager.add(peer.clone());
+        Protocol::get().peer_manager.add(peer.clone()).await;
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
         let requested_milestones = node.resource::<RequestedMilestones>();
 
         spawn(
-            PeerHandshakerWorker::new(
-                Protocol::get().network.clone(),
-                config.clone(),
+            PeerWorker::new(
                 peer,
                 node.worker::<HasherWorker>().unwrap().tx.clone(),
                 node.worker::<MessageResponderWorker>().unwrap().tx.clone(),
                 node.worker::<MilestoneResponderWorker>().unwrap().tx.clone(),
                 node.worker::<MilestoneRequesterWorker>().unwrap().tx.clone(),
             )
-            .run(tangle, requested_milestones, receiver_rx, receiver_shutdown_rx),
+            .run(tangle.clone(), requested_milestones, receiver_rx, receiver_shutdown_rx),
         );
 
         (receiver_tx, receiver_shutdown_tx)

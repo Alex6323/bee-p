@@ -35,7 +35,7 @@ pub(crate) use message_validator::{MessageValidatorWorker, MessageValidatorWorke
 pub(crate) use milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};
 pub(crate) use mps::MpsWorker;
-pub(crate) use peer::{PeerHandshakerWorker, PeerWorker};
+pub(crate) use peer::PeerWorker;
 pub(crate) use propagator::{PropagatorWorker, PropagatorWorkerEvent};
 pub(crate) use requester::{
     MessageRequesterWorker, MessageRequesterWorkerEvent, MilestoneRequesterWorker, MilestoneRequesterWorkerEvent,

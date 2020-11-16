@@ -14,36 +14,4 @@ pub mod delete;
 pub mod exist;
 pub mod fetch;
 pub mod insert;
-
-use bee_storage::access::Error;
-
-#[derive(Debug)]
-pub struct OpError {
-    is_retryable: bool,
-    is_still_valid: bool,
-    error_msg: Option<String>,
-}
-
-impl Error for OpError {
-    fn is_retryable(&self) -> bool {
-        self.is_retryable
-    }
-
-    fn is_still_valid(&self) -> bool {
-        self.is_still_valid
-    }
-
-    fn error_msg(&self) -> Option<String> {
-        self.error_msg.clone()
-    }
-}
-
-impl From<::rocksdb::Error> for OpError {
-    fn from(err: rocksdb::Error) -> Self {
-        Self {
-            is_retryable: false,
-            is_still_valid: false,
-            error_msg: Some(err.into_string()),
-        }
-    }
-}
+pub mod stream;

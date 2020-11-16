@@ -30,5 +30,8 @@ bee-node/snapshots/mainnet/*
 bee-node/snapshots/testnet/*
 !bee-node/snapshots/testnet/.gitkeep
 
+# bee-storage
+bee-storage/bee-storage-rocksdb/database
+
 # bee-test
 bee-test/dbfolder/*

@@ -17,6 +17,10 @@ use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
 
+pub const MILESTONE_MERKLE_PROOF_LENGTH: usize = 64;
+pub const MILESTONE_PUBLIC_KEY_LENGTH: usize = 32;
+pub const MILESTONE_SIGNATURE_LENGTH: usize = 64;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Milestone {
     essence: MilestoneEssence,
@@ -42,7 +46,7 @@ impl Packable for Milestone {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        self.essence.packed_len() + 64 * self.signatures.len()
+        self.essence.packed_len() + 0u8.packed_len() + self.signatures.len() * MILESTONE_SIGNATURE_LENGTH
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
@@ -65,7 +69,7 @@ impl Packable for Milestone {
         let signatures_len = u8::unpack(reader)? as usize;
         let mut signatures = Vec::with_capacity(signatures_len);
         for _ in 0..signatures_len {
-            let mut signature = vec![0u8; 64];
+            let mut signature = vec![0u8; MILESTONE_SIGNATURE_LENGTH];
             reader.read_exact(&mut signature)?;
             signatures.push(signature.into_boxed_slice());
         }
@@ -82,7 +86,7 @@ pub struct MilestoneEssence {
     parent2: MessageId,
     // TODO length is 64, change to array when std::array::LengthAtMost32 disappears.
     merkle_proof: Box<[u8]>,
-    public_keys: Vec<[u8; 32]>,
+    public_keys: Vec<[u8; MILESTONE_PUBLIC_KEY_LENGTH]>,
 }
 
 impl MilestoneEssence {
@@ -92,7 +96,7 @@ impl MilestoneEssence {
         parent1: MessageId,
         parent2: MessageId,
         merkle_proof: Box<[u8]>,
-        public_keys: Vec<[u8; 32]>,
+        public_keys: Vec<[u8; MILESTONE_PUBLIC_KEY_LENGTH]>,
     ) -> Self {
         Self {
             index,
@@ -124,7 +128,7 @@ impl MilestoneEssence {
         &self.merkle_proof
     }
 
-    pub fn public_keys(&self) -> &Vec<[u8; 32]> {
+    pub fn public_keys(&self) -> &Vec<[u8; MILESTONE_PUBLIC_KEY_LENGTH]> {
         &self.public_keys
     }
 }
@@ -137,8 +141,9 @@ impl Packable for MilestoneEssence {
             + self.timestamp.packed_len()
             + self.parent1.packed_len()
             + self.parent2.packed_len()
-            + 32
-            + 32 * self.public_keys.len()
+            + MILESTONE_MERKLE_PROOF_LENGTH
+            + 0u8.packed_len()
+            + self.public_keys.len() * MILESTONE_PUBLIC_KEY_LENGTH
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
@@ -171,13 +176,13 @@ impl Packable for MilestoneEssence {
         let parent1 = MessageId::unpack(reader)?;
         let parent2 = MessageId::unpack(reader)?;
 
-        let mut merkle_proof = [0u8; 64];
+        let mut merkle_proof = [0u8; MILESTONE_MERKLE_PROOF_LENGTH];
         reader.read_exact(&mut merkle_proof)?;
 
         let public_keys_len = u8::unpack(reader)? as usize;
         let mut public_keys = Vec::with_capacity(public_keys_len);
         for _ in 0..public_keys_len {
-            let mut public_key = [0u8; 32];
+            let mut public_key = [0u8; MILESTONE_PUBLIC_KEY_LENGTH];
             reader.read_exact(&mut public_key)?;
             public_keys.push(public_key);
         }

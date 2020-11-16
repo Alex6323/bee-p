@@ -9,8 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_message::MessageId;
+use crate::{output::Output, spent::Spent};
+
+use bee_message::{payload::transaction::OutputId, MessageId};
 use bee_protocol::MilestoneIndex;
+
+use std::collections::HashMap;
 
 /// White flag metadata of a milestone confirmation.
 #[derive(Default)]
@@ -28,6 +32,8 @@ pub(crate) struct WhiteFlagMetadata {
     pub(crate) num_messages_excluded_conflicting: usize,
     // The messages which mutate the ledger in the order in which they were applied.
     pub(crate) messages_included: Vec<MessageId>,
+    pub(crate) spent_outputs: HashMap<OutputId, Spent>,
+    pub(crate) created_outputs: HashMap<OutputId, Output>,
 }
 
 impl WhiteFlagMetadata {

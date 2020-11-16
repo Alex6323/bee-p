@@ -13,13 +13,17 @@ use crate::{payload::Payload, Error, MessageId, Vertex, MESSAGE_ID_LENGTH};
 
 use bee_common::packable::{Packable, Read, Write};
 
-use blake2::{Blake2b, Digest};
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use serde::{Deserialize, Serialize};
 
-use core::convert::TryInto;
+const MESSAGE_VERSION: u8 = 1;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
+    network_id: u64,
     parent1: MessageId,
     parent2: MessageId,
     payload: Option<Payload>,
@@ -32,15 +36,18 @@ impl Message {
     }
 
     pub fn id(&self) -> MessageId {
-        let mut bytes = Vec::with_capacity(self.packed_len());
-        let mut hasher = Blake2b::new();
+        let mut hasher = VarBlake2b::new(MESSAGE_ID_LENGTH).unwrap();
 
-        // Packing to bytes can't fail.
-        self.pack(&mut bytes).unwrap();
-        hasher.update(&bytes);
+        hasher.update(self.pack_new());
 
-        // We know for sure the bytes have the right size.
-        MessageId::new(hasher.finalize()[0..MESSAGE_ID_LENGTH].try_into().unwrap())
+        let mut bytes = [0u8; MESSAGE_ID_LENGTH];
+        hasher.finalize_variable(|res| bytes.copy_from_slice(res));
+
+        MessageId::new(bytes)
+    }
+
+    pub fn network_id(&self) -> u64 {
+        self.network_id
     }
 
     pub fn parent1(&self) -> &MessageId {
@@ -64,7 +71,8 @@ impl Packable for Message {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        1u8.packed_len()
+        MESSAGE_VERSION.packed_len()
+            + self.network_id.packed_len()
             + self.parent1.packed_len()
             + self.parent2.packed_len()
             + 0u32.packed_len()
@@ -77,7 +85,9 @@ impl Packable for Message {
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        1u8.pack(writer)?;
+        MESSAGE_VERSION.pack(writer)?;
+
+        self.network_id.pack(writer)?;
 
         self.parent1.pack(writer)?;
         self.parent2.pack(writer)?;
@@ -100,9 +110,11 @@ impl Packable for Message {
     {
         let version = u8::unpack(reader)?;
 
-        if version != 1u8 {
-            return Err(Self::Error::InvalidVersion(1, version));
+        if version != MESSAGE_VERSION {
+            return Err(Self::Error::InvalidVersion(MESSAGE_VERSION, version));
         }
+
+        let network_id = u64::unpack(reader)?;
 
         let parent1 = MessageId::unpack(reader)?;
         let parent2 = MessageId::unpack(reader)?;
@@ -121,6 +133,7 @@ impl Packable for Message {
         let nonce = u64::unpack(reader)?;
 
         Ok(Self {
+            network_id,
             parent1,
             parent2,
             payload,
@@ -144,14 +157,21 @@ impl Vertex for Message {
 // TODO generic over PoW provider
 #[derive(Default)]
 pub struct MessageBuilder {
+    network_id: Option<u64>,
     parent1: Option<MessageId>,
     parent2: Option<MessageId>,
     payload: Option<Payload>,
+    nonce: Option<u64>,
 }
 
 impl MessageBuilder {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    pub fn with_network_id(mut self, network_id: u64) -> Self {
+        self.network_id = Some(network_id);
+        self
     }
 
     pub fn with_parent1(mut self, parent1: MessageId) -> Self {
@@ -169,12 +189,18 @@ impl MessageBuilder {
         self
     }
 
+    pub fn with_nonce(mut self, nonce: u64) -> Self {
+        self.nonce = Some(nonce);
+        self
+    }
+
     pub fn finish(self) -> Result<Message, Error> {
         Ok(Message {
+            network_id: self.network_id.ok_or(Error::MissingField("network_id"))?,
             parent1: self.parent1.ok_or(Error::MissingField("parent1"))?,
             parent2: self.parent2.ok_or(Error::MissingField("parent2"))?,
             payload: self.payload,
-            nonce: 0,
+            nonce: self.nonce.unwrap_or(0),
         })
     }
 }

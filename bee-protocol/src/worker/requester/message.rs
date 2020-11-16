@@ -66,33 +66,33 @@ async fn process_request(
 
 /// Return `true` if the message was requested.
 async fn process_request_unchecked(message_id: MessageId, index: MilestoneIndex, counter: &mut usize) -> bool {
-    if Protocol::get().peer_manager.handshaked_peers.is_empty() {
+    if Protocol::get().peer_manager.peers.is_empty() {
         return false;
     }
 
-    let guard = Protocol::get().peer_manager.handshaked_peers_keys.read().await;
+    let guard = Protocol::get().peer_manager.peers_keys.read().await;
 
     for _ in 0..guard.len() {
-        let epid = &guard[*counter % guard.len()];
+        let peer_id = &guard[*counter % guard.len()];
 
         *counter += 1;
 
-        if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+        if let Some(peer) = Protocol::get().peer_manager.peers.get(peer_id) {
             if peer.has_data(index) {
-                Sender::<MessageRequest>::send(epid, MessageRequest::new(message_id.as_ref()));
+                Sender::<MessageRequest>::send(peer_id, MessageRequest::new(message_id.as_ref()));
                 return true;
             }
         }
     }
 
     for _ in 0..guard.len() {
-        let epid = &guard[*counter % guard.len()];
+        let peer_id = &guard[*counter % guard.len()];
 
         *counter += 1;
 
-        if let Some(peer) = Protocol::get().peer_manager.handshaked_peers.get(epid) {
+        if let Some(peer) = Protocol::get().peer_manager.peers.get(peer_id) {
             if peer.maybe_has_data(index) {
-                Sender::<MessageRequest>::send(epid, MessageRequest::new(message_id.as_ref()));
+                Sender::<MessageRequest>::send(peer_id, MessageRequest::new(message_id.as_ref()));
                 return true;
             }
         }

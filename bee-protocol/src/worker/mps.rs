@@ -12,7 +12,7 @@
 use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 
 use async_trait::async_trait;
 use futures::StreamExt;
@@ -32,6 +32,8 @@ impl<N: Node> Worker<N> for MpsWorker {
     type Error = WorkerError;
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
+        let bus = node.resource::<Bus>();
+
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
@@ -50,7 +52,7 @@ impl<N: Node> Worker<N> for MpsWorker {
                 let invalid = Protocol::get().metrics.invalid_messages();
                 let outgoing = Protocol::get().metrics.messages_sent();
 
-                Protocol::get().bus.dispatch(TpsMetricsUpdated {
+                bus.dispatch(TpsMetricsUpdated {
                     incoming: incoming - total_incoming,
                     new: new - total_new,
                     known: known - total_known,

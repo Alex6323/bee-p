@@ -9,25 +9,30 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::config::*;
+use super::{
+    config::{RocksDBConfig, RocksDBConfigBuilder, StorageConfig},
+    error::OpError,
+};
 
 pub use bee_storage::storage::Backend;
 
-use bee_message::MESSAGE_ID_LENGTH;
+use bee_message::{payload::indexation::HASHED_INDEX_SIZE, MESSAGE_ID_LENGTH};
 
 use async_trait::async_trait;
-use blake2::{Blake2b, Digest};
 use rocksdb::{ColumnFamilyDescriptor, DBCompactionStyle, DBCompressionType, Options, SliceTransform, DB};
 
 use std::error::Error;
 
 pub(crate) const CF_MESSAGE_ID_TO_MESSAGE: &str = "message_id_to_message";
+pub(crate) const CF_MESSAGE_ID_TO_METADATA: &str = "message_id_to_metadata";
 pub(crate) const CF_MESSAGE_ID_TO_MESSAGE_ID: &str = "message_id_to_message_id";
-pub(crate) const CF_PAYLOAD_INDEX_TO_MESSAGE_ID: &str = "payload_index_to_message_id";
+pub(crate) const CF_INDEX_TO_MESSAGE_ID: &str = "index_to_message_id";
 pub(crate) const CF_OUTPUT_ID_TO_OUTPUT: &str = "output_id_to_output";
 pub(crate) const CF_OUTPUT_ID_TO_SPENT: &str = "output_id_to_spent";
+pub(crate) const CF_OUTPUT_ID_UNSPENT: &str = "output_id_unspent";
 
 pub struct Storage {
+    pub(crate) config: StorageConfig,
     pub(crate) inner: DB,
 }
 
@@ -35,19 +40,23 @@ impl Storage {
     pub fn try_new(config: RocksDBConfig) -> Result<DB, Box<dyn Error>> {
         let cf_message_id_to_message = ColumnFamilyDescriptor::new(CF_MESSAGE_ID_TO_MESSAGE, Options::default());
 
+        let cf_message_id_to_metadata = ColumnFamilyDescriptor::new(CF_MESSAGE_ID_TO_METADATA, Options::default());
+
         let prefix_extractor = SliceTransform::create_fixed_prefix(MESSAGE_ID_LENGTH);
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
         let cf_message_id_to_message_id = ColumnFamilyDescriptor::new(CF_MESSAGE_ID_TO_MESSAGE_ID, options);
 
-        let prefix_extractor = SliceTransform::create_fixed_prefix(<Blake2b as Digest>::output_size());
+        let prefix_extractor = SliceTransform::create_fixed_prefix(HASHED_INDEX_SIZE);
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
-        let cf_payload_index_to_message_id = ColumnFamilyDescriptor::new(CF_PAYLOAD_INDEX_TO_MESSAGE_ID, options);
+        let cf_index_to_message_id = ColumnFamilyDescriptor::new(CF_INDEX_TO_MESSAGE_ID, options);
 
         let cf_output_id_to_output = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_OUTPUT, Options::default());
 
         let cf_output_id_to_spent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_SPENT, Options::default());
+
+        let cf_output_id_unspent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_UNSPENT, Options::default());
 
         let mut opts = Options::default();
 
@@ -74,10 +83,12 @@ impl Storage {
 
         let column_familes = vec![
             cf_message_id_to_message,
+            cf_message_id_to_metadata,
             cf_message_id_to_message_id,
-            cf_payload_index_to_message_id,
+            cf_index_to_message_id,
             cf_output_id_to_output,
             cf_output_id_to_spent,
+            cf_output_id_unspent,
         ];
 
         Ok(DB::open_cf_descriptors(&opts, config.path, column_familes)?)
@@ -88,10 +99,12 @@ impl Storage {
 impl Backend for Storage {
     type ConfigBuilder = RocksDBConfigBuilder;
     type Config = RocksDBConfig;
+    type Error = OpError;
 
     /// It starts RocksDB instance and then initializes the required column familes.
     async fn start(config: Self::Config) -> Result<Self, Box<dyn Error>> {
         Ok(Storage {
+            config: config.storage.clone(),
             inner: Self::try_new(config)?,
         })
     }

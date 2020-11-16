@@ -13,8 +13,8 @@
 
 pub mod config;
 pub mod event;
-pub mod tangle;
 pub mod milestone;
+pub mod tangle;
 
 mod packet;
 mod peer;

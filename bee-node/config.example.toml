@@ -7,16 +7,20 @@ name  = "stdout"
 level = "info"
 
 [network]
-binding_addr        = "0.0.0.0"
-binding_port        = 15600
-reconnect_interval  = 60
+bind_address      = "/ip4/0.0.0.0/tcp/15600"
+msg_buffer_size   = 10000
+peer_limit        = 8
+reconnect_millis  = 60000
 
+[peering]
+# hex representation of an Ed25519 keypair
+local_keypair = ""
 [peering.manual]
 limit     = 5
 peers     = [ ]
 
 [protocol]
-mwm = 14
+minimum_pow_score = 4000
 [protocol.coordinator]
 public_key_count  = 2
 [[protocol.coordinator.public_key_ranges]]
@@ -33,8 +37,7 @@ status_interval = 10
 [snapshot]
 path              = "./snapshots/alphanet/export.bin"
 download_urls     = [
-  "https://x-vps.com/export.bin",
-  "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+  "https://dbfiles.iota.org/alphanet/hornet/export.bin"
 ]
 depth             = 50
 interval_synced   = 50
@@ -45,3 +48,4 @@ delay   = 60480
 
 [database]
 path = "./database/alphanet"
+[database.storage]

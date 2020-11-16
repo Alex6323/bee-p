@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_common::packable::{Packable, Read, Write};
+
 use bitflags::bitflags;
 
 bitflags! {
@@ -70,5 +72,25 @@ impl Flags {
 
     pub fn set_valid(&mut self, is_valid: bool) {
         self.set(Flags::VALID, is_valid);
+    }
+}
+
+impl Packable for Flags {
+    type Error = std::io::Error;
+
+    fn packed_len(&self) -> usize {
+        self.bits().packed_len()
+    }
+
+    fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
+        self.bits().pack(writer)
+    }
+
+    fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        // Flags are only expected to be unpacked from a trusted storage source.
+        Ok(unsafe { Self::from_bits_unchecked(u8::unpack(reader)?) })
     }
 }

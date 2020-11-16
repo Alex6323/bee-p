@@ -18,7 +18,7 @@ use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use core::convert::{From, TryFrom};
+use core::{convert::From, str::FromStr};
 
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
 pub struct UTXOInput(OutputId);
@@ -29,11 +29,11 @@ impl From<OutputId> for UTXOInput {
     }
 }
 
-impl TryFrom<&str> for UTXOInput {
-    type Error = Error;
+impl FromStr for UTXOInput {
+    type Err = Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(UTXOInput(OutputId::try_from(value)?))
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(UTXOInput(OutputId::from_str(s)?))
     }
 }
 
@@ -67,9 +67,7 @@ impl Packable for UTXOInput {
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        self.0.pack(writer)?;
-
-        Ok(())
+        self.0.pack(writer)
     }
 
     fn unpack<R: Read + ?Sized>(reader: &mut R) -> Result<Self, Self::Error>

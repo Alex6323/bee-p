@@ -14,17 +14,11 @@ pub mod delete;
 pub mod exist;
 pub mod fetch;
 pub mod insert;
+pub mod stream;
 
-pub use batch::{BatchBuilder, BeginBatch, CommitBatch};
+pub use batch::{Batch, BatchBuilder};
 pub use delete::Delete;
 pub use exist::Exist;
 pub use fetch::Fetch;
 pub use insert::Insert;
-
-pub trait Error: std::fmt::Debug {
-    fn is_retryable(&self) -> bool;
-
-    fn is_still_valid(&self) -> bool;
-
-    fn error_msg(&self) -> Option<String>;
-}
+pub use stream::AsStream;

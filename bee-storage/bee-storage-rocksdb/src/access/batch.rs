@@ -9,190 +9,261 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{access::OpError, storage::*};
+use crate::storage::*;
 
 use bee_common::packable::Packable;
-use bee_ledger::{output::Output, spent::Spent};
+use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
-use bee_storage::access::{BatchBuilder, BeginBatch, CommitBatch};
+use bee_protocol::tangle::MessageMetadata;
+use bee_storage::access::{Batch, BatchBuilder};
 
-use blake2::Blake2b;
 use rocksdb::{WriteBatch, WriteOptions};
 
-pub struct StorageBatch<'a> {
-    storage: &'a Storage,
-    batch: WriteBatch,
-    // TODO use them to avoid allocating during a same batch
+#[derive(Default)]
+pub struct StorageBatch {
+    inner: WriteBatch,
     key_buf: Vec<u8>,
     value_buf: Vec<u8>,
 }
 
-impl<'a> BeginBatch<'a> for Storage {
-    type BatchBuilder = StorageBatch<'a>;
-
-    fn begin_batch(&'a self) -> Self::BatchBuilder {
-        Self::BatchBuilder {
-            storage: self,
-            batch: WriteBatch::default(),
-            key_buf: Vec::new(),
-            value_buf: Vec::new(),
-        }
-    }
-}
-
 #[async_trait::async_trait]
-impl<'a> CommitBatch for StorageBatch<'a> {
-    type Error = OpError;
+impl BatchBuilder for Storage {
+    type Batch = StorageBatch;
 
-    async fn commit_batch(self, durability: bool) -> Result<(), Self::Error> {
+    async fn batch_commit(&self, batch: Self::Batch, durability: bool) -> Result<(), <Self as Backend>::Error> {
         let mut write_options = WriteOptions::default();
         write_options.set_sync(false);
         write_options.disable_wal(!durability);
-        self.storage.inner.write_opt(self.batch, &write_options)?;
+        self.inner.write_opt(batch.inner, &write_options)?;
 
         Ok(())
     }
 }
 
-impl<'a> BatchBuilder<'a, Storage, (MessageId, MessageId), ()> for StorageBatch<'a> {
-    type Error = OpError;
+impl Batch<MessageId, Message> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        message_id: &MessageId,
+        message: &Message,
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-    fn try_insert(&mut self, (parent, child): &(MessageId, MessageId), (): &()) -> Result<(), Self::Error> {
-        let cf_message_id_to_message_id = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+        batch.value_buf.clear();
+        // Packing to bytes can't fail.
+        message.pack(&mut batch.value_buf).unwrap();
 
-        let mut key = parent.as_ref().to_vec();
-        key.extend_from_slice(child.as_ref());
-
-        self.batch.put_cf(&cf_message_id_to_message_id, key, []);
-
-        Ok(())
-    }
-
-    fn try_delete(&mut self, (parent, child): &(MessageId, MessageId)) -> Result<(), Self::Error> {
-        let cf_message_id_to_message_id = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
-
-        let mut key = parent.as_ref().to_vec();
-        key.extend_from_slice(child.as_ref());
-
-        self.batch.delete_cf(&cf_message_id_to_message_id, key);
-
-        Ok(())
-    }
-}
-
-impl<'a> BatchBuilder<'a, Storage, MessageId, Message> for StorageBatch<'a> {
-    type Error = OpError;
-
-    fn try_insert(&mut self, message_id: &MessageId, message: &Message) -> Result<(), Self::Error> {
-        let cf_message_id_to_message = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
-
-        let mut message_buf = Vec::with_capacity(message.packed_len());
-        message.pack(&mut message_buf).unwrap();
-
-        self.batch.put_cf(&cf_message_id_to_message, message_id, message_buf);
+        batch
+            .inner
+            .put_cf(&cf_message_id_to_message, message_id, &batch.value_buf);
 
         Ok(())
     }
 
-    fn try_delete(&mut self, message_id: &MessageId) -> Result<(), Self::Error> {
-        let cf_message_id_to_message = self.storage.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
+    fn batch_delete(&self, batch: &mut Self::Batch, message_id: &MessageId) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
-        self.batch.delete_cf(&cf_message_id_to_message, message_id);
+        batch.inner.delete_cf(&cf_message_id_to_message, message_id);
 
         Ok(())
     }
 }
 
-impl<'a> BatchBuilder<'a, Storage, (HashedIndex<Blake2b>, MessageId), ()> for StorageBatch<'a> {
-    type Error = OpError;
+impl Batch<MessageId, MessageMetadata> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        message_id: &MessageId,
+        metadata: &MessageMetadata,
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
 
-    fn try_insert(
-        &mut self,
-        (index, message_id): &(HashedIndex<Blake2b>, MessageId),
+        batch.value_buf.clear();
+        // Packing to bytes can't fail.
+        metadata.pack(&mut batch.value_buf).unwrap();
+
+        batch
+            .inner
+            .put_cf(&cf_message_id_to_metadata, message_id, &batch.value_buf);
+
+        Ok(())
+    }
+
+    fn batch_delete(&self, batch: &mut Self::Batch, message_id: &MessageId) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+
+        batch.inner.delete_cf(&cf_message_id_to_metadata, message_id);
+
+        Ok(())
+    }
+}
+
+impl Batch<(MessageId, MessageId), ()> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        (parent, child): &(MessageId, MessageId),
         (): &(),
-    ) -> Result<(), Self::Error> {
-        let cf_payload_index_to_message_id = self.storage.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
-        let mut key = index.as_ref().to_vec();
-        key.extend_from_slice(message_id.as_ref());
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(parent.as_ref());
+        batch.key_buf.extend_from_slice(child.as_ref());
 
-        self.batch.put_cf(&cf_payload_index_to_message_id, key, []);
-
-        Ok(())
-    }
-
-    fn try_delete(&mut self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
-        let cf_payload_index_to_message_id = self.storage.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
-
-        let mut key = index.as_ref().to_vec();
-        key.extend_from_slice(message_id.as_ref());
-
-        self.batch.delete_cf(&cf_payload_index_to_message_id, key);
-
-        Ok(())
-    }
-}
-
-impl<'a> BatchBuilder<'a, Storage, OutputId, Output> for StorageBatch<'a> {
-    type Error = OpError;
-
-    fn try_insert(&mut self, output_id: &OutputId, output: &Output) -> Result<(), Self::Error> {
-        let cf_output_id_to_output = self.storage.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
-
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
-        // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
-        let mut output_buf = Vec::with_capacity(output.packed_len());
-        // Packing to bytes can't fail.
-        output.pack(&mut output_buf).unwrap();
-
-        self.batch.put_cf(&cf_output_id_to_output, output_id_buf, output_buf);
+        batch.inner.put_cf(&cf_message_id_to_message_id, &batch.key_buf, []);
 
         Ok(())
     }
 
-    fn try_delete(&mut self, output_id: &OutputId) -> Result<(), Self::Error> {
-        let cf_output_id_to_output = self.storage.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
+    fn batch_delete(
+        &self,
+        batch: &mut Self::Batch,
+        (parent, child): &(MessageId, MessageId),
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
-        // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(parent.as_ref());
+        batch.key_buf.extend_from_slice(child.as_ref());
 
-        self.batch.delete_cf(&cf_output_id_to_output, output_id_buf);
+        batch.inner.delete_cf(&cf_message_id_to_message_id, &batch.key_buf);
 
         Ok(())
     }
 }
 
-impl<'a> BatchBuilder<'a, Storage, OutputId, Spent> for StorageBatch<'a> {
-    type Error = OpError;
+impl Batch<(HashedIndex, MessageId), ()> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        (index, message_id): &(HashedIndex, MessageId),
+        (): &(),
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
-    fn try_insert(&mut self, output_id: &OutputId, spent: &Spent) -> Result<(), Self::Error> {
-        let cf_output_id_to_spent = self.storage.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(index.as_ref());
+        batch.key_buf.extend_from_slice(message_id.as_ref());
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
-        // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
-        let mut spent_buf = Vec::with_capacity(spent.packed_len());
-        // Packing to bytes can't fail.
-        spent.pack(&mut spent_buf).unwrap();
-
-        self.batch.put_cf(&cf_output_id_to_spent, output_id_buf, spent_buf);
+        batch.inner.put_cf(&cf_index_to_message_id, &batch.key_buf, []);
 
         Ok(())
     }
 
-    fn try_delete(&mut self, output_id: &OutputId) -> Result<(), Self::Error> {
-        let cf_output_id_to_spent = self.storage.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
+    fn batch_delete(
+        &self,
+        batch: &mut Self::Batch,
+        (index, message_id): &(HashedIndex, MessageId),
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
-        let mut output_id_buf = Vec::with_capacity(output_id.packed_len());
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(index.as_ref());
+        batch.key_buf.extend_from_slice(message_id.as_ref());
+
+        batch.inner.delete_cf(&cf_index_to_message_id, &batch.key_buf);
+
+        Ok(())
+    }
+}
+
+impl Batch<OutputId, Output> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        output_id: &OutputId,
+        output: &Output,
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
+
+        batch.key_buf.clear();
         // Packing to bytes can't fail.
-        output_id.pack(&mut output_id_buf).unwrap();
+        output_id.pack(&mut batch.key_buf).unwrap();
+        batch.value_buf.clear();
+        // Packing to bytes can't fail.
+        output.pack(&mut batch.value_buf).unwrap();
 
-        self.batch.delete_cf(&cf_output_id_to_spent, output_id_buf);
+        batch
+            .inner
+            .put_cf(&cf_output_id_to_output, &batch.key_buf, &batch.value_buf);
+
+        Ok(())
+    }
+
+    fn batch_delete(&self, batch: &mut Self::Batch, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
+        let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
+
+        batch.key_buf.clear();
+        // Packing to bytes can't fail.
+        output_id.pack(&mut batch.key_buf).unwrap();
+
+        batch.inner.delete_cf(&cf_output_id_to_output, &batch.key_buf);
+
+        Ok(())
+    }
+}
+
+impl Batch<OutputId, Spent> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        output_id: &OutputId,
+        spent: &Spent,
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
+
+        batch.key_buf.clear();
+        // Packing to bytes can't fail.
+        output_id.pack(&mut batch.key_buf).unwrap();
+        batch.value_buf.clear();
+        // Packing to bytes can't fail.
+        spent.pack(&mut batch.value_buf).unwrap();
+
+        batch
+            .inner
+            .put_cf(&cf_output_id_to_spent, &batch.key_buf, &batch.value_buf);
+
+        Ok(())
+    }
+
+    fn batch_delete(&self, batch: &mut Self::Batch, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
+        let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
+
+        batch.key_buf.clear();
+        // Packing to bytes can't fail.
+        output_id.pack(&mut batch.key_buf).unwrap();
+
+        batch.inner.delete_cf(&cf_output_id_to_spent, &batch.key_buf);
+
+        Ok(())
+    }
+}
+
+impl Batch<Unspent, ()> for Storage {
+    fn batch_insert(&self, batch: &mut Self::Batch, unspent: &Unspent, (): &()) -> Result<(), Self::Error> {
+        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        batch.key_buf.clear();
+        // Packing to bytes can't fail.
+        unspent.pack(&mut batch.key_buf).unwrap();
+
+        batch.inner.put_cf(&cf_output_id_unspent, &batch.key_buf, []);
+
+        Ok(())
+    }
+
+    fn batch_delete(&self, batch: &mut Self::Batch, unspent: &Unspent) -> Result<(), Self::Error> {
+        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        batch.key_buf.clear();
+        // Packing to bytes can't fail.
+        unspent.pack(&mut batch.key_buf).unwrap();
+
+        batch.inner.delete_cf(&cf_output_id_unspent, &batch.key_buf);
 
         Ok(())
     }

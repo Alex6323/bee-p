@@ -13,35 +13,33 @@ use super::config::Config;
 
 use structopt::StructOpt;
 
-use std::net::SocketAddr;
-
 #[derive(Debug, StructOpt)]
 #[structopt(name = "pingpong", about = "bee-network example")]
 pub struct Args {
     #[structopt(short = "b", long = "bind")]
-    binding_address: String,
+    bind_address: String,
 
     #[structopt(short = "p", long = "peers")]
-    peers: Vec<String>,
+    peer_addresses: Vec<String>,
 
     #[structopt(short = "m", long = "msg")]
     message: String,
 }
 
 impl Args {
-    pub fn config(self) -> Config {
+    pub fn into_config(self) -> Config {
         let Args {
-            binding_address,
-            peers,
+            bind_address,
+            mut peer_addresses,
             message,
         } = self;
 
-        Config {
-            binding_address: binding_address
-                .parse::<SocketAddr>()
-                .expect("error parsing binding address"),
-            peers,
-            message,
+        let mut config = Config::build().with_bind_address(bind_address).with_message(message);
+
+        for peer_address in peer_addresses.drain(..) {
+            config = config.with_peer_address(peer_address);
         }
+
+        config.finish()
     }
 }

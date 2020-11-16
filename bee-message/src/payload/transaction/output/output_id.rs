@@ -18,7 +18,10 @@ use bee_common::packable::{Packable, Read, Write};
 
 use serde::{Deserialize, Serialize};
 
-use core::convert::{From, TryFrom, TryInto};
+use core::{
+    convert::{From, TryInto},
+    str::FromStr,
+};
 
 pub const OUTPUT_ID_LENGTH: usize = TRANSACTION_ID_LENGTH + std::mem::size_of::<u16>();
 
@@ -28,19 +31,19 @@ pub struct OutputId {
     index: u16,
 }
 
-impl TryFrom<&str> for OutputId {
-    type Error = Error;
+impl FromStr for OutputId {
+    type Err = Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let bytes = hex::decode(value).map_err(|_| Self::Error::InvalidHex)?;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let bytes = hex::decode(s).map_err(|_| Self::Err::InvalidHex)?;
         let transaction_id_bytes: [u8; TRANSACTION_ID_LENGTH] = bytes[..TRANSACTION_ID_LENGTH]
             .try_into()
-            .map_err(|_| Self::Error::InvalidHex)?;
+            .map_err(|_| Self::Err::InvalidHex)?;
         let transaction_id = TransactionId::from(transaction_id_bytes);
         let index = u16::from_le_bytes(
             bytes[TRANSACTION_ID_LENGTH..]
                 .try_into()
-                .map_err(|_| Self::Error::InvalidHex)?,
+                .map_err(|_| Self::Err::InvalidHex)?,
         );
 
         OutputId::new(transaction_id, index)

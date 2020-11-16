@@ -9,25 +9,25 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{access::OpError, storage::*};
+use crate::storage::*;
 
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent};
 use bee_message::{
-    payload::{indexation::HashedIndex, transaction::OutputId},
+    payload::{
+        indexation::{HashedIndex, HASHED_INDEX_SIZE},
+        transaction::OutputId,
+    },
     Message, MessageId, MESSAGE_ID_LENGTH,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::Fetch;
-
-use blake2::{Blake2b, Digest};
 
 use std::convert::TryInto;
 
 #[async_trait::async_trait]
 impl Fetch<MessageId, Message> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, message_id: &MessageId) -> Result<Option<Message>, Self::Error>
+    async fn fetch(&self, message_id: &MessageId) -> Result<Option<Message>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
@@ -42,48 +42,60 @@ impl Fetch<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Fetch<MessageId, Vec<MessageId>> for Storage {
-    type Error = OpError;
+impl Fetch<MessageId, MessageMetadata> for Storage {
+    async fn fetch(&self, message_id: &MessageId) -> Result<Option<MessageMetadata>, <Self as Backend>::Error>
+    where
+        Self: Sized,
+    {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
 
-    async fn fetch(&self, parent: &MessageId) -> Result<Option<Vec<MessageId>>, Self::Error>
+        if let Some(res) = self.inner.get_cf(&cf_message_id_to_metadata, message_id)? {
+            Ok(Some(MessageMetadata::unpack(&mut res.as_slice()).unwrap()))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Fetch<MessageId, Vec<MessageId>> for Storage {
+    async fn fetch(&self, parent: &MessageId) -> Result<Option<Vec<MessageId>>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
-        // TODO limit to a certain number of results
 
         Ok(Some(
             self.inner
                 .prefix_iterator_cf(&cf_message_id_to_message_id, parent)
                 .map(|(key, _)| {
-                    let (_, child) = key.split_at(Blake2b::output_size());
+                    let (_, child) = key.split_at(HASHED_INDEX_SIZE);
                     let child: [u8; MESSAGE_ID_LENGTH] = child.try_into().unwrap();
                     MessageId::from(child)
                 })
+                .take(self.config.fetch_edge_limit)
                 .collect(),
         ))
     }
 }
 
 #[async_trait::async_trait]
-impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, index: &HashedIndex<Blake2b>) -> Result<Option<Vec<MessageId>>, Self::Error>
+impl Fetch<HashedIndex, Vec<MessageId>> for Storage {
+    async fn fetch(&self, index: &HashedIndex) -> Result<Option<Vec<MessageId>>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
-        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
-        // TODO limit to a certain number of results
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
         Ok(Some(
             self.inner
-                .prefix_iterator_cf(&cf_payload_index_to_message_id, index)
+                .prefix_iterator_cf(&cf_index_to_message_id, index)
                 .map(|(key, _)| {
-                    let (_, message_id) = key.split_at(Blake2b::output_size());
+                    let (_, message_id) = key.split_at(HASHED_INDEX_SIZE);
                     let message_id: [u8; MESSAGE_ID_LENGTH] = message_id.try_into().unwrap();
                     MessageId::from(message_id)
                 })
+                .take(self.config.fetch_index_limit)
                 .collect(),
         ))
     }
@@ -91,18 +103,13 @@ impl Fetch<HashedIndex<Blake2b>, Vec<MessageId>> for Storage {
 
 #[async_trait::async_trait]
 impl Fetch<OutputId, Output> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Output>, Self::Error>
+    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Output>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        if let Some(res) = self.inner.get_cf(&cf_output_id_to_output, output_id_buf)? {
+        if let Some(res) = self.inner.get_cf(&cf_output_id_to_output, output_id.pack_new())? {
             Ok(Some(Output::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)
@@ -112,18 +119,13 @@ impl Fetch<OutputId, Output> for Storage {
 
 #[async_trait::async_trait]
 impl Fetch<OutputId, Spent> for Storage {
-    type Error = OpError;
-
-    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Spent>, Self::Error>
+    async fn fetch(&self, output_id: &OutputId) -> Result<Option<Spent>, <Self as Backend>::Error>
     where
         Self: Sized,
     {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        if let Some(res) = self.inner.get_cf(&cf_output_id_to_spent, output_id_buf)? {
+        if let Some(res) = self.inner.get_cf(&cf_output_id_to_spent, output_id.pack_new())? {
             Ok(Some(Spent::unpack(&mut res.as_slice()).unwrap()))
         } else {
             Ok(None)

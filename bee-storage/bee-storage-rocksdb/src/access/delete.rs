@@ -9,23 +9,20 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{access::OpError, storage::*};
+use crate::storage::*;
 
 use bee_common::packable::Packable;
-use bee_ledger::{output::Output, spent::Spent};
+use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{indexation::HashedIndex, transaction::OutputId},
     Message, MessageId,
 };
+use bee_protocol::tangle::MessageMetadata;
 use bee_storage::access::Delete;
-
-use blake2::Blake2b;
 
 #[async_trait::async_trait]
 impl Delete<MessageId, Message> for Storage {
-    type Error = OpError;
-
-    async fn delete(&self, message_id: &MessageId) -> Result<(), Self::Error> {
+    async fn delete(&self, message_id: &MessageId) -> Result<(), <Self as Backend>::Error> {
         let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
 
         self.inner.delete_cf(&cf_message_id_to_message, message_id)?;
@@ -35,10 +32,19 @@ impl Delete<MessageId, Message> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Delete<(MessageId, MessageId), ()> for Storage {
-    type Error = OpError;
+impl Delete<MessageId, MessageMetadata> for Storage {
+    async fn delete(&self, message_id: &MessageId) -> Result<(), <Self as Backend>::Error> {
+        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
 
-    async fn delete(&self, (parent, child): &(MessageId, MessageId)) -> Result<(), Self::Error> {
+        self.inner.delete_cf(&cf_message_id_to_metadata, message_id)?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<(MessageId, MessageId), ()> for Storage {
+    async fn delete(&self, (parent, child): &(MessageId, MessageId)) -> Result<(), <Self as Backend>::Error> {
         let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
 
         let mut key = parent.as_ref().to_vec();
@@ -51,16 +57,14 @@ impl Delete<(MessageId, MessageId), ()> for Storage {
 }
 
 #[async_trait::async_trait]
-impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
-    type Error = OpError;
-
-    async fn delete(&self, (index, message_id): &(HashedIndex<Blake2b>, MessageId)) -> Result<(), Self::Error> {
-        let cf_payload_index_to_message_id = self.inner.cf_handle(CF_PAYLOAD_INDEX_TO_MESSAGE_ID).unwrap();
+impl Delete<(HashedIndex, MessageId), ()> for Storage {
+    async fn delete(&self, (index, message_id): &(HashedIndex, MessageId)) -> Result<(), <Self as Backend>::Error> {
+        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
 
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        self.inner.delete_cf(&cf_payload_index_to_message_id, key)?;
+        self.inner.delete_cf(&cf_index_to_message_id, key)?;
 
         Ok(())
     }
@@ -68,15 +72,10 @@ impl Delete<(HashedIndex<Blake2b>, MessageId), ()> for Storage {
 
 #[async_trait::async_trait]
 impl Delete<OutputId, Output> for Storage {
-    type Error = OpError;
-
-    async fn delete(&self, output_id: &OutputId) -> Result<(), Self::Error> {
+    async fn delete(&self, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
 
-        // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
-
-        self.inner.delete_cf(&cf_output_id_to_output, output_id_buf)?;
+        self.inner.delete_cf(&cf_output_id_to_output, output_id.pack_new())?;
 
         Ok(())
     }
@@ -84,15 +83,21 @@ impl Delete<OutputId, Output> for Storage {
 
 #[async_trait::async_trait]
 impl Delete<OutputId, Spent> for Storage {
-    type Error = OpError;
-
-    async fn delete(&self, output_id: &OutputId) -> Result<(), Self::Error> {
+    async fn delete(&self, output_id: &OutputId) -> Result<(), <Self as Backend>::Error> {
         let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
 
-        // Packing to bytes can't fail.
-        let output_id_buf = output_id.pack_new().unwrap();
+        self.inner.delete_cf(&cf_output_id_to_spent, output_id.pack_new())?;
 
-        self.inner.delete_cf(&cf_output_id_to_spent, output_id_buf)?;
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<Unspent, ()> for Storage {
+    async fn delete(&self, unspent: &Unspent) -> Result<(), <Self as Backend>::Error> {
+        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+
+        self.inner.delete_cf(&cf_output_id_unspent, unspent.pack_new())?;
 
         Ok(())
     }

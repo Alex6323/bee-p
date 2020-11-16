@@ -20,7 +20,7 @@ const SNAPSHOT_VERSION: u8 = 1;
 pub struct SnapshotHeader {
     pub(crate) kind: Kind,
     pub(crate) timestamp: u64,
-    pub(crate) network_id: u8,
+    pub(crate) network_id: u64,
     pub(crate) sep_index: u32,
     pub(crate) sep_id: MessageId,
     pub(crate) ledger_index: u32,
@@ -36,7 +36,7 @@ impl SnapshotHeader {
         self.timestamp
     }
 
-    pub fn network_id(&self) -> u8 {
+    pub fn network_id(&self) -> u64 {
         self.network_id
     }
 
@@ -96,7 +96,7 @@ impl Packable for SnapshotHeader {
 
         let kind = Kind::unpack(reader)?;
         let timestamp = u64::unpack(reader)?;
-        let network_id = u8::unpack(reader)?;
+        let network_id = u64::unpack(reader)?;
         let sep_index = u32::unpack(reader)?;
         let sep_id = MessageId::unpack(reader)?;
         let ledger_index = u32::unpack(reader)?;
