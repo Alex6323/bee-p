@@ -11,7 +11,7 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use bee_network::{Multiaddr, MultiaddrPeerId, PeerId};
+use bee_network::{Multiaddr, PeerId};
 
 use std::str::FromStr;
 
@@ -41,10 +41,6 @@ impl ConfigBuilder {
 
     pub fn with_peer_address(mut self, peer_address: String) -> Self {
         self.peers.push(peer_address);
-        // MultiaddrPeerId::from_str(&peer_address_id)
-        //     .expect("create MultiaddrPeerId instance")
-        //     .split(),
-        // );
         self
     }
 
@@ -73,7 +69,6 @@ impl ConfigBuilder {
 #[derive(Clone)]
 pub struct Config {
     pub bind_address: Multiaddr,
-    // pub peers: Vec<(MultiAddr, PeerId)>,
     pub peers: Vec<Multiaddr>,
     pub message: String,
 }

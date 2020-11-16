@@ -132,7 +132,7 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
             Event::PeerDisconnected { id } => self.peer_disconnected_handler(id).await,
             Event::MessageReceived { message, from } => self.peer_message_received_handler(message, from).await,
             Event::PeerBanned { .. } => (),
-            Event::AddrBanned { .. } => (),
+            Event::AddressBanned { .. } => (),
             _ => warn!("Unsupported event {:?}.", event),
         }
     }

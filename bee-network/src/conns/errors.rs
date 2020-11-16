@@ -23,9 +23,7 @@ pub enum Error {
     BindingAddressFailed(Multiaddr),
     #[error("Not listening on an address.")]
     NotListeningError,
-    #[error("Failed to extract the IP address from a multiaddress.")]
-    // InvalidMultiaddr,
-    // #[error("Tried to dial a banned address: {}.", .0)]
+    #[error("Tried to dial a banned address: {}.", .0)]
     DialedBannedAddress(String),
     #[error("Tried to dial a banned peer: {}.", .0)]
     DialedBannedPeer(PeerId),

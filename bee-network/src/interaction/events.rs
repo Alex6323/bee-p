@@ -9,11 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{conns::Origin, peers::DataSender};
-
-use libp2p::{Multiaddr, PeerId};
-
-use std::net::IpAddr;
+use crate::{conns::Origin, peers::DataSender, Multiaddr, PeerId};
 
 pub type EventReceiver = flume::Receiver<Event>;
 pub type EventSender = flume::Sender<Event>;
@@ -22,6 +18,16 @@ pub type InternalEventSender = flume::Sender<InternalEvent>;
 
 pub fn channel<T>() -> (flume::Sender<T>, flume::Receiver<T>) {
     flume::unbounded()
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum Event {
+    PeerConnected { id: PeerId, address: Multiaddr },
+    PeerDisconnected { id: PeerId },
+    MessageReceived { message: Vec<u8>, from: PeerId },
+    PeerBanned { id: PeerId },
+    AddressBanned { address: Multiaddr },
 }
 
 #[derive(Debug)]
@@ -44,16 +50,4 @@ pub enum InternalEvent {
         message: Vec<u8>,
         from: PeerId,
     },
-}
-
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum Event {
-    PeerConnected { id: PeerId, address: Multiaddr },
-
-    PeerDisconnected { id: PeerId },
-
-    MessageReceived { message: Vec<u8>, from: PeerId },
-    PeerBanned { id: PeerId },
-    AddrBanned { ip: IpAddr },
 }
