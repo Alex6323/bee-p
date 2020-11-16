@@ -11,8 +11,6 @@
 
 use libp2p::{Multiaddr, PeerId};
 
-use std::net::IpAddr;
-
 pub type CommandSender = flume::Sender<Command>;
 pub type CommandReceiver = flume::Receiver<Command>;
 
@@ -26,8 +24,8 @@ pub enum Command {
     ConnectUnknownPeer { address: Multiaddr },
     DisconnectPeer { id: PeerId },
     SendMessage { message: Vec<u8>, to: PeerId },
-    BanAddr { ip: IpAddr },
+    BanAddr { address: Multiaddr },
     BanPeer { id: PeerId },
-    UnbanAddr { ip: IpAddr },
+    UnbanAddr { address: Multiaddr },
     UnbanPeer { id: PeerId },
 }

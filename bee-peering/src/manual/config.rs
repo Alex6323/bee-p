@@ -11,7 +11,7 @@
 
 use serde::Deserialize;
 
-use bee_network::{Multiaddr, MultiaddrPeerId, PeerId};
+use bee_network::Multiaddr;
 
 use std::str::FromStr;
 
@@ -43,11 +43,7 @@ impl ManualPeeringConfigBuilder {
         let peers = self
             .peers
             .iter()
-            .map(|s| {
-                MultiaddrPeerId::from_str(s)
-                    .expect("error parsing MultiaddrPeerId")
-                    .split()
-            })
+            .map(|s| Multiaddr::from_str(s).expect("error parsing Multiaddr"))
             .collect();
 
         ManualPeeringConfig {
@@ -60,7 +56,7 @@ impl ManualPeeringConfigBuilder {
 #[derive(Clone)]
 pub struct ManualPeeringConfig {
     pub(crate) limit: u8,
-    pub(crate) peers: Vec<(Multiaddr, PeerId)>,
+    pub(crate) peers: Vec<Multiaddr>,
 }
 
 impl ManualPeeringConfig {

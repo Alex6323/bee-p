@@ -13,13 +13,13 @@ use crate::PeerId;
 
 use dashmap::DashSet;
 
-use std::{hash::Hash, net::IpAddr, sync::Arc};
+use std::{hash::Hash, sync::Arc};
 
 const DEFAULT_BANNED_PEER_CAPACITY: usize = 64;
 const DEFAULT_BANNED_ADDR_CAPACITY: usize = 32;
 
 pub type BannedPeerList = BannedList<PeerId>;
-pub type BannedAddrList = BannedList<IpAddr>;
+pub type BannedAddrList = BannedList<String>;
 
 #[derive(Clone, Default)]
 pub struct BannedList<T: Hash + Eq>(Arc<DashSet<T>>);
@@ -30,7 +30,7 @@ impl BannedList<PeerId> {
     }
 }
 
-impl BannedList<IpAddr> {
+impl BannedList<String> {
     pub fn new() -> Self {
         Self(Arc::new(DashSet::with_capacity(DEFAULT_BANNED_ADDR_CAPACITY)))
     }
