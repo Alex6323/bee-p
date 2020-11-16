@@ -69,7 +69,7 @@ impl Fetch<MessageId, Vec<MessageId>> for Storage {
             self.inner
                 .prefix_iterator_cf(&cf_message_id_to_message_id, parent)
                 .map(|(key, _)| {
-                    let (_, child) = key.split_at(HASHED_INDEX_SIZE);
+                    let (_, child) = key.split_at(MESSAGE_ID_LENGTH);
                     let child: [u8; MESSAGE_ID_LENGTH] = child.try_into().unwrap();
                     MessageId::from(child)
                 })

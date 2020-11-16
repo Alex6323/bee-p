@@ -84,7 +84,7 @@ async fn access() {
         }
     }
 
-    let mut stream = storage.stream().await.unwrap();
+    let mut stream = AsStream::<MessageId, Message>::stream(&storage).await.unwrap();
 
     while let Some((key, value)) = stream.next().await {
         println!("{:?} {:?}", key, value);
