@@ -9,11 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::PeerId;
+use crate::{Multiaddr, PeerId};
 
 use thiserror::Error as ErrorAttr;
-
-use std::net::IpAddr;
 
 #[derive(Debug, ErrorAttr)]
 pub enum Error {
@@ -30,11 +28,11 @@ pub enum Error {
     #[error("Failed to disconnect from peer: {}", .0)]
     DisconnectPeerFailure(PeerId),
     #[error("Already banned that address: {}", .0)]
-    AddressAlreadyBanned(IpAddr),
+    AddressAlreadyBanned(Multiaddr),
     #[error("Already banned that peer: {}", .0)]
     PeerAlreadyBanned(PeerId),
     #[error("Already unbanned that address: {}", .0)]
-    AddressAlreadyUnbanned(IpAddr),
+    AddressAlreadyUnbanned(Multiaddr),
     #[error("Already unbanned that peer: {}", .0)]
     PeerAlreadyUnbanned(PeerId),
 }

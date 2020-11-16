@@ -13,8 +13,6 @@ use crate::{Multiaddr, PeerId};
 
 use thiserror::Error as ErrorAttr;
 
-use std::net::IpAddr;
-
 #[derive(Debug, ErrorAttr)]
 pub enum Error {
     #[error("Tried to connect to more peers than allowed ({}).", .0)]
@@ -26,9 +24,9 @@ pub enum Error {
     #[error("Not listening on an address.")]
     NotListeningError,
     #[error("Failed to extract the IP address from a multiaddress.")]
-    InvalidMultiaddr,
-    #[error("Tried to dial a banned address: {}.", .0)]
-    DialedBannedAddress(IpAddr),
+    // InvalidMultiaddr,
+    // #[error("Tried to dial a banned address: {}.", .0)]
+    DialedBannedAddress(String),
     #[error("Tried to dial a banned peer: {}.", .0)]
     DialedBannedPeer(PeerId),
     #[error("Failed dialing address: {}.", .0)]

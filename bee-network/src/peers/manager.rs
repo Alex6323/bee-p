@@ -197,9 +197,9 @@ async fn process_command(
         Command::SendMessage { message, to } => {
             send_message(message, &to, peers).await?;
         }
-        Command::BanAddr { ip } => {
-            if !banned_addrs.insert(ip) {
-                return Err(Error::AddressAlreadyBanned(ip));
+        Command::BanAddr { address } => {
+            if !banned_addrs.insert(address.to_string()) {
+                return Err(Error::AddressAlreadyBanned(address));
             }
         }
         Command::BanPeer { id } => {
@@ -207,9 +207,9 @@ async fn process_command(
                 return Err(Error::PeerAlreadyBanned(id));
             }
         }
-        Command::UnbanAddr { ip } => {
-            if !banned_addrs.remove(&ip) {
-                return Err(Error::AddressAlreadyUnbanned(ip));
+        Command::UnbanAddr { address } => {
+            if !banned_addrs.remove(&address.to_string()) {
+                return Err(Error::AddressAlreadyUnbanned(address));
             }
         }
         Command::UnbanPeer { id } => {

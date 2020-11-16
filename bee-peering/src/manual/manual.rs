@@ -11,7 +11,7 @@
 
 use crate::{manual::config::ManualPeeringConfig, PeerManager};
 
-use bee_network::{Command::ConnectPeer, Multiaddr, Network, PeerId};
+use bee_network::{Command::ConnectPeer, Multiaddr, Network, PeerId, Protocol};
 
 use async_trait::async_trait;
 use log::warn;
@@ -41,8 +41,15 @@ impl PeerManager for ManualPeerManager {
     async fn run(mut self) {
         // TODO config file watcher
         // TODO use limit
-        for (address, id) in self.config.peers.clone() {
-            self.connect_peer(address, id);
+        for mut address in self.config.peers.clone() {
+            // NOTE: if unwrapping fails here, it should have been caught earlier (e.g. when parsing the config,
+            // cli, ...)
+            if let Some(Protocol::P2p(multihash)) = address.pop() {
+                let id = PeerId::from_multihash(multihash).expect("Invalid Multiaddr.");
+                self.connect_peer(address, id);
+            } else {
+                unreachable!("Invalid Multiaddr.");
+            }
         }
     }
 }

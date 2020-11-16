@@ -23,9 +23,9 @@ use crate::{
 
 use log::*;
 
-use libp2p::{identity, multiaddr::Protocol, Multiaddr, Transport};
+use libp2p::{identity, Multiaddr, Transport};
 
-use std::{net::IpAddr, sync::atomic::Ordering};
+use std::sync::atomic::Ordering;
 
 pub async fn dial(
     peer_address: Multiaddr,
@@ -46,15 +46,10 @@ pub async fn dial(
 
     trace!("Dialing {} ({:?})...", peer_address, peer_id);
 
-    let ip_address = match peer_address.iter().next().unwrap() {
-        Protocol::Ip4(ip_addr) => IpAddr::V4(ip_addr),
-        Protocol::Ip6(ip_addr) => IpAddr::V6(ip_addr),
-        _ => return Err(Error::InvalidMultiaddr),
-    };
-
-    if banned_addrs.contains(&ip_address) {
-        warn!("Dialing aborted. Cause: Banned IP {}.", ip_address);
-        return Err(Error::DialedBannedAddress(ip_address.clone()));
+    let peer_address_str = peer_address.to_string();
+    if banned_addrs.contains(&peer_address_str) {
+        warn!("Dialing aborted. Cause: Banned address {}.", peer_address_str);
+        return Err(Error::DialedBannedAddress(peer_address_str));
     }
 
     let (id, muxer) = transport
