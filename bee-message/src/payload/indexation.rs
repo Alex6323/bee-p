@@ -96,6 +96,13 @@ impl Packable for Indexation {
 #[derive(Debug, Eq, PartialEq)]
 pub struct HashedIndex([u8; HASHED_INDEX_SIZE]);
 
+// TODO review when we have fixed size index
+impl HashedIndex {
+    pub fn new(bytes: [u8; HASHED_INDEX_SIZE]) -> Self {
+        Self(bytes)
+    }
+}
+
 impl AsRef<[u8]> for HashedIndex {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
