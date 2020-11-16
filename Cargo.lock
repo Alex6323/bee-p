@@ -431,6 +431,7 @@ dependencies = [
  "pin-project 1.0.1",
  "rocksdb",
  "serde",
+ "thiserror",
  "tokio",
 ]
 
