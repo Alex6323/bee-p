@@ -44,22 +44,28 @@ impl<'a, K, V> StorageStream<'a, K, V> {
     }
 }
 
-#[async_trait::async_trait]
-impl<'a> AsStream<'a, MessageId, Message> for Storage {
-    type Stream = StorageStream<'a, MessageId, Message>;
+macro_rules! impl_stream {
+    ($key:ty, $value:ty, $cf:expr) => {
+        #[async_trait::async_trait]
+        impl<'a> AsStream<'a, $key, $value> for Storage {
+            type Stream = StorageStream<'a, $key, $value>;
 
-    async fn stream(&'a self) -> Result<Self::Stream, <Self as Backend>::Error>
-    where
-        Self: Sized,
-    {
-        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
+            async fn stream(&'a self) -> Result<Self::Stream, <Self as Backend>::Error>
+            where
+                Self: Sized,
+            {
+                let cf_handle = self.inner.cf_handle($cf).unwrap();
 
-        Ok(StorageStream::new(
-            self.inner.iterator_cf(cf_message_id_to_message, IteratorMode::Start),
-            self.config.iteration_budget,
-        ))
-    }
+                Ok(StorageStream::new(
+                    self.inner.iterator_cf(cf_handle, IteratorMode::Start),
+                    self.config.iteration_budget,
+                ))
+            }
+        }
+    };
 }
+
+impl_stream!(MessageId, Message, CF_MESSAGE_ID_TO_MESSAGE);
 
 impl<'a> Stream for StorageStream<'a, MessageId, Message> {
     type Item = (MessageId, Message);

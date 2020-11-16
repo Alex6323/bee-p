@@ -12,7 +12,7 @@
 use bee_common::packable::Packable;
 use bee_message::{Message, MessageId};
 use bee_storage::{
-    access::{Batch, BatchBuilder, Delete, Exist, Fetch, Insert, Stream},
+    access::{AsStream, Batch, BatchBuilder, Delete, Exist, Fetch, Insert},
     storage::Backend,
 };
 use bee_storage_rocksdb::{config::RocksDBConfigBuilder, storage::Storage};
