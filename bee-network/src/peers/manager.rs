@@ -197,17 +197,27 @@ async fn process_command(
         Command::SendMessage { message, to } => {
             send_message(message, &to, peers).await?;
         }
-        Command::BanAddr { address } => {
+        Command::BanAddress { address } => {
             if !banned_addrs.insert(address.to_string()) {
                 return Err(Error::AddressAlreadyBanned(address));
+            } else {
+                event_sender
+                    .send_async(Event::AddressBanned { address })
+                    .await
+                    .map_err(|_| Error::EventSendFailure("AddressBanned"))?;
             }
         }
         Command::BanPeer { id } => {
             if !banned_peers.insert(id.clone()) {
                 return Err(Error::PeerAlreadyBanned(id));
+            } else {
+                event_sender
+                    .send_async(Event::PeerBanned { id })
+                    .await
+                    .map_err(|_| Error::EventSendFailure("PeerBanned"))?;
             }
         }
-        Command::UnbanAddr { address } => {
+        Command::UnbanAddress { address } => {
             if !banned_addrs.remove(&address.to_string()) {
                 return Err(Error::AddressAlreadyUnbanned(address));
             }

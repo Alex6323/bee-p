@@ -24,8 +24,8 @@ pub enum Command {
     ConnectUnknownPeer { address: Multiaddr },
     DisconnectPeer { id: PeerId },
     SendMessage { message: Vec<u8>, to: PeerId },
-    BanAddr { address: Multiaddr },
+    BanAddress { address: Multiaddr },
     BanPeer { id: PeerId },
-    UnbanAddr { address: Multiaddr },
+    UnbanAddress { address: Multiaddr },
     UnbanPeer { id: PeerId },
 }
