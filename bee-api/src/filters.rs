@@ -11,11 +11,9 @@
 
 use crate::handlers;
 use bee_common_ext::node::ResHandle;
-use bee_message::MessageId;
-use bee_protocol::{tangle::MsTangle, MilestoneIndex};
+use bee_protocol::tangle::MsTangle;
 use bee_storage::storage::Backend;
 use serde::de::DeserializeOwned;
-use std::convert::TryFrom;
 use warp::{reject, Filter, Rejection};
 
 #[derive(Debug)]
@@ -77,7 +75,7 @@ fn get_message<B: Backend>(
         .and(warp::path("api"))
         .and(warp::path("v1"))
         .and(warp::path("messages"))
-        .and(message_id())
+        .and(custom_path_param::message_id())
         .and(warp::path::end())
         .and(with_tangle(tangle))
         .and_then(handlers::get_message)
@@ -90,7 +88,7 @@ fn get_children<B: Backend>(
         .and(warp::path("api"))
         .and(warp::path("v1"))
         .and(warp::path("messages"))
-        .and(message_id())
+        .and(custom_path_param::message_id())
         .and(warp::path("children"))
         .and(warp::path::end())
         .and(with_tangle(tangle))
@@ -104,28 +102,36 @@ fn get_milestone<B: Backend>(
         .and(warp::path("api"))
         .and(warp::path("v1"))
         .and(warp::path("milestones"))
-        .and(milestone_index())
+        .and(custom_path_param::milestone_index())
         .and(warp::path::end())
         .and(with_tangle(tangle))
         .and_then(handlers::get_milestone)
 }
 
-fn message_id() -> impl Filter<Extract = (MessageId,), Error = Rejection> + Copy {
-    warp::path::param().and_then(|value: String| async move {
-        match MessageId::try_from(value.as_str()) {
-            Ok(x) => Ok(x),
-            Err(_) => Err(reject::custom(BadRequest)),
-        }
-    })
-}
+mod custom_path_param {
 
-fn milestone_index() -> impl Filter<Extract = (MilestoneIndex,), Error = Rejection> + Copy {
-    warp::path::param().and_then(|value: String| async move {
-        match value.parse::<u32>() {
-            Ok(x) => Ok(MilestoneIndex(x)),
-            Err(_) => Err(reject::custom(BadRequest)),
-        }
-    })
+    use super::*;
+    use bee_message::MessageId;
+    use bee_protocol::MilestoneIndex;
+    use std::convert::TryFrom;
+
+    pub(super) fn message_id() -> impl Filter<Extract = (MessageId,), Error = Rejection> + Copy {
+        warp::path::param().and_then(|value: String| async move {
+            match value.parse::<MessageId>() {
+                Ok(msg) => Ok(msg),
+                Err(_) => Err(reject::custom(BadRequest)),
+            }
+        })
+    }
+
+    pub(super) fn milestone_index() -> impl Filter<Extract = (MilestoneIndex,), Error = Rejection> + Copy {
+        warp::path::param().and_then(|value: String| async move {
+            match value.parse::<u32>() {
+                Ok(i) => Ok(MilestoneIndex(i)),
+                Err(_) => Err(reject::custom(BadRequest)),
+            }
+        })
+    }
 }
 
 fn with_tangle<B: Backend>(
