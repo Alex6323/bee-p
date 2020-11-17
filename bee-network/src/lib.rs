@@ -114,27 +114,28 @@ pub async fn init(
     )
 }
 
-pub trait ReadableId {
-    const OriginalLength: usize;
-    const ReadableLength: usize;
-
-    type Identifier: ToString;
+pub trait ReadableId
+where
+    Self: ToString,
+{
+    const ORIGINAL_LENGTH: usize;
+    const LEADING_LENGTH: usize;
+    const TRAILING_LENGTH: usize;
 
     fn readable(&self) -> String;
 }
 
 impl ReadableId for PeerId {
-    const OriginalLength: usize = 52;
-    const ReadableLength: usize = 8;
-
-    type Identifier = PeerId;
+    const ORIGINAL_LENGTH: usize = 52;
+    const LEADING_LENGTH: usize = 2;
+    const TRAILING_LENGTH: usize = 6;
 
     fn readable(&self) -> String {
-        let s = self.to_base58();
+        let s = self.to_string();
         format!(
             "{}*{}",
-            &s[0..2],
-            &s[(Self::OriginalLength - Self::ReadableLength + 2)..]
+            &s[0..Self::LEADING_LENGTH],
+            &s[(Self::ORIGINAL_LENGTH - Self::TRAILING_LENGTH)..]
         )
     }
 }
