@@ -18,7 +18,7 @@ use crate::{
     interaction::events::{InternalEvent, InternalEventSender},
     peers::{self, DataReceiver},
     protocols::gossip::{GossipProtocol, GossipSubstream},
-    MSG_BUFFER_SIZE,
+    ReadableId, MSG_BUFFER_SIZE,
 };
 
 pub use connection::Origin;
@@ -63,17 +63,17 @@ pub(crate) async fn spawn_connection_handler(
             let outbound = outbound_from_ref_and_wrap(muxer)
                 .fuse()
                 .await
-                .map_err(|_| Error::CreatingOutboundSubstreamFailed)?;
+                .map_err(|_| Error::CreatingOutboundSubstreamFailed(peer_id.readable()))?;
 
             upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
                 .await
-                .map_err(|_| Error::SubstreamProtocolUpgradeFailed)?
+                .map_err(|_| Error::SubstreamProtocolUpgradeFailed(peer_id.readable()))?
         }
         Origin::Inbound => {
             let inbound = loop {
                 if let Some(inbound) = event_from_ref_and_wrap(muxer.clone())
                     .await
-                    .map_err(|_| Error::CreatingInboundSubstreamFailed)?
+                    .map_err(|_| Error::CreatingInboundSubstreamFailed(peer_id.readable()))?
                     .into_inbound_substream()
                 {
                     break inbound;
@@ -82,7 +82,7 @@ pub(crate) async fn spawn_connection_handler(
 
             upgrade::apply_inbound(inbound, GossipProtocol)
                 .await
-                .map_err(|_| Error::SubstreamProtocolUpgradeFailed)?
+                .map_err(|_| Error::SubstreamProtocolUpgradeFailed(peer_id.readable()))?
         }
     };
 

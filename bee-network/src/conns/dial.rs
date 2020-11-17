@@ -18,7 +18,7 @@ use crate::{
     interaction::events::InternalEventSender,
     peers::{BannedAddrList, BannedPeerList, PeerList},
     transport::build_transport,
-    PeerId, PEER_LIMIT,
+    PeerId, ReadableId, PEER_LIMIT,
 };
 
 use log::*;
@@ -49,7 +49,7 @@ pub async fn dial(
     let peer_address_str = peer_address.to_string();
     if banned_addrs.contains(&peer_address_str) {
         warn!("Dialing aborted. Cause: Banned address {}.", peer_address_str);
-        return Err(Error::DialedBannedAddress(peer_address_str));
+        return Err(Error::DialedBannedAddress(peer_address));
     }
 
     let (id, muxer) = transport
@@ -63,19 +63,19 @@ pub async fn dial(
 
         // Note: `peer_id.is_some() == true`
         return Err(Error::PeerIdMismatch {
-            expected: peer_id.unwrap(),
-            received: id,
+            expected: peer_id.unwrap().readable(),
+            received: id.readable(),
         });
     }
 
     if banned_peers.contains(&id) {
         warn!("Tried to connect to a banned peer ({}).", id);
-        return Err(Error::DialedBannedPeer(id));
+        return Err(Error::DialedBannedPeer(id.readable()));
     }
 
     if peers.contains_peer(&id) {
         debug!("Already connected to {}", id);
-        return Err(Error::DuplicateConnection(id));
+        return Err(Error::DuplicateConnection(id.readable()));
     }
 
     let connection = MuxedConnection::new(id, peer_address, muxer, Origin::Outbound);
