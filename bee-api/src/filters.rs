@@ -113,7 +113,6 @@ mod custom_path_param {
     use super::*;
     use bee_message::MessageId;
     use bee_protocol::MilestoneIndex;
-    use std::convert::TryFrom;
 
     pub(super) fn message_id() -> impl Filter<Extract = (MessageId,), Error = Rejection> + Copy {
         warp::path::param().and_then(|value: String| async move {
