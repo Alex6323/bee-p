@@ -65,7 +65,7 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     let name = String::from("Bee");
     let version = String::from(env!("CARGO_PKG_VERSION"));
     let is_healthy = is_healthy(tangle.clone()).await;
-    // TODO: get network_id from protocol config
+    // TODO: get network_id from node; use a splaceholder for now
     let network_id = 1;
     let latest_milestone_id = tangle
         .get_milestone_message_id(tangle.get_latest_milestone_index())
@@ -105,7 +105,14 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     }
 }
 
-pub async fn get_message<B: Backend>(
+pub async fn get_message_by_index<B: Backend>(
+    index: HashedIndex,
+    tangle: ResHandle<MsTangle<B>>,
+) -> Result<impl Reply, Rejection> {
+    Ok(StatusCode::OK)
+}
+
+pub async fn get_message_by_message_id<B: Backend>(
     message_id: MessageId,
     tangle: ResHandle<MsTangle<B>>,
 ) -> Result<impl Reply, Rejection> {
@@ -217,7 +224,7 @@ pub async fn get_message<B: Backend>(
     }
 }
 
-pub async fn get_children<B: Backend>(
+pub async fn get_children_by_message_id<B: Backend>(
     message_id: MessageId,
     tangle: ResHandle<MsTangle<B>>,
 ) -> Result<impl Reply, Rejection> {
@@ -237,7 +244,7 @@ pub async fn get_children<B: Backend>(
     }
 }
 
-pub async fn get_milestone<B: Backend>(
+pub async fn get_milestone_by_milestone_index<B: Backend>(
     milestone_index: MilestoneIndex,
     tangle: ResHandle<MsTangle<B>>,
 ) -> Result<impl Reply, Rejection> {
@@ -260,6 +267,21 @@ pub async fn get_milestone<B: Backend>(
 pub mod tests {
 
     use super::*;
+
+    pub fn message_without_payload() -> Message {
+        Message::builder()
+            .with_network_id(1)
+            .with_parent1(MessageId::new([
+                0xF5, 0x32, 0xA5, 0x35, 0x45, 0x10, 0x32, 0x76, 0xB4, 0x68, 0x76, 0xC4, 0x73, 0x84, 0x6D, 0x98, 0x64,
+                0x8E, 0xE4, 0x18, 0x46, 0x8B, 0xCE, 0x76, 0xDF, 0x48, 0x68, 0x64, 0x8D, 0xD7, 0x3E, 0x5D,
+            ]))
+            .with_parent2(MessageId::new([
+                0x78, 0xD5, 0x46, 0xB4, 0x6A, 0xEC, 0x45, 0x57, 0x87, 0x21, 0x39, 0xA4, 0x8F, 0x66, 0xBC, 0x56, 0x76,
+                0x87, 0xE8, 0x41, 0x35, 0x78, 0xA1, 0x43, 0x23, 0x54, 0x87, 0x32, 0x35, 0x89, 0x14, 0xA2,
+            ]))
+            .finish()
+            .unwrap()
+    }
 
     pub fn indexation_message() -> Message {
         Message::builder()
