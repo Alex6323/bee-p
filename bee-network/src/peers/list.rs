@@ -9,6 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::ReadableId;
+
 use super::{errors::Error, DataSender};
 
 use dashmap::{mapref::entry::Entry, DashMap};
@@ -70,14 +72,14 @@ impl PeerList {
                 sender
                     .send_async(message)
                     .await
-                    .map_err(|_| Error::SendMessageFailure(to.clone()))?;
+                    .map_err(|_| Error::SendMessageFailure(to.readable()))?;
 
                 Ok(())
             } else {
-                Err(Error::DisconnectedPeer(to.clone()))
+                Err(Error::DisconnectedPeer(to.readable()))
             }
         } else {
-            Err(Error::UnknownPeer(to.clone()))
+            Err(Error::UnknownPeer(to.readable()))
         }
     }
 

@@ -27,9 +27,7 @@ use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 use futures::{prelude::*, select};
 use libp2p::{
     core::{muxing::StreamMuxerBox, transport::ListenerEvent},
-    identity,
-    multiaddr::Protocol,
-    Multiaddr, PeerId, Transport,
+    identity, Multiaddr, PeerId, Transport,
 };
 use log::*;
 

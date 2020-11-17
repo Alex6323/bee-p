@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{Multiaddr, PeerId};
+use crate::Multiaddr;
 
 use thiserror::Error as ErrorAttr;
 
@@ -20,19 +20,19 @@ pub enum Error {
     #[error("Failed to send an internal event ({}).", .0)]
     InternalEventSendFailure(&'static str),
     #[error("Failed to send a message to {}", .0)]
-    SendMessageFailure(PeerId),
+    SendMessageFailure(String),
     #[error("Unknown peer: {}", .0)]
-    UnknownPeer(PeerId),
+    UnknownPeer(String),
     #[error("Disconnected peer: {}", .0)]
-    DisconnectedPeer(PeerId),
+    DisconnectedPeer(String),
     #[error("Failed to disconnect from peer: {}", .0)]
-    DisconnectPeerFailure(PeerId),
+    DisconnectPeerFailure(String),
     #[error("Already banned that address: {}", .0)]
     AddressAlreadyBanned(Multiaddr),
     #[error("Already banned that peer: {}", .0)]
-    PeerAlreadyBanned(PeerId),
+    PeerAlreadyBanned(String),
     #[error("Already unbanned that address: {}", .0)]
     AddressAlreadyUnbanned(Multiaddr),
     #[error("Already unbanned that peer: {}", .0)]
-    PeerAlreadyUnbanned(PeerId),
+    PeerAlreadyUnbanned(String),
 }

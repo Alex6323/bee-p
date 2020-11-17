@@ -9,16 +9,16 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use super::{errors::Error, BannedAddrList, BannedPeerList, PeerList};
-
 use crate::{
     conns,
     interaction::{
         commands::Command,
         events::{Event, EventSender, InternalEvent, InternalEventReceiver, InternalEventSender},
     },
-    RECONNECT_MILLIS,
+    ReadableId, RECONNECT_MILLIS,
 };
+
+use super::{errors::Error, BannedAddrList, BannedPeerList, PeerList};
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
@@ -191,7 +191,7 @@ async fn process_command(
                     .await
                     .map_err(|_| Error::EventSendFailure("PeerDisconnected"))?;
             } else {
-                return Err(Error::DisconnectPeerFailure(id.clone()));
+                return Err(Error::DisconnectPeerFailure(id.readable()));
             }
         }
         Command::SendMessage { message, to } => {
@@ -209,7 +209,7 @@ async fn process_command(
         }
         Command::BanPeer { id } => {
             if !banned_peers.insert(id.clone()) {
-                return Err(Error::PeerAlreadyBanned(id));
+                return Err(Error::PeerAlreadyBanned(id.readable()));
             } else {
                 event_sender
                     .send_async(Event::PeerBanned { id })
@@ -224,7 +224,7 @@ async fn process_command(
         }
         Command::UnbanPeer { id } => {
             if !banned_peers.remove(&id) {
-                return Err(Error::PeerAlreadyUnbanned(id));
+                return Err(Error::PeerAlreadyUnbanned(id.readable()));
             }
         }
     }
