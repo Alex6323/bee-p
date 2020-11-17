@@ -73,10 +73,6 @@ impl PeerWorker {
 
         let mut message_handler = MessageHandler::new(receiver_fused, shutdown_fused, self.peer.address.clone());
 
-        //                 Protocol::get()
-        //                     .bus
-        //                     .dispatch(HandshakeCompleted(self.peer.id, address));
-        //
         //                 Protocol::send_heartbeat(
         //                     self.peer.id,
         //                     tangle.get_latest_solid_milestone_index(),
