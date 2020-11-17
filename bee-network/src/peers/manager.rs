@@ -325,7 +325,7 @@ async fn connect_peer(
     )
     .await
     {
-        warn!("Failed connecting to peer. Error: {:?}", e);
+        warn!("Failed connecting to peer. Error: {}", e);
 
         // Only attempt to reconnect if the dialing itself failed for some reason, but for any other error that might
         // have happend
