@@ -144,8 +144,10 @@ impl<N: Node> Worker<N> for MessageRequesterWorker {
                 select! {
                     _ = timeouts.next() => retry_requests(&*requested_messages,&mut counter).await,
                     entry = receiver.next() => match entry {
-                        Some(MessageRequesterWorkerEvent(message_id, index)) =>
-                            process_request(&*requested_messages, message_id, index, &mut counter).await,
+                        Some(MessageRequesterWorkerEvent(message_id, index)) => {
+                            trace!("Requesting message {}.", message_id);
+                            process_request(&*requested_messages, message_id, index, &mut counter).await
+                        },
                         None => break,
                     },
                 }

@@ -14,6 +14,7 @@ use crate::peer::Peer;
 use bee_network::PeerId;
 
 use dashmap::DashMap;
+use log::debug;
 use tokio::sync::RwLock;
 
 use std::sync::Arc;
@@ -32,13 +33,15 @@ impl PeerManager {
     }
 
     pub(crate) async fn add(&self, peer: Arc<Peer>) {
+        debug!("Added peer {}.", peer.id);
         self.peers_keys.write().await.push(peer.id.clone());
         self.peers.insert(peer.id.clone(), peer);
     }
 
     pub(crate) async fn remove(&self, id: &PeerId) {
-        self.peers.remove(id);
+        debug!("Removed peer {}.", id);
         self.peers_keys.write().await.retain(|peer_id| peer_id != id);
+        self.peers.remove(id);
     }
 
     pub(crate) fn connected_peers(&self) -> u8 {
