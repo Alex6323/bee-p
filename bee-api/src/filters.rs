@@ -31,11 +31,12 @@ impl reject::Reject for ServiceUnavailable {}
 
 pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
+    storage: ResHandle<B>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_health(tangle.clone())
         .or(get_info(tangle.clone()).or(get_milestone_by_milestone_index(tangle.clone())))
         .or(get_tips(tangle.clone()))
-        .or(get_message_by_index(tangle.clone()))
+        .or(get_message_by_index(storage.clone()))
         .or(get_message_by_message_id(tangle.clone()))
         .or(get_children_by_message_id(tangle.clone()))
 }
@@ -75,7 +76,7 @@ fn get_tips<B: Backend>(
 }
 
 fn get_message_by_index<B: Backend>(
-    tangle: ResHandle<MsTangle<B>>,
+    storage: ResHandle<B>
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::get()
         .and(warp::path("api"))
@@ -92,7 +93,7 @@ fn get_message_by_index<B: Backend>(
                 None => Err(reject::custom(BadRequest)),
             }
         }))
-        .and(with_tangle(tangle))
+        .and(with_storage(storage))
         .and_then(handlers::get_message_by_index)
 }
 
@@ -165,6 +166,12 @@ fn with_tangle<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = (ResHandle<MsTangle<B>>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || tangle.clone())
+}
+
+fn with_storage<B: Backend>(
+    storage: ResHandle<B>,
+) -> impl Filter<Extract = (ResHandle<B>,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || storage.clone())
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {

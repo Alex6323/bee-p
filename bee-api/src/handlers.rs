@@ -17,12 +17,14 @@ use bee_common_ext::node::ResHandle;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
 use bee_protocol::{tangle::MsTangle, MilestoneIndex};
 use bee_storage::storage::Backend;
+use bee_storage::access::Fetch;
 use std::{
     convert::Infallible,
     iter::FromIterator,
     time::{SystemTime, UNIX_EPOCH},
 };
 use warp::{http::StatusCode, reject, Rejection, Reply};
+use std::ops::Deref;
 
 async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
     let mut is_healthy = true;
@@ -107,8 +109,12 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
 
 pub async fn get_message_by_index<B: Backend>(
     index: HashedIndex,
-    tangle: ResHandle<MsTangle<B>>,
+    storage: ResHandle<B>,
 ) -> Result<impl Reply, Rejection> {
+
+    let ret: Vec<MessageId> = storage.deref().fetch(&index).await?;
+
+
     Ok(StatusCode::OK)
 }
 
