@@ -22,7 +22,7 @@ use bee_message::MessageId;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use futures::{select, StreamExt};
-use log::{debug, info};
+use log::{debug, info, trace};
 use tokio::time::interval;
 
 use std::{
