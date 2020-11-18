@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 
 use alloc::{boxed::Box, vec::Vec};
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TransactionEssence {
     inputs: Box<[Input]>,
     outputs: Box<[Output]>,

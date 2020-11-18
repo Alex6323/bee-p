@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 use alloc::{boxed::Box, vec::Vec};
 use core::{cmp::Ordering, slice::Iter};
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Transaction {
     essence: TransactionEssence,
     unlock_blocks: Box<[UnlockBlock]>,
