@@ -89,6 +89,19 @@ pub struct GetTipsResponse {
 
 impl DataBody for GetTipsResponse {}
 
+/// Response of GET /api/v1/messages/{message_id}?index={INDEX}
+#[derive(Clone, Debug, Serialize)]
+pub struct GetMessagesByIndexResponse {
+    pub index: String,
+    #[serde(rename = "maxResults")]
+    pub max_results: usize,
+    pub count: usize,
+    #[serde(rename = "messageIds")]
+    pub message_ids: Vec<String>,
+}
+
+impl DataBody for GetMessagesByIndexResponse {}
+
 /// Response of GET /api/v1/messages/{message_id}
 #[derive(Clone, Debug, Serialize)]
 pub struct GetMessageResponse(pub MessageDto);

@@ -9,9 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use bee_api::storage::Backend as ApiBackend;
 use bee_ledger::storage::Backend as LedgerBackend;
 use bee_storage::storage;
 
-pub trait Backend: storage::Backend + LedgerBackend {}
+pub trait Backend: storage::Backend + LedgerBackend + ApiBackend {}
 
-impl<T> Backend for T where T: storage::Backend + LedgerBackend {}
+impl<T> Backend for T where T: storage::Backend + LedgerBackend + ApiBackend {}

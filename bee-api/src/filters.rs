@@ -12,13 +12,12 @@
 use crate::handlers;
 use bee_common_ext::node::ResHandle;
 use bee_protocol::tangle::MsTangle;
-use bee_storage::storage::Backend;
 use serde::de::DeserializeOwned;
 use warp::{reject, Filter, Rejection};
 
 use bee_message::prelude::HashedIndex;
-use blake2::Blake2s;
-use digest::Digest;
+
+use crate::storage::Backend;
 use std::{collections::HashMap, convert::TryInto};
 
 #[derive(Debug)]
@@ -76,7 +75,7 @@ fn get_tips<B: Backend>(
 }
 
 fn get_message_by_index<B: Backend>(
-    storage: ResHandle<B>
+    storage: ResHandle<B>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::get()
         .and(warp::path("api"))
@@ -85,11 +84,7 @@ fn get_message_by_index<B: Backend>(
         .and(warp::path::end())
         .and(warp::query().and_then(|query: HashMap<String, String>| async move {
             match query.get("index") {
-                Some(i) => {
-                    let mut hasher = Blake2s::new();
-                    hasher.update(i.as_bytes());
-                    Ok(HashedIndex::new(hasher.finalize_reset().as_slice().try_into().unwrap()))
-                }
+                Some(i) => Ok(i.to_string()),
                 None => Err(reject::custom(BadRequest)),
             }
         }))

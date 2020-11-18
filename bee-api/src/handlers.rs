@@ -11,20 +11,22 @@
 
 use crate::{
     filters::ServiceUnavailable,
+    storage::Backend,
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
 };
 use bee_common_ext::node::ResHandle;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
 use bee_protocol::{tangle::MsTangle, MilestoneIndex};
-use bee_storage::storage::Backend;
 use bee_storage::access::Fetch;
+use blake2::Blake2s;
+use digest::Digest;
 use std::{
-    convert::Infallible,
+    convert::{Infallible, TryInto},
     iter::FromIterator,
+    ops::Deref,
     time::{SystemTime, UNIX_EPOCH},
 };
 use warp::{http::StatusCode, reject, Rejection, Reply};
-use std::ops::Deref;
 
 async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
     let mut is_healthy = true;
@@ -107,15 +109,33 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     }
 }
 
-pub async fn get_message_by_index<B: Backend>(
-    index: HashedIndex,
-    storage: ResHandle<B>,
-) -> Result<impl Reply, Rejection> {
+pub async fn get_message_by_index<B: Backend>(index: String, storage: ResHandle<B>) -> Result<impl Reply, Rejection> {
+    let mut hasher = Blake2s::new();
+    hasher.update(index.as_bytes());
+    let hashed_index = HashedIndex::new(hasher.finalize_reset().as_slice().try_into().unwrap());
 
-    let ret: Vec<MessageId> = storage.deref().fetch(&index).await?;
-
-
-    Ok(StatusCode::OK)
+    let max_results = 1000;
+    match storage.deref().fetch(&hashed_index).await {
+        Ok(ret) => match ret {
+            Some(mut fetched) => {
+                let count = fetched.len();
+                fetched.truncate(max_results);
+                Ok(warp::reply::json(&DataResponse::new(GetMessagesByIndexResponse {
+                    index,
+                    max_results,
+                    count,
+                    message_ids: fetched.iter().map(|id| id.to_string()).collect(),
+                })))
+            }
+            None => Ok(warp::reply::json(&DataResponse::new(GetMessagesByIndexResponse {
+                index,
+                max_results,
+                count: 0,
+                message_ids: vec![],
+            }))),
+        },
+        Err(_) => Err(reject::custom(ServiceUnavailable)),
+    }
 }
 
 pub async fn get_message_by_message_id<B: Backend>(

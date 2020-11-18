@@ -12,6 +12,7 @@
 pub mod config;
 mod filters;
 mod handlers;
+pub mod storage;
 mod types;
 
 use crate::{
@@ -30,13 +31,21 @@ use log::info;
 use std::{any::TypeId, convert::Infallible};
 use warp::{http::StatusCode, Filter, Rejection, Reply};
 
-pub async fn init<N: Node>(config: ApiConfig, node_builder: N::Builder) -> N::Builder {
+use crate::storage::Backend;
+
+pub async fn init<N: Node>(config: ApiConfig, node_builder: N::Builder) -> N::Builder
+where
+    N::Backend: Backend,
+{
     node_builder.with_worker_cfg::<ApiWorker>(config)
 }
 
 pub struct ApiWorker;
 #[async_trait]
-impl<N: Node> Worker<N> for ApiWorker {
+impl<N: Node> Worker<N> for ApiWorker
+where
+    N::Backend: Backend,
+{
     type Config = ApiConfig;
     type Error = WorkerError;
 
