@@ -23,7 +23,7 @@ use core::convert::TryInto;
 
 pub const HASHED_INDEX_SIZE: usize = 32;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Indexation {
     index: String,
     data: Box<[u8]>,
