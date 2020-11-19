@@ -16,11 +16,11 @@ use bee_common::packable::{Packable, Read, Write};
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Kind {
-    /// Full is a local snapshot which contains the full ledger entry for a given milestone plus the milestone diffs
-    /// which subtracted to the ledger milestone reduce to the snapshot milestone ledger.
+    /// Full is a snapshot which contains the full ledger entry for a given milestone plus the milestone diffs which
+    /// subtracted to the ledger milestone reduce to the snapshot milestone ledger.
     Full = 0,
-    /// Delta is a local snapshot which contains solely diffs of milestones newer than a certain ledger milestone
-    /// instead of the complete ledger state of a given milestone.
+    /// Delta is a snapshot which contains solely diffs of milestones newer than a certain ledger milestone instead of
+    /// the complete ledger state of a given milestone.
     Delta = 1,
 }
 

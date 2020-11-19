@@ -17,23 +17,23 @@ use std::{fs::File, io::copy, path::Path};
 
 // TODO copy is not really streaming ?
 // TODO temporary file until fully downloaded ?
-pub async fn download_local_snapshot(config: &SnapshotConfig) -> Result<(), Error> {
+pub async fn download_snapshot(config: &SnapshotConfig) -> Result<(), Error> {
     let path = config.path();
 
     let config = config.clone();
 
     for url in config.download_urls() {
-        info!("Downloading local snapshot file from {}...", url);
+        info!("Downloading snapshot file from {}...", url);
         match reqwest::get(url).await {
             Ok(res) => match File::create(config.path()) {
                 // TODO unwrap
                 Ok(mut file) => match copy(&mut res.bytes().await.unwrap().as_ref(), &mut file) {
                     Ok(_) => break,
-                    Err(e) => warn!("Copying local snapshot file failed: {:?}.", e),
+                    Err(e) => warn!("Copying snapshot file failed: {:?}.", e),
                 },
-                Err(e) => warn!("Creating local snapshot file failed: {:?}.", e),
+                Err(e) => warn!("Creating snapshot file failed: {:?}.", e),
             },
-            Err(e) => warn!("Downloading local snapshot file failed: {:?}.", e),
+            Err(e) => warn!("Downloading snapshot file failed: {:?}.", e),
         }
     }
 

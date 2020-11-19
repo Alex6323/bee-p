@@ -25,11 +25,11 @@ pub mod output;
 pub mod snapshot;
 pub mod spent;
 
-pub(crate) use download::download_local_snapshot;
+pub(crate) use download::download_snapshot;
 
 pub use error::Error;
 pub use header::SnapshotHeader;
-pub use snapshot::LocalSnapshot;
+pub use snapshot::Snapshot;
 
 use bee_common_ext::node::Node;
 // use bee_protocol::{event::LatestSolidMilestoneChanged, MilestoneIndex};
@@ -45,16 +45,16 @@ pub async fn init<N: Node>(
     // tangle: &MsTangle<B>,
     config: &config::SnapshotConfig,
     node_builder: N::Builder,
-) -> Result<(N::Builder, LocalSnapshot), Error> {
+) -> Result<(N::Builder, Snapshot), Error> {
     if !Path::new(config.path()).exists() {
-        download_local_snapshot(config).await?;
+        download_snapshot(config).await?;
     }
-    info!("Loading local snapshot file {}...", config.path());
+    info!("Loading snapshot file {}...", config.path());
 
-    let snapshot = LocalSnapshot::from_file(config.path())?;
+    let snapshot = Snapshot::from_file(config.path())?;
 
     info!(
-        "Loaded local snapshot file from {} with {} solid entry points.",
+        "Loaded snapshot file from {} with {} solid entry points.",
         Utc.timestamp(snapshot.header().timestamp() as i64, 0).to_rfc2822(),
         snapshot.solid_entry_points().len(),
     );
