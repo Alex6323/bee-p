@@ -17,7 +17,6 @@ pub enum Error {
     InvalidVariant,
     InvalidVersion(u8, u8),
     Download,
-    Local,
     Message(MessageError),
 }
 
@@ -28,7 +27,6 @@ impl std::fmt::Display for Error {
             Error::InvalidVariant => write!(f, "Invalid variant read."),
             Error::InvalidVersion(expected, actual) => write!(f, "Invalid version read: {}, {}.", expected, actual),
             Error::Download => write!(f, ""),
-            Error::Local => write!(f, ""),
             Error::Message(_) => write!(f, ""),
         }
     }

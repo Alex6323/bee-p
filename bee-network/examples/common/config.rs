@@ -57,12 +57,7 @@ impl ConfigBuilder {
         let peers = self
             .peers
             .iter()
-            .map(|s| {
-                // MultiaddrPeerId::from_str(s)
-                //     .expect("error parsing MultiaddrPeerId")
-                //     .split()
-                Multiaddr::from_str(s).expect("error parsing Multiaddr")
-            })
+            .map(|s| Multiaddr::from_str(s).expect("error parsing Multiaddr"))
             .collect();
 
         Config {

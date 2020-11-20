@@ -12,9 +12,6 @@
 use crate::Milestone;
 
 use bee_message::MessageId;
-use bee_network::{Multiaddr, PeerId};
-
-pub struct HandshakeCompleted(pub PeerId, pub Multiaddr);
 
 pub struct LatestMilestoneChanged(pub Milestone);
 

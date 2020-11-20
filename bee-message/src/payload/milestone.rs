@@ -21,7 +21,7 @@ pub const MILESTONE_MERKLE_PROOF_LENGTH: usize = 64;
 pub const MILESTONE_PUBLIC_KEY_LENGTH: usize = 32;
 pub const MILESTONE_SIGNATURE_LENGTH: usize = 64;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Milestone {
     essence: MilestoneEssence,
     // TODO length is 64, change to array when std::array::LengthAtMost32 disappears.
@@ -78,7 +78,7 @@ impl Packable for Milestone {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct MilestoneEssence {
     index: u32,
     timestamp: u64,

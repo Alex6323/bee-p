@@ -30,7 +30,7 @@ use bee_common_ext::{
     node::{Node, NodeBuilder},
 };
 use bee_network::{Multiaddr, Network, PeerId};
-use bee_snapshot::LocalSnapshot;
+use bee_snapshot::Snapshot;
 use bee_storage::storage::Backend;
 
 use futures::channel::oneshot;
@@ -52,7 +52,7 @@ impl Protocol {
         config: ProtocolConfig,
         database_config: <N::Backend as Backend>::Config,
         network: Network,
-        snapshot: &LocalSnapshot,
+        snapshot: &Snapshot,
         node_builder: N::Builder,
     ) -> N::Builder {
         let protocol = Protocol {

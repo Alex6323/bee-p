@@ -42,7 +42,7 @@ async fn trigger_solidification_unchecked<B: Backend>(
 ) {
     if let Some(target_hash) = tangle.get_milestone_message_id(target_index) {
         if !tangle.is_solid_message(&target_hash) {
-            debug!("Triggered solidification for milestone {}.", *target_index);
+            debug!("Triggering solidification for milestone {}.", *target_index);
 
             // TODO: This wouldn't be necessary if the traversal code wasn't closure-driven
             let mut missing = Vec::new();

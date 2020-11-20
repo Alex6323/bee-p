@@ -14,7 +14,7 @@ use crate::{
     constants::{
         ADDITIONAL_PRUNING_THRESHOLD, SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE, SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST,
     },
-    local::snapshot,
+    snapshot,
     pruning::prune_database,
 };
 
@@ -40,9 +40,9 @@ fn should_snapshot<B: Backend>(tangle: &MsTangle<B>, index: MilestoneIndex, conf
     let snapshot_index = *tangle.get_snapshot_index();
     let pruning_index = *tangle.get_pruning_index();
     let snapshot_interval = if tangle.is_synced() {
-        config.local().interval_synced()
+        config.interval_synced()
     } else {
-        config.local().interval_unsynced()
+        config.interval_unsynced()
     };
 
     if (solid_index < depth + snapshot_interval)
@@ -108,18 +108,18 @@ impl<N: Node> Worker<N> for SnapshotWorker {
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            let depth = if config.local().depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
+            let depth = if config.depth() < SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE {
                 warn!(
                     "Configuration value for \"depth\" is too low ({}), value changed to {}.",
-                    config.local().depth(),
+                    config.depth(),
                     SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE
                 );
                 SOLID_ENTRY_POINT_CHECK_THRESHOLD_FUTURE
             } else {
-                config.local().depth()
+                config.depth()
             };
             let delay_min =
-                config.local().depth() + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
+                config.depth() + SOLID_ENTRY_POINT_CHECK_THRESHOLD_PAST + ADDITIONAL_PRUNING_THRESHOLD + 1;
             let delay = if config.pruning().delay() < delay_min {
                 warn!(
                     "Configuration value for \"delay\" is too low ({}), value changed to {}.",
@@ -133,7 +133,7 @@ impl<N: Node> Worker<N> for SnapshotWorker {
 
             while let Some(SnapshotWorkerEvent(milestone)) = receiver.next().await {
                 if should_snapshot(&tangle, milestone.index(), &config, depth) {
-                    if let Err(e) = snapshot(config.local().path(), *milestone.index() - depth) {
+                    if let Err(e) = snapshot(config.path(), *milestone.index() - depth) {
                         error!("Failed to create snapshot: {:?}.", e);
                     }
                 }

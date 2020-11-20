@@ -35,7 +35,6 @@ use log::*;
 
 use std::{
     io,
-    net::IpAddr,
     pin::Pin,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -131,19 +130,10 @@ impl ConnectionManager {
                                 // )
                                 // .await//.expect("process_listener_event")
 
-                                // FIXME: unwrap (but is blowup even possible?)
-                                let ip_address = match peer_address.iter().next().unwrap() {
-                                    Protocol::Ip4(ip_addr) => IpAddr::V4(ip_addr),
-                                    Protocol::Ip6(ip_addr) => IpAddr::V6(ip_addr),
-                                    _ => {
-                                        warn!("Invalid multiaddress.");
-                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                        continue;
-                                    }
-                                };
+                                let peer_address_str = peer_address.to_string();
 
-                                if banned_addrs.contains(&ip_address) {
-                                    warn!("Ignoring peer. Cause: '{}' is banned.", ip_address);
+                                if banned_addrs.contains(&peer_address_str) {
+                                    warn!("Ignoring peer. Cause: '{}' is banned.", peer_address_str);
                                     NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
                                     continue;
                                 }

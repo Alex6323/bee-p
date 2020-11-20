@@ -150,6 +150,7 @@ impl<N: Node> Worker<N> for MilestoneRequesterWorker {
                     entry = receiver.next() => match entry {
                         Some(MilestoneRequesterWorkerEvent(index, peer_id)) => {
                             if !tangle.contains_milestone(index.into()) {
+                                debug!("Requesting milestone {}.", *index);
                                 process_request(&*requested_milestones, index, peer_id, &mut counter).await;
                             }
                         },

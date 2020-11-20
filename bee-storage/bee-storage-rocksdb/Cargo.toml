@@ -25,6 +25,7 @@ num_cpus = "1.13"
 pin-project = "1.0"
 rocksdb = { version = "0.15", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
 
 [dev-dependencies]
 bee-test = { path = "../../bee-test" }

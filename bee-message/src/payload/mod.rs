@@ -30,7 +30,7 @@ const PAYLOAD_MILESTONE_TYPE: u32 = 1;
 const PAYLOAD_INDEXATION_TYPE: u32 = 2;
 
 #[non_exhaustive]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Payload {
     Transaction(Box<Transaction>),
     Milestone(Box<Milestone>),

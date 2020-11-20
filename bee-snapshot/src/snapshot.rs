@@ -22,14 +22,14 @@ use std::{
     io::{BufReader, BufWriter},
 };
 
-pub struct LocalSnapshot {
+pub struct Snapshot {
     pub(crate) header: SnapshotHeader,
     pub(crate) solid_entry_points: HashSet<MessageId>,
     pub(crate) outputs: Vec<Output>,
     pub(crate) milestone_diffs: Vec<MilestoneDiff>,
 }
 
-impl LocalSnapshot {
+impl Snapshot {
     pub fn header(&self) -> &SnapshotHeader {
         &self.header
     }
@@ -38,11 +38,11 @@ impl LocalSnapshot {
         &self.solid_entry_points
     }
 
-    pub fn from_file(path: &str) -> Result<LocalSnapshot, Error> {
+    pub fn from_file(path: &str) -> Result<Snapshot, Error> {
         let mut reader = BufReader::new(OpenOptions::new().read(true).open(path).map_err(Error::Io)?);
 
         // TODO unwrap
-        Ok(LocalSnapshot::unpack(&mut reader).unwrap())
+        Ok(Snapshot::unpack(&mut reader).unwrap())
     }
 
     pub fn to_file(&self, path: &str) -> Result<(), Error> {
@@ -62,7 +62,7 @@ impl LocalSnapshot {
     }
 }
 
-impl Packable for LocalSnapshot {
+impl Packable for Snapshot {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
@@ -151,9 +151,9 @@ impl Packable for LocalSnapshot {
 
 #[allow(dead_code)] // TODO: When pruning is enabled
 pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
-    info!("Creating local snapshot at index {}...", index);
+    info!("Creating snapshot at index {}...", index);
 
-    let ls = LocalSnapshot {
+    let ls = Snapshot {
         header: SnapshotHeader {
             kind: Kind::Full,
             timestamp: 0,
@@ -171,10 +171,10 @@ pub(crate) fn snapshot(path: &str, index: u32) -> Result<(), Error> {
     let file = path.to_string() + "_tmp";
 
     if let Err(e) = ls.to_file(&file) {
-        error!("Failed to write local snapshot to file {}: {:?}.", file, e);
+        error!("Failed to write snapshot to file {}: {:?}.", file, e);
     }
 
-    info!("Created local snapshot at index {}.", index);
+    info!("Created snapshot at index {}.", index);
 
     Ok(())
 }

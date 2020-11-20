@@ -23,7 +23,7 @@ pub enum Error {
     MerkleProofMismatch,
     InvalidMessagesCount,
     OutputNotFound(OutputId),
-    Storage(Box<dyn std::error::Error>),
+    Storage(Box<dyn std::error::Error + Send>),
 }
 
 impl From<std::io::Error> for Error {
