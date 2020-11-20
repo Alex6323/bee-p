@@ -110,8 +110,8 @@ impl DataBody for GetMessageResponse {}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct MessageDto {
-    #[serde(rename = "networkId")]
-    pub network_id: String,
+    //#[serde(rename = "networkId")]
+    //pub network_id: String,
     #[serde(rename = "parent1MessageId")]
     pub parent_1_message_id: String,
     #[serde(rename = "parent2MessageId")]
