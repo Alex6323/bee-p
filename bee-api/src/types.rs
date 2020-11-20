@@ -142,8 +142,14 @@ pub struct TransactionEssenceDto {
     #[serde(rename = "type")]
     pub kind: u32,
     pub inputs: Vec<UtxoInputDto>,
-    pub outputs: Vec<SigLockedSingleOutputDto>,
+    pub outputs: Vec<OutputDto>,
     pub payload: Option<IndexationPayloadDto>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum OutputDto {
+    SignatureLockedSingle(SignatureLockedSingleOutputDto),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -157,11 +163,11 @@ pub struct UtxoInputDto {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct SigLockedSingleOutputDto {
+pub struct SignatureLockedSingleOutputDto {
     #[serde(rename = "type")]
     pub kind: u32,
     pub address: Ed25519AddressDto,
-    pub amount: u32,
+    pub amount: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -245,3 +251,19 @@ pub struct GetMilestoneResponse {
 }
 
 impl DataBody for GetMilestoneResponse {}
+
+/// Response of GET /api/v1/outputs/{output_id}
+#[derive(Clone, Debug, Serialize)]
+pub struct GetOutputByOutputIdResponse {
+    #[serde(rename = "messageId")]
+    pub message_id: String,
+    #[serde(rename = "transactionId")]
+    pub transaction_id: String,
+    #[serde(rename = "outputIndex")]
+    pub output_index: u16,
+    #[serde(rename = "isSpent")]
+    pub is_spent: bool,
+    pub output: OutputDto,
+}
+
+impl DataBody for GetOutputByOutputIdResponse {}

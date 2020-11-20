@@ -15,9 +15,9 @@ use crate::{
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
 };
 use bee_common_ext::node::ResHandle;
+use bee_ledger::spent::Spent;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
 use bee_protocol::{tangle::MsTangle, MilestoneIndex};
-use bee_storage::access::Fetch;
 use blake2::Blake2s;
 use digest::Digest;
 use std::{
@@ -171,17 +171,19 @@ pub async fn get_message_by_message_id<B: Backend>(
                                 .outputs()
                                 .iter()
                                 .map(|output| match output {
-                                    Output::SignatureLockedSingle(output) => SigLockedSingleOutputDto {
-                                        kind: 0,
-                                        address: match output.address() {
-                                            Address::Ed25519(ed) => Ed25519AddressDto {
-                                                kind: 1,
-                                                address: ed.to_string(),
+                                    Output::SignatureLockedSingle(output) => {
+                                        OutputDto::SignatureLockedSingle(SignatureLockedSingleOutputDto {
+                                            kind: 0,
+                                            address: match output.address() {
+                                                Address::Ed25519(ed) => Ed25519AddressDto {
+                                                    kind: 1,
+                                                    address: ed.to_bech32(),
+                                                },
+                                                _ => unimplemented!(),
                                             },
-                                            _ => unimplemented!(),
-                                        },
-                                        amount: 0,
-                                    },
+                                            amount: output.amount().to_string(),
+                                        })
+                                    }
                                     _ => unimplemented!(),
                                 })
                                 .collect(),
@@ -288,6 +290,49 @@ pub async fn get_milestone_by_milestone_index<B: Backend>(
         },
         None => Err(reject::not_found()),
     }
+}
+
+pub async fn get_output_by_output_id<B: Backend>(
+    output_id: OutputId,
+    storage: ResHandle<B>,
+) -> Result<impl Reply, Rejection> {
+    let output: Result<Option<bee_ledger::output::Output>, <B as bee_storage::storage::Backend>::Error> =
+        storage.fetch(&output_id).await;
+    let is_spent: Result<Option<Spent>, <B as bee_storage::storage::Backend>::Error> = storage.fetch(&output_id).await;
+
+    if let (Ok(output), Ok(is_spent)) = (output, is_spent) {
+        match output {
+            Some(output) => Ok(warp::reply::json(&DataResponse::new(GetOutputByOutputIdResponse {
+                message_id: output.message_id().to_string(),
+                transaction_id: output_id.transaction_id().to_string(),
+                output_index: output_id.index(),
+                is_spent: is_spent.is_some(),
+                output: match output.inner() {
+                    Output::SignatureLockedSingle(output) => {
+                        OutputDto::SignatureLockedSingle(SignatureLockedSingleOutputDto {
+                            kind: 0,
+                            address: Ed25519AddressDto {
+                                kind: 1,
+                                address: output.address().to_bech32(),
+                            },
+                            amount: output.amount().to_string(),
+                        })
+                    }
+                    _ => panic!("unexpected signature scheme"),
+                },
+            }))),
+            None => Err(reject::not_found()),
+        }
+    } else {
+        Err(reject::custom(ServiceUnavailable))
+    }
+}
+
+pub async fn get_balance_by_address<B: Backend>(
+    output_id: OutputId,
+    storage: ResHandle<B>,
+) -> Result<impl Reply, Rejection> {
+    Ok(StatusCode::OK)
 }
 
 pub mod tests {

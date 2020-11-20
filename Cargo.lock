@@ -192,6 +192,7 @@ dependencies = [
  "async-trait",
  "bee-common",
  "bee-common-ext",
+ "bee-ledger",
  "bee-message",
  "bee-protocol",
  "bee-storage",

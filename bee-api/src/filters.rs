@@ -15,10 +15,8 @@ use bee_protocol::tangle::MsTangle;
 use serde::de::DeserializeOwned;
 use warp::{reject, Filter, Rejection};
 
-use bee_message::prelude::HashedIndex;
-
 use crate::storage::Backend;
-use std::{collections::HashMap, convert::TryInto};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct BadRequest;
@@ -38,6 +36,7 @@ pub fn all<B: Backend>(
         .or(get_message_by_index(storage.clone()))
         .or(get_message_by_message_id(tangle.clone()))
         .or(get_children_by_message_id(tangle.clone()))
+        .or(get_output_by_output_id(storage.clone()))
 }
 
 fn get_health<B: Backend>(
@@ -132,11 +131,33 @@ fn get_milestone_by_milestone_index<B: Backend>(
         .and_then(handlers::get_milestone_by_milestone_index)
 }
 
+fn get_output_by_output_id<B: Backend>(
+    storage: ResHandle<B>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("outputs"))
+        .and(custom_path_param::output_id())
+        .and(warp::path::end())
+        .and(with_storage(storage))
+        .and_then(handlers::get_output_by_output_id)
+}
+
 mod custom_path_param {
 
     use super::*;
-    use bee_message::MessageId;
+    use bee_message::{payload::transaction::OutputId, MessageId};
     use bee_protocol::MilestoneIndex;
+
+    pub(super) fn output_id() -> impl Filter<Extract = (OutputId,), Error = Rejection> + Copy {
+        warp::path::param().and_then(|value: String| async move {
+            match value.parse::<OutputId>() {
+                Ok(id) => Ok(id),
+                Err(_) => Err(reject::custom(BadRequest)),
+            }
+        })
+    }
 
     pub(super) fn message_id() -> impl Filter<Extract = (MessageId,), Error = Rejection> + Copy {
         warp::path::param().and_then(|value: String| async move {
