@@ -14,6 +14,7 @@ use crate::{
     storage::Backend,
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
 };
+use bee_common::packable::Packable;
 use bee_common_ext::node::ResHandle;
 use bee_ledger::spent::Spent;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
@@ -26,7 +27,10 @@ use std::{
     ops::Deref,
     time::{SystemTime, UNIX_EPOCH},
 };
-use warp::{http::StatusCode, reject, Rejection, Reply};
+use warp::{
+    http::{Response, StatusCode},
+    reject, Rejection, Reply,
+};
 
 async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
     let mut is_healthy = true;
@@ -144,7 +148,7 @@ pub async fn get_message_by_message_id<B: Backend>(
 ) -> Result<impl Reply, Rejection> {
     match tangle.get(&message_id).await {
         Some(message) => {
-            //let network_id = message.network_id().to_string();
+            // let network_id = message.network_id().to_string();
             let parent_1_message_id = message.parent1().to_string();
             let parent_2_message_id = message.parent2().to_string();
             let payload = {
@@ -241,13 +245,25 @@ pub async fn get_message_by_message_id<B: Backend>(
             let nonce = message.nonce().to_string();
 
             Ok(warp::reply::json(&DataResponse::new(GetMessageResponse(MessageDto {
-                //network_id,
+                // network_id,
                 parent_1_message_id,
                 parent_2_message_id,
                 payload,
                 nonce,
             }))))
         }
+        None => Err(reject::not_found()),
+    }
+}
+
+pub async fn get_raw_message<B: Backend>(
+    message_id: MessageId,
+    tangle: ResHandle<MsTangle<B>>,
+) -> Result<impl Reply, Rejection> {
+    match tangle.get(&message_id).await {
+        Some(message) => Ok(Response::builder()
+            .header("Content-Type", "application/octet-stream")
+            .body(message.pack_new())),
         None => Err(reject::not_found()),
     }
 }
