@@ -35,6 +35,7 @@ pub fn all<B: Backend>(
         .or(get_tips(tangle.clone()))
         .or(get_message_by_index(storage.clone()))
         .or(get_message_by_message_id(tangle.clone()))
+        .or(get_message_metadata(tangle.clone()))
         .or(get_raw_message(tangle.clone()))
         .or(get_children_by_message_id(tangle.clone()))
         .or(get_output_by_output_id(storage.clone()))
@@ -103,6 +104,20 @@ fn get_message_by_message_id<B: Backend>(
         .and(warp::path::end())
         .and(with_tangle(tangle))
         .and_then(handlers::get_message_by_message_id)
+}
+
+fn get_message_metadata<B: Backend>(
+    tangle: ResHandle<MsTangle<B>>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("messages"))
+        .and(custom_path_param::message_id())
+        .and(warp::path("metadata"))
+        .and(warp::path::end())
+        .and(with_tangle(tangle))
+        .and_then(handlers::get_message_metadata)
 }
 
 fn get_raw_message<B: Backend>(

@@ -111,7 +111,7 @@ impl DataBody for GetMessageResponse {}
 #[derive(Clone, Debug, Serialize)]
 pub struct MessageDto {
     //#[serde(rename = "networkId")]
-    //pub network_id: String,
+    // pub network_id: String,
     #[serde(rename = "parent1MessageId")]
     pub parent_1_message_id: String,
     #[serde(rename = "parent2MessageId")]
@@ -225,6 +225,41 @@ pub struct MilestonePayloadDto {
     pub inclusion_merkle_proof: String,
     pub signatures: Vec<String>,
 }
+
+/// Response of GET /api/v1/messages/{message_id}/metadata
+#[derive(Clone, Debug, Serialize)]
+pub struct GetMessageMetadataResponse {
+    #[serde(rename = "messageId")]
+    pub message_id: String,
+    #[serde(rename = "parent1MessageId")]
+    pub parent_1_message_id: String,
+    #[serde(rename = "parent2MessageId")]
+    pub parent_2_message_id: String,
+    #[serde(rename = "isSolid")]
+    pub is_solid: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "referencedByMilestoneIndex")]
+    pub referenced_by_milestone_index: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "ledgerInclusionState")]
+    pub ledger_inclusion_state: Option<LedgerInclusionStateDto>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "shouldPromote")]
+    pub should_promote: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "shouldReattach")]
+    pub should_reattach: Option<bool>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum LedgerInclusionStateDto {
+    Conflicting,
+    Included,
+    NoTransaction,
+}
+
+impl DataBody for GetMessageMetadataResponse {}
 
 /// Response of GET /api/v1/messages/{message_id}/children
 #[derive(Clone, Debug, Serialize)]

@@ -32,6 +32,11 @@ use warp::{
     reject, Rejection, Reply,
 };
 
+// TODO: move constants to node configuration
+const YTRSI_DELTA: u32 = 8;
+const OTRSI_DELTA: u32 = 13;
+const BELOW_MAX_DEPTH: u32 = 15;
+
 async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
     let mut is_healthy = true;
 
@@ -251,6 +256,94 @@ pub async fn get_message_by_message_id<B: Backend>(
                 payload,
                 nonce,
             }))))
+        }
+        None => Err(reject::not_found()),
+    }
+}
+
+pub async fn get_message_metadata<B: Backend>(
+    message_id: MessageId,
+    tangle: ResHandle<MsTangle<B>>,
+) -> Result<impl Reply, Rejection> {
+    if !tangle.is_synced() {
+        return Err(reject::custom(ServiceUnavailable));
+    }
+
+    match tangle.get_metadata(&message_id) {
+        Some(metadata) => {
+            match tangle.get(&message_id).await {
+                Some(message) => {
+                    let res = {
+                        // in case the message is referenced by a milestone
+                        if let Some(milestone) = metadata.cone_index() {
+                            GetMessageMetadataResponse {
+                                message_id: message_id.to_string(),
+                                parent_1_message_id: message.parent1().to_string(),
+                                parent_2_message_id: message.parent2().to_string(),
+                                is_solid: metadata.flags().is_solid(),
+                                referenced_by_milestone_index: Some(*milestone),
+                                ledger_inclusion_state: Some(
+                                    if let Some(Payload::Transaction(_)) = message.payload() {
+                                        if metadata.flags().is_conflicting() {
+                                            LedgerInclusionStateDto::Conflicting
+                                        } else {
+                                            LedgerInclusionStateDto::Included
+                                        }
+                                    } else {
+                                        LedgerInclusionStateDto::NoTransaction
+                                    },
+                                ),
+                                should_promote: None,
+                                should_reattach: None,
+                            }
+                        } else {
+                            // in case the message is not referenced by a milestone, but solid
+                            if metadata.flags().is_solid() {
+                                let mut should_promote = false;
+                                let mut should_reattach = false;
+                                let lsmi = *tangle.get_latest_solid_milestone_index();
+
+                                if (lsmi - OTRSI_DELTA) > BELOW_MAX_DEPTH {
+                                    should_promote = false;
+                                    should_reattach = true;
+                                } else if (lsmi - YTRSI_DELTA) > YTRSI_DELTA {
+                                    should_promote = true;
+                                    should_reattach = false;
+                                } else if (lsmi - OTRSI_DELTA) > OTRSI_DELTA {
+                                    should_promote = true;
+                                    should_reattach = false;
+                                }
+
+                                GetMessageMetadataResponse {
+                                    message_id: message_id.to_string(),
+                                    parent_1_message_id: message.parent1().to_string(),
+                                    parent_2_message_id: message.parent2().to_string(),
+                                    is_solid: true,
+                                    referenced_by_milestone_index: None,
+                                    ledger_inclusion_state: None,
+                                    should_promote: Some(should_promote),
+                                    should_reattach: Some(should_reattach),
+                                }
+                            } else {
+                                // in case the message is not referenced by a milestone, not solid,
+                                GetMessageMetadataResponse {
+                                    message_id: message_id.to_string(),
+                                    parent_1_message_id: message.parent1().to_string(),
+                                    parent_2_message_id: message.parent2().to_string(),
+                                    is_solid: false,
+                                    referenced_by_milestone_index: None,
+                                    ledger_inclusion_state: None,
+                                    should_promote: Some(true),
+                                    should_reattach: Some(false),
+                                }
+                            }
+                        }
+                    };
+
+                    Ok(warp::reply::json(&DataResponse::new(res)))
+                }
+                None => Err(reject::not_found()),
+            }
         }
         None => Err(reject::not_found()),
     }
