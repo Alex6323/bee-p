@@ -19,8 +19,6 @@ use blake2::{
 };
 use serde::{Deserialize, Serialize};
 
-const MESSAGE_VERSION: u8 = 1;
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
     network_id: u64,
@@ -71,8 +69,7 @@ impl Packable for Message {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        MESSAGE_VERSION.packed_len()
-            + self.network_id.packed_len()
+        self.network_id.packed_len()
             + self.parent1.packed_len()
             + self.parent2.packed_len()
             + 0u32.packed_len()
@@ -85,8 +82,6 @@ impl Packable for Message {
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
-        MESSAGE_VERSION.pack(writer)?;
-
         self.network_id.pack(writer)?;
 
         self.parent1.pack(writer)?;
@@ -108,12 +103,6 @@ impl Packable for Message {
     where
         Self: Sized,
     {
-        let version = u8::unpack(reader)?;
-
-        if version != MESSAGE_VERSION {
-            return Err(Self::Error::InvalidVersion(MESSAGE_VERSION, version));
-        }
-
         let network_id = u64::unpack(reader)?;
 
         let parent1 = MessageId::unpack(reader)?;

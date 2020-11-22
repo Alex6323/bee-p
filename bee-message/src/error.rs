@@ -29,7 +29,6 @@ pub enum Error {
     Io(std::io::Error),
     InvalidVariant,
     Utf8String(alloc::string::FromUtf8Error),
-    InvalidVersion(u8, u8),
     InvalidType(u8, u8),
     InvalidAnnouncedLength(usize, usize),
     InvalidSyntax,
@@ -55,7 +54,6 @@ impl fmt::Display for Error {
             Error::Io(e) => write!(f, "I/O error happened: {}.", e),
             Error::InvalidVariant => write!(f, "Invalid variant read."),
             Error::Utf8String(e) => write!(f, "Invalid Utf8 string read: {}.", e),
-            Error::InvalidVersion(expected, actual) => write!(f, "Invalid version read: {}, {}.", expected, actual),
             Error::InvalidType(expected, actual) => write!(f, "Invalid type read: {}, {}.", expected, actual),
             Error::InvalidAnnouncedLength(expected, actual) => {
                 write!(f, "Invalid announced length: {}, {}.", expected, actual)
