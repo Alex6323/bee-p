@@ -62,13 +62,9 @@ pub struct GetInfoResponse {
     #[serde(rename = "isHealthy")]
     pub is_healthy: bool,
     #[serde(rename = "networkId")]
-    pub network_id: u8,
-    #[serde(rename = "latestMilestoneId")]
-    pub latest_milestone_id: String,
+    pub network_id: String,
     #[serde(rename = "latestMilestoneIndex")]
     pub latest_milestone_index: u32,
-    #[serde(rename = "solidMilestoneId")]
-    pub solid_milestone_id: String,
     #[serde(rename = "solidMilestoneIndex")]
     pub solid_milestone_index: u32,
     #[serde(rename = "pruningIndex")]

@@ -79,16 +79,8 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     let version = String::from(env!("CARGO_PKG_VERSION"));
     let is_healthy = is_healthy(tangle.clone()).await;
     // TODO: get network_id from node; use a splaceholder for now
-    let network_id = 1;
-    let latest_milestone_id = tangle
-        .get_milestone_message_id(tangle.get_latest_milestone_index())
-        .unwrap()
-        .to_string();
+    let network_id = "alphanet".to_string();
     let latest_milestone_index = *tangle.get_latest_milestone_index();
-    let solid_milestone_id = tangle
-        .get_milestone_message_id(tangle.get_latest_milestone_index())
-        .unwrap()
-        .to_string();
     let solid_milestone_index = *tangle.get_latest_milestone_index();
     let pruning_index = *tangle.get_pruning_index();
     // TODO: check enabled features
@@ -99,9 +91,7 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
         version,
         is_healthy,
         network_id,
-        latest_milestone_id,
         latest_milestone_index,
-        solid_milestone_id,
         solid_milestone_index,
         pruning_index,
         features,
