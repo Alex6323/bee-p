@@ -23,7 +23,7 @@ const MESSAGE_VERSION: u8 = 1;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message {
-    // network_id: u64,
+    network_id: u64,
     parent1: MessageId,
     parent2: MessageId,
     payload: Option<Payload>,
@@ -46,9 +46,9 @@ impl Message {
         MessageId::new(bytes)
     }
 
-    // pub fn network_id(&self) -> u64 {
-    //     self.network_id
-    // }
+    pub fn network_id(&self) -> u64 {
+        self.network_id
+    }
 
     pub fn parent1(&self) -> &MessageId {
         &self.parent1
@@ -72,7 +72,7 @@ impl Packable for Message {
 
     fn packed_len(&self) -> usize {
         MESSAGE_VERSION.packed_len()
-            // + self.network_id.packed_len()
+            + self.network_id.packed_len()
             + self.parent1.packed_len()
             + self.parent2.packed_len()
             + 0u32.packed_len()
@@ -87,7 +87,7 @@ impl Packable for Message {
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
         MESSAGE_VERSION.pack(writer)?;
 
-        // self.network_id.pack(writer)?;
+        self.network_id.pack(writer)?;
 
         self.parent1.pack(writer)?;
         self.parent2.pack(writer)?;
@@ -114,7 +114,7 @@ impl Packable for Message {
             return Err(Self::Error::InvalidVersion(MESSAGE_VERSION, version));
         }
 
-        // let network_id = u64::unpack(reader)?;
+        let network_id = u64::unpack(reader)?;
 
         let parent1 = MessageId::unpack(reader)?;
         let parent2 = MessageId::unpack(reader)?;
@@ -133,7 +133,7 @@ impl Packable for Message {
         let nonce = u64::unpack(reader)?;
 
         Ok(Self {
-            // network_id,
+            network_id,
             parent1,
             parent2,
             payload,
@@ -157,7 +157,7 @@ impl Vertex for Message {
 // TODO generic over PoW provider
 #[derive(Default)]
 pub struct MessageBuilder {
-    // network_id: Option<u64>,
+    network_id: Option<u64>,
     parent1: Option<MessageId>,
     parent2: Option<MessageId>,
     payload: Option<Payload>,
@@ -169,10 +169,10 @@ impl MessageBuilder {
         Default::default()
     }
 
-    // pub fn with_network_id(mut self, network_id: u64) -> Self {
-    //     self.network_id = Some(network_id);
-    //     self
-    // }
+    pub fn with_network_id(mut self, network_id: u64) -> Self {
+        self.network_id = Some(network_id);
+        self
+    }
 
     pub fn with_parent1(mut self, parent1: MessageId) -> Self {
         self.parent1 = Some(parent1);
@@ -196,7 +196,7 @@ impl MessageBuilder {
 
     pub fn finish(self) -> Result<Message, Error> {
         Ok(Message {
-            // network_id: self.network_id.ok_or(Error::MissingField("network_id"))?,
+            network_id: self.network_id.ok_or(Error::MissingField("network_id"))?,
             parent1: self.parent1.ok_or(Error::MissingField("parent1"))?,
             parent2: self.parent2.ok_or(Error::MissingField("parent2"))?,
             payload: self.payload,
