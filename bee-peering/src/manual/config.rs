@@ -17,11 +17,11 @@ use std::str::FromStr;
 
 // TODO add acceptAnyConnection
 
-const DEFAULT_LIMIT: u8 = 5;
+const DEFAULT_LIMIT: usize = 5;
 
 #[derive(Default, Deserialize)]
 pub struct ManualPeeringConfigBuilder {
-    pub(crate) limit: Option<u8>,
+    pub(crate) limit: Option<usize>,
     pub(crate) peers: Vec<(String, Option<String>)>,
 }
 
@@ -30,7 +30,7 @@ impl ManualPeeringConfigBuilder {
         Self::default()
     }
 
-    pub fn limit(mut self, limit: u8) -> Self {
+    pub fn limit(mut self, limit: usize) -> Self {
         self.limit.replace(limit);
         self
     }
@@ -60,7 +60,7 @@ impl ManualPeeringConfigBuilder {
 
 #[derive(Clone)]
 pub struct ManualPeeringConfig {
-    pub(crate) limit: u8,
+    pub(crate) limit: usize,
     pub(crate) peers: Vec<(Multiaddr, Option<String>)>,
 }
 

@@ -29,42 +29,38 @@ impl ManualPeerManager {
     }
 }
 
-fn add_peer(network: &Network, id: PeerId, address: Multiaddr, alias: Option<String>, relation: PeerRelation) {
-    if let Err(e) = network.unbounded_send(AddPeer {
-        id,
-        address,
-        alias,
-        relation,
-    }) {
-        warn!("Failed to add peer: {}", e);
-    }
-}
-
-fn connect_peer(network: &Network, id: PeerId) {
-    if let Err(e) = network.unbounded_send(ConnectPeer { id }) {
-        warn!("Failed to connect to peer: {}", e);
-    }
-}
-
 #[async_trait]
 impl PeerManager for ManualPeerManager {
     async fn run(self, network: &Network) {
         let ManualPeerManager { config } = self;
 
         // TODO config file watcher
-        // TODO use limit
-        for (mut address, alias) in config.peers {
-            // NOTE: if unwrapping fails here, it should have been caught earlier (e.g. when parsing the config,
-            // cli, ...)
-            if let Protocol::P2p(multihash) = address.pop().unwrap() {
-                let id = PeerId::from_multihash(multihash).expect("Invalid Multiaddr.");
+        for (i, (mut address, alias)) in config.peers.into_iter().enumerate() {
+            if i < config.limit {
+                // NOTE: `unwrap`ping should be fine here since it comes from the config.
+                if let Protocol::P2p(multihash) = address.pop().unwrap() {
+                    let id = PeerId::from_multihash(multihash).expect("Invalid Multiaddr.");
 
-                add_peer(network, id, address, alias, PeerRelation::Known);
+                    add_peer(network, id, address, alias);
+                } else {
+                    unreachable!(
+                        "Invalid Peer descriptor. The multiaddress did not have a valid peer id as its last segment."
+                    )
+                }
             } else {
-                unreachable!(
-                    "Invalid Peer descriptor. The multiaddress did not have a valid peer id as its last segment."
-                )
+                warn!("Tried to add more peers than specified in limit(={})", config.limit);
             }
         }
+    }
+}
+
+fn add_peer(network: &Network, id: PeerId, address: Multiaddr, alias: Option<String>) {
+    if let Err(e) = network.unbounded_send(AddPeer {
+        id,
+        address,
+        alias,
+        relation: PeerRelation::Known,
+    }) {
+        warn!("Failed to add peer: {}", e);
     }
 }
