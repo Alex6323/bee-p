@@ -47,7 +47,7 @@ pub(crate) struct ProcessorWorker {
 
 #[async_trait]
 impl<N: Node> Worker<N> for ProcessorWorker {
-    type Config = ProtocolConfig;
+    type Config = (ProtocolConfig, u64);
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
@@ -97,6 +97,12 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     }
                 };
 
+                if message.network_id() != config.1 {
+                    trace!("Incompatible network ID {} != {}.", message.network_id(), config.1);
+                    Protocol::get().metrics.invalid_messages_inc();
+                    continue;
+                }
+
                 // TODO should be passed by the hasher worker ?
                 blake2b.update(&message_packet.bytes);
                 let mut bytes = [0u8; 32];
@@ -104,8 +110,12 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 blake2b.finalize_variable_reset(|digest| bytes.copy_from_slice(&digest));
                 let message_id = MessageId::from(bytes);
 
-                if pow_score < config.minimum_pow_score {
-                    trace!("Insufficient pow score: {} < {}.", pow_score, config.minimum_pow_score);
+                if pow_score < config.0.minimum_pow_score {
+                    trace!(
+                        "Insufficient pow score: {} < {}.",
+                        pow_score,
+                        config.0.minimum_pow_score
+                    );
                     Protocol::get().metrics.invalid_messages_inc();
                     continue;
                 }

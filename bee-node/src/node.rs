@@ -114,6 +114,7 @@ impl<B: Backend> NodeBuilder<B> {
             self.config.database.clone(),
             network.clone(),
             &snapshot,
+            self.config.network_id.1,
             node_builder,
         );
 
