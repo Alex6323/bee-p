@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::storage::*;
+use crate::{error::Error, storage::*};
 
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
@@ -29,9 +29,12 @@ impl Exist<MessageId, Message> for Storage {
     where
         Self: Sized,
     {
-        let cf_message_id_to_message = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE).unwrap();
+        let cf = self
+            .inner
+            .cf_handle(CF_MESSAGE_ID_TO_MESSAGE)
+            .ok_or(Error::UnknownCf(CF_MESSAGE_ID_TO_MESSAGE))?;
 
-        Ok(self.inner.get_cf(&cf_message_id_to_message, message_id)?.is_some())
+        Ok(self.inner.get_cf(&cf, message_id)?.is_some())
     }
 }
 
@@ -41,9 +44,12 @@ impl Exist<MessageId, MessageMetadata> for Storage {
     where
         Self: Sized,
     {
-        let cf_message_id_to_metadata = self.inner.cf_handle(CF_MESSAGE_ID_TO_METADATA).unwrap();
+        let cf = self
+            .inner
+            .cf_handle(CF_MESSAGE_ID_TO_METADATA)
+            .ok_or(Error::UnknownCf(CF_MESSAGE_ID_TO_METADATA))?;
 
-        Ok(self.inner.get_cf(&cf_message_id_to_metadata, message_id)?.is_some())
+        Ok(self.inner.get_cf(&cf, message_id)?.is_some())
     }
 }
 
@@ -53,12 +59,15 @@ impl Exist<(MessageId, MessageId), ()> for Storage {
     where
         Self: Sized,
     {
-        let cf_message_id_to_message_id = self.inner.cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID).unwrap();
+        let cf = self
+            .inner
+            .cf_handle(CF_MESSAGE_ID_TO_MESSAGE_ID)
+            .ok_or(Error::UnknownCf(CF_MESSAGE_ID_TO_MESSAGE_ID))?;
 
         let mut key = parent.as_ref().to_vec();
         key.extend_from_slice(child.as_ref());
 
-        Ok(self.inner.get_cf(&cf_message_id_to_message_id, key)?.is_some())
+        Ok(self.inner.get_cf(&cf, key)?.is_some())
     }
 }
 
@@ -68,12 +77,15 @@ impl Exist<(HashedIndex, MessageId), ()> for Storage {
     where
         Self: Sized,
     {
-        let cf_index_to_message_id = self.inner.cf_handle(CF_INDEX_TO_MESSAGE_ID).unwrap();
+        let cf = self
+            .inner
+            .cf_handle(CF_INDEX_TO_MESSAGE_ID)
+            .ok_or(Error::UnknownCf(CF_INDEX_TO_MESSAGE_ID))?;
 
         let mut key = index.as_ref().to_vec();
         key.extend_from_slice(message_id.as_ref());
 
-        Ok(self.inner.get_cf(&cf_index_to_message_id, key)?.is_some())
+        Ok(self.inner.get_cf(&cf, key)?.is_some())
     }
 }
 
@@ -83,12 +95,12 @@ impl Exist<OutputId, Output> for Storage {
     where
         Self: Sized,
     {
-        let cf_output_id_to_output = self.inner.cf_handle(CF_OUTPUT_ID_TO_OUTPUT).unwrap();
-
-        Ok(self
+        let cf = self
             .inner
-            .get_cf(&cf_output_id_to_output, output_id.pack_new())?
-            .is_some())
+            .cf_handle(CF_OUTPUT_ID_TO_OUTPUT)
+            .ok_or(Error::UnknownCf(CF_OUTPUT_ID_TO_OUTPUT))?;
+
+        Ok(self.inner.get_cf(&cf, output_id.pack_new())?.is_some())
     }
 }
 
@@ -98,12 +110,12 @@ impl Exist<OutputId, Spent> for Storage {
     where
         Self: Sized,
     {
-        let cf_output_id_to_spent = self.inner.cf_handle(CF_OUTPUT_ID_TO_SPENT).unwrap();
-
-        Ok(self
+        let cf = self
             .inner
-            .get_cf(&cf_output_id_to_spent, output_id.pack_new())?
-            .is_some())
+            .cf_handle(CF_OUTPUT_ID_TO_SPENT)
+            .ok_or(Error::UnknownCf(CF_OUTPUT_ID_TO_SPENT))?;
+
+        Ok(self.inner.get_cf(&cf, output_id.pack_new())?.is_some())
     }
 }
 
@@ -113,9 +125,12 @@ impl Exist<Unspent, ()> for Storage {
     where
         Self: Sized,
     {
-        let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
+        let cf = self
+            .inner
+            .cf_handle(CF_OUTPUT_ID_UNSPENT)
+            .ok_or(Error::UnknownCf(CF_OUTPUT_ID_UNSPENT))?;
 
-        Ok(self.inner.get_cf(&cf_output_id_unspent, unspent.pack_new())?.is_some())
+        Ok(self.inner.get_cf(&cf, unspent.pack_new())?.is_some())
     }
 }
 
@@ -125,11 +140,14 @@ impl Exist<(Ed25519Address, OutputId), ()> for Storage {
     where
         Self: Sized,
     {
-        let cf_ed25519_address_to_output_id = self.inner.cf_handle(CF_ED25519_ADDRESS_TO_OUTPUT_ID).unwrap();
+        let cf = self
+            .inner
+            .cf_handle(CF_ED25519_ADDRESS_TO_OUTPUT_ID)
+            .ok_or(Error::UnknownCf(CF_ED25519_ADDRESS_TO_OUTPUT_ID))?;
 
         let mut key = address.as_ref().to_vec();
         key.extend_from_slice(&output_id.pack_new());
 
-        Ok(self.inner.get_cf(&cf_ed25519_address_to_output_id, key)?.is_some())
+        Ok(self.inner.get_cf(&cf, key)?.is_some())
     }
 }

@@ -15,4 +15,6 @@ use thiserror::Error;
 pub enum Error {
     #[error("RocksDB error: {0}.")]
     RocksDB(#[from] rocksdb::Error),
+    #[error("Unknown column family {0}.")]
+    UnknownCf(&'static str),
 }

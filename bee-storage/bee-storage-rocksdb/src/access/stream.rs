@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::storage::*;
+use crate::{error::Error, storage::*};
 
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
@@ -62,10 +62,10 @@ macro_rules! impl_stream {
             where
                 Self: Sized,
             {
-                let cf_handle = self.inner.cf_handle($cf).unwrap();
+                let cf = self.inner.cf_handle($cf).ok_or(Error::UnknownCf($cf))?;
 
                 Ok(StorageStream::new(
-                    self.inner.iterator_cf(cf_handle, IteratorMode::Start),
+                    self.inner.iterator_cf(cf, IteratorMode::Start),
                     self.config.iteration_budget,
                 ))
             }
