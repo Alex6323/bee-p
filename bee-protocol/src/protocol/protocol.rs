@@ -52,7 +52,7 @@ impl Protocol {
         config: ProtocolConfig,
         database_config: <N::Backend as Backend>::Config,
         network: Network,
-        snapshot: &Snapshot,
+        snapshot: Snapshot,
         network_id: u64,
         node_builder: N::Builder,
     ) -> N::Builder {
@@ -68,7 +68,7 @@ impl Protocol {
 
         node_builder
             .with_worker_cfg::<StorageWorker>(database_config)
-            .with_worker_cfg::<TangleWorker>(snapshot.header().clone())
+            .with_worker_cfg::<TangleWorker>(snapshot)
             .with_worker_cfg::<HasherWorker>(config.workers.message_worker_cache)
             .with_worker_cfg::<ProcessorWorker>((config.clone(), network_id))
             .with_worker::<MessageResponderWorker>()

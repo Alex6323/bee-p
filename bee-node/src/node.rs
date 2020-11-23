@@ -119,7 +119,7 @@ impl<B: Backend> NodeBuilder<B> {
             self.config.protocol.clone(),
             self.config.database.clone(),
             network.clone(),
-            &snapshot,
+            snapshot,
             self.config.network_id.1,
             node_builder,
         );

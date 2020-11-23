@@ -14,7 +14,7 @@ use crate::{tangle::MsTangle, worker::storage::StorageWorker, MilestoneIndex};
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
-use bee_snapshot::SnapshotHeader;
+use bee_snapshot::Snapshot;
 
 use async_trait::async_trait;
 use log::{error, warn};
@@ -30,7 +30,7 @@ pub struct TangleWorker;
 
 #[async_trait]
 impl<N: Node> Worker<N> for TangleWorker {
-    type Config = SnapshotHeader;
+    type Config = Snapshot;
     type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
@@ -45,16 +45,17 @@ impl<N: Node> Worker<N> for TangleWorker {
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
 
-        tangle.update_latest_solid_milestone_index(config.sep_index().into());
-        tangle.update_latest_milestone_index(config.sep_index().into());
-        tangle.update_snapshot_index(config.sep_index().into());
-        tangle.update_pruning_index(config.sep_index().into());
+        tangle.update_latest_solid_milestone_index(config.header().sep_index().into());
+        tangle.update_latest_milestone_index(config.header().sep_index().into());
+        tangle.update_snapshot_index(config.header().sep_index().into());
+        tangle.update_pruning_index(config.header().sep_index().into());
         // tangle.add_milestone(config.sep_index().into(), *config.sep_id());
 
-        // for message_id in config.solid_entry_points() {
-        //     // TODO no more indices ? What about TRSI ?
-        //     tangle.add_solid_entry_point(*message_id, MilestoneIndex(0));
-        // }
+        for message_id in config.solid_entry_points() {
+            // TODO no more indices ? What about TRSI ?
+            //TODO Remove index ?
+            tangle.add_solid_entry_point(*message_id, MilestoneIndex(0));
+        }
 
         tangle.add_solid_entry_point(MessageId::null(), MilestoneIndex(0));
 
