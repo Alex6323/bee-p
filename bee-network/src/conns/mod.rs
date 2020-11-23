@@ -9,50 +9,41 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod connection;
 mod dial;
 mod errors;
 mod manager;
 
-use crate::{
-    interaction::events::{InternalEvent, InternalEventSender},
-    peers::{self, DataReceiver},
-    protocols::gossip::{GossipProtocol, GossipSubstream},
-    ReadableId, MSG_BUFFER_SIZE,
-};
-
-pub use connection::Origin;
-pub use dial::dial;
+pub use dial::*;
 pub use errors::Error;
 pub use manager::ConnectionManager;
 
-use connection::MuxedConnection;
+use crate::{
+    interaction::events::{InternalEvent, InternalEventSender},
+    peers::{self, DataReceiver, PeerInfo},
+    protocols::gossip::{GossipProtocol, GossipSubstream},
+    PeerId, ShortId, MSG_BUFFER_SIZE,
+};
 
 use futures::{prelude::*, select, AsyncRead, AsyncWrite};
-use libp2p::{
-    core::{
-        muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap},
-        upgrade,
-    },
-    Multiaddr, PeerId,
+use libp2p::core::{
+    muxing::{event_from_ref_and_wrap, outbound_from_ref_and_wrap, StreamMuxerBox},
+    upgrade,
 };
 use log::*;
 use tokio::task::JoinHandle;
 
-use std::sync::{atomic::Ordering, Arc};
+use std::{
+    fmt,
+    sync::{atomic::Ordering, Arc},
+};
 
 pub(crate) async fn spawn_connection_handler(
-    connection: MuxedConnection,
+    peer_id: PeerId,
+    peer_info: PeerInfo,
+    muxer: StreamMuxerBox,
+    origin: Origin,
     internal_event_sender: InternalEventSender,
 ) -> Result<(), Error> {
-    let MuxedConnection {
-        peer_id,
-        peer_address,
-        muxer,
-        origin,
-        ..
-    } = connection;
-
     let muxer = Arc::new(muxer);
     let (message_sender, message_receiver) = peers::channel();
 
@@ -63,17 +54,17 @@ pub(crate) async fn spawn_connection_handler(
             let outbound = outbound_from_ref_and_wrap(muxer)
                 .fuse()
                 .await
-                .map_err(|_| Error::CreatingOutboundSubstreamFailed(peer_id.readable()))?;
+                .map_err(|_| Error::CreatingOutboundSubstreamFailed(peer_id.short()))?;
 
             upgrade::apply_outbound(outbound, GossipProtocol, upgrade::Version::V1)
                 .await
-                .map_err(|_| Error::SubstreamProtocolUpgradeFailed(peer_id.readable()))?
+                .map_err(|_| Error::SubstreamProtocolUpgradeFailed(peer_id.short()))?
         }
         Origin::Inbound => {
             let inbound = loop {
                 if let Some(inbound) = event_from_ref_and_wrap(muxer.clone())
                     .await
-                    .map_err(|_| Error::CreatingInboundSubstreamFailed(peer_id.readable()))?
+                    .map_err(|_| Error::CreatingInboundSubstreamFailed(peer_id.short()))?
                     .into_inbound_substream()
                 {
                     break inbound;
@@ -82,13 +73,12 @@ pub(crate) async fn spawn_connection_handler(
 
             upgrade::apply_inbound(inbound, GossipProtocol)
                 .await
-                .map_err(|_| Error::SubstreamProtocolUpgradeFailed(peer_id.readable()))?
+                .map_err(|_| Error::SubstreamProtocolUpgradeFailed(peer_id.short()))?
         }
     };
 
     spawn_substream_task(
         peer_id.clone(),
-        peer_address.clone(),
         substream,
         message_receiver,
         internal_event_sender_clone,
@@ -97,7 +87,7 @@ pub(crate) async fn spawn_connection_handler(
     internal_event_sender
         .send_async(InternalEvent::ConnectionEstablished {
             peer_id,
-            peer_address,
+            peer_info,
             origin,
             message_sender,
         })
@@ -109,7 +99,6 @@ pub(crate) async fn spawn_connection_handler(
 
 fn spawn_substream_task(
     peer_id: PeerId,
-    peer_address: Multiaddr,
     mut substream: GossipSubstream,
     message_receiver: DataReceiver,
     mut internal_event_sender: InternalEventSender,
@@ -129,7 +118,6 @@ fn spawn_substream_task(
                             if let Err(e) = internal_event_sender
                                 .send_async(InternalEvent::ConnectionDropped {
                                     peer_id: peer_id.clone(),
-                                    peer_address: peer_address.clone(),
                                 })
                                 .await
                                 .map_err(|_| Error::InternalEventSendFailure("ConnectionDropped"))
@@ -211,4 +199,30 @@ async fn process_read(
         .map_err(|_| Error::InternalEventSendFailure("MessageReceived"))?;
 
     Ok(())
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Origin {
+    Inbound,
+    Outbound,
+}
+
+impl Origin {
+    pub fn is_inbound(&self) -> bool {
+        *self == Origin::Inbound
+    }
+
+    pub fn is_outbound(&self) -> bool {
+        *self == Origin::Outbound
+    }
+}
+
+impl fmt::Display for Origin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match *self {
+            Origin::Outbound => "outbound",
+            Origin::Inbound => "inbound",
+        };
+        write!(f, "{}", s)
+    }
 }

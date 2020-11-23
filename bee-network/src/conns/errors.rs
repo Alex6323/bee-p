@@ -15,8 +15,6 @@ use thiserror::Error as ErrorAttr;
 
 #[derive(Debug, ErrorAttr)]
 pub enum Error {
-    #[error("Tried to connect to more peers than allowed ({}).", .0)]
-    PeerLimitReached(usize),
     #[error("Building the underlying transport layer failed.")]
     CreatingTransportFailed,
     #[error("Binding to {} failed.", .0)]
@@ -27,6 +25,8 @@ pub enum Error {
     DialedBannedAddress(Multiaddr),
     #[error("Tried to dial a banned peer: {}.", .0)]
     DialedBannedPeer(String),
+    #[error("Tried to dial an unlisted peer: {}.", .0)]
+    DialedUnlistedPeer(String),
     #[error("Failed dialing address: {}.", .0)]
     DialingFailed(Multiaddr),
     #[error("Already connected to peer: {}.", .0)]
