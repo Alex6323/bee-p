@@ -12,6 +12,8 @@
 use bee_common::logger::logger_init;
 use bee_node::{CliArgs, Node, NodeConfigBuilder};
 
+use log::error;
+
 const CONFIG_PATH: &str = "./config.toml";
 
 #[tokio::main]
@@ -29,16 +31,14 @@ async fn main() {
             {
                 Ok(node) => {
                     if let Err(e) = node.run().await {
-                        eprintln!("Program aborted. Error was: {}", e);
+                        error!("{}", e);
                     }
                 }
-                Err(e) => {
-                    eprintln!("Program aborted. Error was: {}", e);
-                }
+                Err(e) => error!("{}", e),
             }
         }
         Err(e) => {
-            eprintln!("Program aborted. Error was: {}", e);
+            eprintln!("{}", e);
         }
     }
 }

@@ -43,11 +43,15 @@ type PeerList = HashMap<PeerId, (flume::Sender<Vec<u8>>, oneshot::Sender<()>)>;
 /// All possible node errors.
 #[derive(Error, Debug)]
 pub enum Error {
-    /// Occurs, when there is an error while reading the snapshot file.
+    /// Occurs when there is an error while reading the snapshot file.
     #[error("Reading snapshot file failed.")]
     SnapshotError(bee_snapshot::Error),
 
-    /// Occurs, when there is an error while shutting down the node.
+    /// Occurs when the snapshot file doesn't match the selected network.
+    #[error("The snapshot network {0} doesn't match the configuration network {1}.")]
+    NetworkMismatch(u64, u64),
+
+    /// Occurs when there is an error while shutting down the node.
     #[error("Shutting down failed.")]
     ShutdownError(#[from] bee_common::shutdown::Error),
 }
@@ -62,7 +66,7 @@ impl<B: Backend> NodeBuilder<B> {
         print_banner_and_version();
 
         info!(
-            "Joining network {}({}).",
+            "Joining network {}({:x}).",
             self.config.network_id.0, self.config.network_id.1
         );
 
@@ -80,6 +84,13 @@ impl<B: Backend> NodeBuilder<B> {
         let (mut node_builder, snapshot) = bee_snapshot::init::<BeeNode<B>>(&self.config.snapshot, node_builder)
             .await
             .map_err(Error::SnapshotError)?;
+
+        if snapshot.header().network_id() != self.config.network_id.1 {
+            return Err(Error::NetworkMismatch(
+                snapshot.header().network_id(),
+                self.config.network_id.1,
+            ));
+        }
 
         info!("Initializing network...");
         let (network, events) = bee_network::init(self.config.network.clone(), local_keys, &mut shutdown).await;

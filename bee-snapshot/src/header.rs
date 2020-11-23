@@ -12,7 +12,6 @@
 use crate::{kind::Kind, Error};
 
 use bee_common::packable::{Packable, Read, Write};
-use bee_message::MessageId;
 
 const SNAPSHOT_VERSION: u8 = 1;
 
