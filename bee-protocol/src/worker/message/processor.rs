@@ -61,7 +61,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
         .leak()
     }
 
-    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
         let milestone_validator = node.worker::<MilestoneValidatorWorker>().unwrap().tx.clone();
         let propagator = node.worker::<PropagatorWorker>().unwrap().tx.clone();
@@ -78,7 +78,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
             let mut blake2b = VarBlake2b::new(MESSAGE_ID_LENGTH).unwrap();
 
             while let Some(ProcessorWorkerEvent {
-                pow_score: _pow_score,
+                pow_score,
                 from,
                 message_packet,
             }) = receiver.next().await
@@ -97,23 +97,22 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                     }
                 };
 
+                // TODO should be passed by the hasher worker ?
                 blake2b.update(&message_packet.bytes);
                 let mut bytes = [0u8; 32];
                 // TODO Do we have to copy ?
                 blake2b.finalize_variable_reset(|digest| bytes.copy_from_slice(&digest));
                 let message_id = MessageId::from(bytes);
 
+                if pow_score < config.minimum_pow_score {
+                    trace!("Insufficient pow score: {} < {}.", pow_score, config.minimum_pow_score);
+                    Protocol::get().metrics.invalid_messages_inc();
+                    continue;
+                }
+
                 let requested = requested_messages.contains_key(&message_id);
 
-                // TODO when PoW
-                // if !requested && message_id.weight() < config.mwm {
-                //     trace!("Insufficient weight magnitude: {}.", message_id.weight());
-                //     Protocol::get().metrics.invalid_messages_inc();
-                //     continue;
-                // }
-
                 let mut metadata = MessageMetadata::arrived();
-
                 metadata.flags_mut().set_requested(requested);
 
                 // store message
