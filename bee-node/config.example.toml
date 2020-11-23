@@ -22,7 +22,7 @@ limit     = 5
 peers     = [ ]
 
 [protocol]
-minimum_pow_score = 4000
+minimum_pow_score = 100
 [protocol.coordinator]
 public_key_count  = 2
 [[protocol.coordinator.public_key_ranges]]
