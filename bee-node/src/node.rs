@@ -266,6 +266,20 @@ pub struct BeeNodeBuilder<B: Backend> {
     config: NodeConfig<B>,
 }
 
+impl<B: Backend> BeeNodeBuilder<B> {
+    pub fn config(&self) -> &NodeConfig<B> {
+        &self.config
+    }
+
+    pub fn with_plugin<P: plugin::Plugin>(self) -> Self where P::Config: Default {
+        self.with_worker::<plugin::PluginWorker<P>>()
+    }
+
+    pub fn with_plugin_cfg<P: plugin::Plugin>(self, config: P::Config) -> Self {
+        self.with_worker_cfg::<plugin::PluginWorker<P>>(config)
+    }
+}
+
 #[async_trait(?Send)]
 impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
     type Error = Error;
@@ -375,9 +389,6 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
             config.network_id.1,
             builder,
         );
-
-        info!("Initializing plugins...");
-        // plugin::init(bus.clone());
 
         let mut builder = builder.with_worker::<VersionCheckerWorker>();
 

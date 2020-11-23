@@ -11,7 +11,8 @@
 
 use bee_common::logger::logger_init;
 use bee_common_ext::node::{Node as _, NodeBuilder as _};
-use bee_node::{CliArgs, Node, NodeConfigBuilder};
+use bee_node::{CliArgs, Node, NodeConfigBuilder, default_plugins};
+use bee_storage_rocksdb::storage::Storage as Rocksdb;
 
 use log::error;
 
@@ -19,27 +20,18 @@ const CONFIG_PATH: &str = "./config.toml";
 
 #[tokio::main]
 async fn main() {
-    match NodeConfigBuilder::from_file(CONFIG_PATH) {
-        Ok(mut config_builder) => {
-            CliArgs::default().apply_to_config(&mut config_builder);
-            let config = config_builder.finish();
+    let config = NodeConfigBuilder::from_file(CONFIG_PATH)
+        .expect("Error when creating node config builder")
+        .with_cli_args(CliArgs::default())
+        .finish();
 
-            logger_init(config.logger.clone()).unwrap();
-
-            match Node::<bee_storage_rocksdb::storage::Storage>::build(config)
-                .finish()
-                .await
-            {
-                Ok(node) => {
-                    if let Err(e) = node.run().await {
-                        error!("{}", e);
-                    }
-                }
-                Err(e) => error!("{}", e),
-            }
-        }
-        Err(e) => {
-            eprintln!("{}", e);
-        }
-    }
+    Node::<Rocksdb>::build(config)
+        .with_plugin::<default_plugins::Mps>()
+        .with_logging()
+        .finish()
+        .await
+        .expect("Failed to build node")
+        .run()
+        .await
+        .expect("Failed to run node");
 }

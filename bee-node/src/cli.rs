@@ -33,10 +33,11 @@ impl Default for CliArgs {
     }
 }
 
-impl CliArgs {
-    pub fn apply_to_config<B: Backend>(self, config: &mut NodeConfigBuilder<B>) {
-        if let Some(log_level) = self.log_level {
-            config.logger.level(LOGGER_STDOUT_NAME, log_level);
+impl<B: Backend> NodeConfigBuilder<B> {
+    pub fn with_cli_args(mut self, args: CliArgs) -> Self {
+        if let Some(log_level) = args.log_level {
+            self.logger.level(LOGGER_STDOUT_NAME, log_level);
         }
+        self
     }
 }

@@ -9,7 +9,10 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::worker::Worker;
+use crate::{
+    worker::Worker,
+    event::Bus,
+};
 
 use bee_common::shutdown;
 use bee_storage::storage::Backend;
@@ -62,6 +65,10 @@ pub trait Node: Send + Sized + 'static {
     fn resource<R: Any + Send + Sync>(&self) -> ResHandle<R>;
 
     fn storage(&self) -> ResHandle<Self::Backend> {
+        self.resource()
+    }
+
+    fn event_bus(&self) -> ResHandle<Bus<'static>> {
         self.resource()
     }
 }
