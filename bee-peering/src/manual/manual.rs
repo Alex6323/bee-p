@@ -11,7 +11,7 @@
 
 use crate::{manual::config::ManualPeeringConfig, PeerManager};
 
-use bee_network::{Command::ConnectPeer, Multiaddr, Network, PeerId, Protocol};
+use bee_network::{Command::*, Multiaddr, Network, PeerId, PeerRelation, Protocol};
 
 use async_trait::async_trait;
 use log::warn;
@@ -27,27 +27,43 @@ impl ManualPeerManager {
     pub fn new(config: ManualPeeringConfig) -> Self {
         Self { config }
     }
+}
 
-    fn connect_peer(&mut self, network: &Network, address: Multiaddr, id: PeerId) {
-        if let Err(e) = network.unbounded_send(ConnectPeer { address, id }) {
-            warn!("Failed to add peer: {}", e);
-        }
+fn add_peer(network: &Network, id: PeerId, address: Multiaddr, alias: Option<String>, relation: PeerRelation) {
+    if let Err(e) = network.unbounded_send(AddPeer {
+        id,
+        address,
+        alias,
+        relation,
+    }) {
+        warn!("Failed to add peer: {}", e);
+    }
+}
+
+fn connect_peer(network: &Network, id: PeerId) {
+    if let Err(e) = network.unbounded_send(ConnectPeer { id }) {
+        warn!("Failed to connect to peer: {}", e);
     }
 }
 
 #[async_trait]
 impl PeerManager for ManualPeerManager {
-    async fn run(mut self, network: &Network) {
+    async fn run(self, network: &Network) {
+        let ManualPeerManager { config } = self;
+
         // TODO config file watcher
         // TODO use limit
-        for mut address in self.config.peers.clone() {
+        for (mut address, alias) in config.peers {
             // NOTE: if unwrapping fails here, it should have been caught earlier (e.g. when parsing the config,
             // cli, ...)
-            if let Some(Protocol::P2p(multihash)) = address.pop() {
+            if let Protocol::P2p(multihash) = address.pop().unwrap() {
                 let id = PeerId::from_multihash(multihash).expect("Invalid Multiaddr.");
-                self.connect_peer(network, address, id);
+
+                add_peer(network, id, address, alias, PeerRelation::Known);
             } else {
-                unreachable!("Invalid Multiaddr.");
+                unreachable!(
+                    "Invalid Peer descriptor. The multiaddress did not have a valid peer id as its last segment."
+                )
             }
         }
     }
