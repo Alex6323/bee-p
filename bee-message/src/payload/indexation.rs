@@ -21,7 +21,7 @@ use blake2::Blake2s;
 
 use core::convert::TryInto;
 
-pub const HASHED_INDEX_SIZE: usize = 32;
+pub const HASHED_INDEX_LENGTH: usize = 32;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Indexation {
@@ -52,7 +52,7 @@ impl Indexation {
     pub fn hash(&self) -> HashedIndex {
         let mut hasher = Blake2s::new();
         hasher.update(self.index.as_bytes());
-        // `Blake2s` output is `HASHED_INDEX_SIZE` bytes long.
+        // `Blake2s` output is `HASHED_INDEX_LENGTH` bytes long.
         HashedIndex(hasher.finalize_reset().as_slice().try_into().unwrap())
     }
 }
@@ -94,11 +94,11 @@ impl Packable for Indexation {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct HashedIndex([u8; HASHED_INDEX_SIZE]);
+pub struct HashedIndex([u8; HASHED_INDEX_LENGTH]);
 
 // TODO review when we have fixed size index
 impl HashedIndex {
-    pub fn new(bytes: [u8; HASHED_INDEX_SIZE]) -> Self {
+    pub fn new(bytes: [u8; HASHED_INDEX_LENGTH]) -> Self {
         Self(bytes)
     }
 }

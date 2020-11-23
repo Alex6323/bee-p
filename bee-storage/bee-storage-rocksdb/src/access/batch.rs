@@ -14,7 +14,10 @@ use crate::storage::*;
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
-    payload::{indexation::HashedIndex, transaction::OutputId},
+    payload::{
+        indexation::HashedIndex,
+        transaction::{Ed25519Address, OutputId},
+    },
     Message, MessageId,
 };
 use bee_protocol::tangle::MessageMetadata;
@@ -264,6 +267,41 @@ impl Batch<Unspent, ()> for Storage {
         unspent.pack(&mut batch.key_buf).unwrap();
 
         batch.inner.delete_cf(&cf_output_id_unspent, &batch.key_buf);
+
+        Ok(())
+    }
+}
+
+impl Batch<(Ed25519Address, OutputId), ()> for Storage {
+    fn batch_insert(
+        &self,
+        batch: &mut Self::Batch,
+        (address, output_id): &(Ed25519Address, OutputId),
+        (): &(),
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_ed25519_address_to_output_id = self.inner.cf_handle(CF_ED25519_ADDRESS_TO_OUTPUT_ID).unwrap();
+
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(address.as_ref());
+        batch.key_buf.extend_from_slice(&output_id.pack_new());
+
+        batch.inner.put_cf(&cf_ed25519_address_to_output_id, &batch.key_buf, []);
+
+        Ok(())
+    }
+
+    fn batch_delete(
+        &self,
+        batch: &mut Self::Batch,
+        (address, output_id): &(Ed25519Address, OutputId),
+    ) -> Result<(), <Self as Backend>::Error> {
+        let cf_ed25519_address_to_output_id = self.inner.cf_handle(CF_ED25519_ADDRESS_TO_OUTPUT_ID).unwrap();
+
+        batch.key_buf.clear();
+        batch.key_buf.extend_from_slice(address.as_ref());
+        batch.key_buf.extend_from_slice(&output_id.pack_new());
+
+        batch.inner.delete_cf(&cf_ed25519_address_to_output_id, &batch.key_buf);
 
         Ok(())
     }

@@ -11,7 +11,7 @@
 
 pub use crate::{
     payload::{
-        indexation::{HashedIndex, Indexation, HASHED_INDEX_SIZE},
+        indexation::{HashedIndex, Indexation, HASHED_INDEX_LENGTH},
         milestone::{
             Milestone, MILESTONE_MERKLE_PROOF_LENGTH, MILESTONE_PUBLIC_KEY_LENGTH, MILESTONE_SIGNATURE_LENGTH,
         },

@@ -14,7 +14,10 @@ use crate::storage::*;
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
-    payload::{indexation::HashedIndex, transaction::OutputId},
+    payload::{
+        indexation::HashedIndex,
+        transaction::{Ed25519Address, OutputId},
+    },
     Message, MessageId,
 };
 use bee_protocol::tangle::MessageMetadata;
@@ -98,6 +101,20 @@ impl Delete<Unspent, ()> for Storage {
         let cf_output_id_unspent = self.inner.cf_handle(CF_OUTPUT_ID_UNSPENT).unwrap();
 
         self.inner.delete_cf(&cf_output_id_unspent, unspent.pack_new())?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Delete<(Ed25519Address, OutputId), ()> for Storage {
+    async fn delete(&self, (address, output_id): &(Ed25519Address, OutputId)) -> Result<(), <Self as Backend>::Error> {
+        let cf_ed25519_address_to_output_id = self.inner.cf_handle(CF_ED25519_ADDRESS_TO_OUTPUT_ID).unwrap();
+
+        let mut key = address.as_ref().to_vec();
+        key.extend_from_slice(&output_id.pack_new());
+
+        self.inner.delete_cf(&cf_ed25519_address_to_output_id, key)?;
 
         Ok(())
     }
