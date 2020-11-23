@@ -9,27 +9,34 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::NETWORK_ID;
+
 use futures::prelude::*;
 use libp2p::core::{
     muxing::{StreamMuxerBox, SubstreamRef},
     InboundUpgrade, Negotiated, OutboundUpgrade, UpgradeInfo,
 };
 
-use std::{iter, sync::Arc};
-
-const PROTOCOL_INFO: &[u8] = b"/iota-gossip/1/1.0.0";
+use std::{
+    iter,
+    sync::{atomic::Ordering, Arc},
+};
 
 pub type GossipSubstream = Negotiated<SubstreamRef<Arc<StreamMuxerBox>>>;
 
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct GossipProtocol;
 
 impl UpgradeInfo for GossipProtocol {
-    type Info = &'static [u8];
+    type Info = Vec<u8>;
     type InfoIter = iter::Once<Self::Info>;
 
     fn protocol_info(&self) -> Self::InfoIter {
-        iter::once(PROTOCOL_INFO)
+        iter::once(
+            format!("/iota-gossip/{}/1.0.0", NETWORK_ID.load(Ordering::Relaxed))
+                .as_bytes()
+                .to_vec(),
+        )
     }
 }
 

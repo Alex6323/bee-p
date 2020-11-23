@@ -93,7 +93,13 @@ impl<B: Backend> NodeBuilder<B> {
         }
 
         info!("Initializing network...");
-        let (network, events) = bee_network::init(self.config.network.clone(), local_keys, &mut shutdown).await;
+        let (network, events) = bee_network::init(
+            self.config.network.clone(),
+            local_keys,
+            self.config.network_id.1,
+            &mut shutdown,
+        )
+        .await;
         info!("Own Peer Id = {}", network.local_id());
 
         info!("Starting manual peer manager...");
