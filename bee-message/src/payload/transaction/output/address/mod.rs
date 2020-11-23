@@ -12,7 +12,7 @@
 mod ed25519;
 mod wots;
 
-pub use ed25519::Ed25519Address;
+pub use ed25519::{Ed25519Address, ED25519_ADDRESS_LENGTH};
 pub use wots::WotsAddress;
 
 use crate::Error;
