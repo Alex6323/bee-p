@@ -11,23 +11,19 @@
 
 use crate::{
     interaction::events::InternalEventSender,
-    peers::{BannedAddrList, BannedPeerList, PeerList},
+    peers::{BannedAddrList, BannedPeerList, PeerInfo, PeerList, PeerRelation},
     transport::build_transport,
-    PEER_LIMIT,
+    Multiaddr, PeerId, ShortId, UNKNOWN_PEER_LIMIT,
 };
 
-use super::{
-    connection::{MuxedConnection, Origin},
-    errors::Error,
-    spawn_connection_handler,
-};
+use super::{errors::Error, spawn_connection_handler, Origin};
 
 use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
 
 use futures::{prelude::*, select};
 use libp2p::{
     core::{muxing::StreamMuxerBox, transport::ListenerEvent},
-    identity, Multiaddr, PeerId, Transport,
+    identity, Transport,
 };
 use log::*;
 
@@ -117,21 +113,12 @@ impl ConnectionManager {
                         if let Ok(listener_event) = listener_event {
                             if let Some((upgrade, peer_address)) = listener_event.into_upgrade() {
 
-                                // process_listener_event(
-                                //     listener_event,
-                                //     upgrade,
-                                //     peer_address,
-                                //     &peers,
-                                //     &banned_peers,
-                                //     &banned_addrs,
-                                //     &internal_event_sender,
-                                // )
-                                // .await//.expect("process_listener_event")
+                                // TODO: try again to move this block into its own function (beware: lifetime issues ahead!!!)
 
+                                // Prevent accepting from banned addresses.
                                 let peer_address_str = peer_address.to_string();
-
                                 if banned_addrs.contains(&peer_address_str) {
-                                    warn!("Ignoring peer. Cause: '{}' is banned.", peer_address_str);
+                                    trace!("Ignoring peer. Cause: '{}' is banned.", peer_address_str);
                                     NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
                                     continue;
                                 }
@@ -139,41 +126,53 @@ impl ConnectionManager {
                                 let (peer_id, muxer) = match upgrade.await {
                                     Ok(u) => u,
                                     Err(_) => {
+                                        trace!("Ignoring peer. Cause: Handshake failed.");
                                         NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
                                         continue;
                                     }
                                 };
 
-                                if banned_peers.contains(&peer_id) {
-                                    warn!("Ignoring peer. Cause: '{}' is banned.", peer_id);
-                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                    continue;
-                                }
-
-                                if peers.num_connected() >= PEER_LIMIT.load(Ordering::Relaxed) {
-                                    warn!(
-                                        "Ignoring peer. Cause: Peer limit ({}) reached.",
-                                        PEER_LIMIT.load(Ordering::Relaxed)
-                                    );
-                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                    continue;
-                                }
-
-                                if peers.contains_peer(&peer_id) {
+                                // Prevent accepting duplicate connections.
+                                if peers.is_connected(&peer_id) {
                                     trace!("Already connected to {}", peer_id);
                                     NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
                                     continue;
                                 }
 
-                                let connection = MuxedConnection::new(peer_id, peer_address, muxer, Origin::Inbound);
+                                // Prevent accepting banned peers.
+                                if banned_peers.contains(&peer_id) {
+                                    trace!("Ignoring peer. Cause: '{}' is banned.", peer_id);
+                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                    continue;
+                                }
 
-                                trace!(
-                                    "Successfully established inbound connection to {} ({}).",
-                                    connection.peer_address,
-                                    connection.peer_id,
-                                );
+                                let peer_info = if let Some(peer_info) = peers.get_info(&peer_id) {
+                                    // If we have this peer id in our peerlist (but are not already connected to it),
+                                    // then we allow the connection.
+                                    peer_info
+                                } else {
+                                    if peers.num_unknown() >= UNKNOWN_PEER_LIMIT.load(Ordering::Relaxed) {
+                                        trace!(
+                                            "Ignoring peer. Cause: Unknown Peer limit (={}) reached.",
+                                            UNKNOWN_PEER_LIMIT.load(Ordering::Relaxed)
+                                        );
+                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                        continue;
+                                    } else {
+                                        // We also allow for a certain number of unknown peers.
+                                        info!("Allowing connection to unknown peer '{}' [{}]", peer_id.short(), peer_address);
 
-                                if let Err(e) = spawn_connection_handler(connection, internal_event_sender.clone())
+                                        PeerInfo {
+                                            address: peer_address,
+                                            alias: None,
+                                            relation: PeerRelation::Unknown
+                                        }
+                                    }
+                                };
+
+                                log_inbound_connection_success(&peer_id, &peer_info);
+
+                                if let Err(e) = spawn_connection_handler(peer_id, peer_info, muxer, Origin::Inbound, internal_event_sender.clone())
                                 .await
                                 {
                                     error!("Error spawning connection handler. Error: {}", e);
@@ -201,75 +200,19 @@ impl ConnectionManager {
 }
 
 #[inline]
-async fn process_listener_event(// listener_event: ListenerEvent<ListenerUpgrade, io::Error>,
-    // listener_upgrade: ListenerUpgrade,
-    // peer_address: Multiaddr,
-    // peers: &PeerList,
-    // banned_peers: &BannedPeerList,
-    // banned_addrs: &BannedAddrList,
-    // internal_event_sender: &InternalEventSender,
-) {
-    // // Upgrade TokioTcpConfig
-    // if let Some((upgrade, peer_address)) = listener_event.into_upgrade() {
-    //     let ip_address = match peer_address.iter().next().unwrap() {
-    //         Protocol::Ip4(ip_addr) => IpAddr::V4(ip_addr),
-    //         Protocol::Ip6(ip_addr) => IpAddr::V6(ip_addr),
-    //         _ => unreachable!("wrong multiaddr"),
-    //     };
-
-    //     if banned_addrs.contains(&ip_address) {
-    //         warn!("Ignoring peer. Cause: '{}' is banned.", ip_address);
-    //         return; // Ok(());
-    //     }
-
-    //     // TODO: error handling
-    //     let (peer_id, muxer) = upgrade.await.expect("upgrade failed");
-
-    //     if banned_peers.contains(&peer_id) {
-    //         warn!("Ignoring peer. Cause: '{}' is banned.", peer_id);
-    //         return; // Ok(());
-    //     }
-
-    //     if peers.num_connected() >= PEER_LIMIT.load(Ordering::Relaxed) {
-    //         warn!(
-    //             "Ignoring peer. Cause: Peer limit ({}) reached.",
-    //             PEER_LIMIT.load(Ordering::Relaxed)
-    //         );
-    //         return; // Ok(());
-    //     }
-
-    //     if peers.contains_peer(&peer_id) {
-    //         trace!("Already connected to {}", peer_id);
-    //         return; // Ok(());
-    //     }
-
-    //     let connection = MuxedConnection::new(peer_id, peer_address, muxer, Origin::Inbound);
-
-    //     trace!(
-    //         "Successfully established inbound connection to {} ({}).",
-    //         connection.peer_address,
-    //         connection.peer_id,
-    //     );
-
-    //     // let internal_event_sender = internal_event_sender.clone();
-
-    //     // FIXME: map error
-    //     if let Err(_) = spawn_connection_handler(connection, internal_event_sender.clone()).await {
-    //         todo!("spawn_connection_handler error handling")
-    //     // Err(WorkerError(Box::new(io::Error::new(
-    //     //     io::ErrorKind::InvalidData,
-    //     //     "spawn_connection_handler",
-    //     // ))))
-    //     } else {
-    //         // Ok(())
-    //     }
-    // } else {
-    //     // TODO: handle other listener events
-    //     trace!("Not an upgrade event.");
-    //     todo!("spawn_connection_handler error handling");
-    //     // Err(WorkerError(Box::new(io::Error::new(
-    //     //     io::ErrorKind::InvalidData,
-    //     //     "not an upgrade event",
-    //     // ))))
-    // }
+fn log_inbound_connection_success(peer_id: &PeerId, peer_info: &PeerInfo) {
+    if let Some(alias) = peer_info.alias.as_ref() {
+        info!(
+            "Established (inbound) connection with '{}/{}' [{}].",
+            alias,
+            peer_id.short(),
+            peer_info.address,
+        )
+    } else {
+        info!(
+            "Established (inbound) connection with '{}' [{}].",
+            peer_id.short(),
+            peer_info.address,
+        );
+    }
 }
