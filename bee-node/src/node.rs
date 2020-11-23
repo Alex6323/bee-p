@@ -61,6 +61,11 @@ impl<B: Backend> NodeBuilder<B> {
     pub async fn finish(self) -> Result<Node<B>, Error> {
         print_banner_and_version();
 
+        info!(
+            "Joining network {}({}).",
+            self.config.network_id.0, self.config.network_id.1
+        );
+
         let generated_new_local_keypair = self.config.peering.local_keypair.2;
         if generated_new_local_keypair {
             info!("Generated new local keypair: {}", self.config.peering.local_keypair.1);

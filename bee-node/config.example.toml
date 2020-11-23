@@ -1,5 +1,7 @@
 # Duplicate this file to config.toml to use it
 
+network_id  = "alphanet1"
+
 [logger]
 color_enabled = true
 [[logger.outputs]]

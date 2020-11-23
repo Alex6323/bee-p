@@ -25,6 +25,7 @@ bee-storage-rocksdb = { path = "../bee-storage/bee-storage-rocksdb" }
 
 anymap = "0.12"
 async-trait = "0.1"
+blake2 = "0.9"
 flume = "0.9"
 futures = "0.3"
 log = "0.4"

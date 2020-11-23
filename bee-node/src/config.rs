@@ -16,10 +16,16 @@ use bee_protocol::config::{ProtocolConfig, ProtocolConfigBuilder};
 use bee_snapshot::config::{SnapshotConfig, SnapshotConfigBuilder};
 use bee_storage::storage::Backend;
 
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use serde::Deserialize;
 use thiserror::Error;
 
-use std::{fs, path::Path};
+use std::{convert::TryInto, fs, path::Path};
+
+const DEFAULT_NETWORK_ID: &str = "alphanet1";
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -32,6 +38,7 @@ pub enum Error {
 
 #[derive(Default, Deserialize)]
 pub struct NodeConfigBuilder<B: Backend> {
+    pub(crate) network_id: Option<String>,
     pub(crate) logger: LoggerConfigBuilder,
     pub(crate) network: NetworkConfigBuilder,
     pub(crate) peering: PeeringConfigBuilder,
@@ -50,7 +57,13 @@ impl<B: Backend> NodeConfigBuilder<B> {
     }
 
     pub fn finish(self) -> NodeConfig<B> {
+        let mut hasher = VarBlake2b::new(32).unwrap();
+        let mut network_id: (String, u64) = (self.network_id.unwrap_or_else(|| DEFAULT_NETWORK_ID.to_string()), 0);
+        hasher.update(network_id.0.as_bytes());
+        hasher.finalize_variable(|res| network_id.1 = u64::from_le_bytes(res[0..8].try_into().unwrap()));
+
         NodeConfig {
+            network_id,
             logger: self.logger.finish(),
             network: self.network.finish(),
             peering: self.peering.finish(),
@@ -63,6 +76,7 @@ impl<B: Backend> NodeConfigBuilder<B> {
 
 #[derive(Clone)]
 pub struct NodeConfig<B: Backend> {
+    pub network_id: (String, u64),
     pub logger: LoggerConfig,
     pub network: NetworkConfig,
     pub peering: PeeringConfig,
