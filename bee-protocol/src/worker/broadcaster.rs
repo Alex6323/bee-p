@@ -35,13 +35,13 @@ pub(crate) struct BroadcasterWorker {
 
 #[async_trait]
 impl<N: Node> Worker<N> for BroadcasterWorker {
-    type Config = Network;
+    type Config = ();
     type Error = Infallible;
 
-    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
-        let network = config;
+        let network = node.resource::<Network>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");

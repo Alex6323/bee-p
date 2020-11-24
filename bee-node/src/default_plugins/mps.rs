@@ -15,37 +15,24 @@ use bee_common_ext::event::Bus;
 use bee_protocol::event::TpsMetricsUpdated;
 
 use log::info;
+use async_trait::async_trait;
 
-use std::{convert::Infallible, sync::Arc};
+use std::convert::Infallible;
 
-fn tps(metrics: &TpsMetricsUpdated) {
-    info!(
-        "incoming {} new {} known {} invalid {} outgoing {}",
-        metrics.incoming, metrics.new, metrics.known, metrics.invalid, metrics.outgoing
-    );
-}
+pub struct Mps;
 
-pub(crate) struct TpsPlugin {}
-
-impl TpsPlugin {
-    pub(crate) fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Plugin for TpsPlugin {
+#[async_trait]
+impl Plugin for Mps {
+    type Config = ();
     type Error = Infallible;
 
-    fn name(&self) -> &str {
-        "tps"
-    }
-
-    fn init(&mut self, bus: Arc<Bus>) -> Result<(), Self::Error> {
-        bus.add_listener::<(), _, _>(tps);
-        Ok(())
-    }
-
-    fn start(&mut self) -> Result<(), Self::Error> {
-        Ok(())
+    async fn start(_: Self::Config, bus: &Bus<'_>) -> Result<Self, Self::Error> {
+        bus.add_listener::<(), TpsMetricsUpdated, _>(|metrics| {
+            info!(
+                "incoming {} new {} known {} invalid {} outgoing {}",
+                metrics.incoming, metrics.new, metrics.known, metrics.invalid, metrics.outgoing
+            );
+        });
+        Ok(Self)
     }
 }

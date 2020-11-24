@@ -18,7 +18,7 @@ use std::error::Error;
 /// Trait to be implemented on storage backend, which determine how to start and shutdown the storage.
 pub trait Backend: Sized + Send + Sync + 'static {
     type ConfigBuilder: Default + DeserializeOwned + Into<Self::Config>;
-    type Config: Clone + Send;
+    type Config: Clone + Send + Sync;
     type Error: std::error::Error + Send;
 
     /// Start method should impl how to start and initialize the corrsponding database.

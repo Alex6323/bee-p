@@ -9,19 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod banner;
-mod cli;
-mod config;
-mod constants;
-mod logger;
-mod node;
-mod plugin;
-mod storage;
-mod version_checker;
+pub mod mps;
 
-pub mod default_plugins;
-
-pub use banner::print_banner_and_version;
-pub use cli::CliArgs;
-pub use config::NodeConfigBuilder;
-pub use node::{BeeNode as Node, Error};
+pub use self::{
+    mps::Mps,
+};

@@ -19,7 +19,7 @@ use crate::{
 use bee_common::{packable::Packable, shutdown_stream::ShutdownStream};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
-use bee_network::PeerId;
+use bee_network::{Network, PeerId};
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
@@ -49,6 +49,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
         let (tx, rx) = flume::unbounded();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let network = node.resource::<Network>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -66,7 +67,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                         let mut bytes = Vec::new();
 
                         if message.pack(&mut bytes).is_ok() {
-                            Sender::<MessagePacket>::send(&peer_id, MessagePacket::new(&bytes));
+                            Sender::<MessagePacket>::send(&network, &peer_id, MessagePacket::new(&bytes));
                         }
                     }
                 }
