@@ -11,12 +11,11 @@
 
 use crate::{
     conns,
-    conns::Error as ConnError,
     interaction::{
         commands::Command,
         events::{Event, EventSender, InternalEvent, InternalEventReceiver, InternalEventSender},
     },
-    peers::{PeerRelation, PeerState, Repeat},
+    peers::{PeerRelation, PeerState},
     ShortId, RECONNECT_MILLIS,
 };
 
@@ -89,6 +88,8 @@ impl PeerManager {
             banned_peers,
             shutdown_listener,
         } = self;
+
+        spawn_reconnector_task(&peers, internal_event_sender.clone());
 
         let mut fused_shutdown_listener = shutdown_listener.fuse();
 
@@ -167,7 +168,26 @@ async fn process_command(
             address,
             alias,
             relation,
-        } => add_peer(id, address, alias, relation, peers, event_sender).await?,
+        } => {
+            // Note: the control flow seems to violate DRY principle, but we only need to clone `id` in one branch.
+            if relation == PeerRelation::Known {
+                add_peer(id.clone(), address, alias, relation, peers, event_sender).await?;
+
+                // We automatically connect to known peers.
+                connect_peer(
+                    id,
+                    local_keys,
+                    peers,
+                    banned_addrs,
+                    banned_peers,
+                    internal_event_sender,
+                    event_sender,
+                )
+                .await?;
+            } else {
+                add_peer(id, address, alias, relation, peers, event_sender).await?;
+            }
+        }
         Command::RemovePeer { id } => remove_peer(id, peers, event_sender).await?,
         Command::ConnectPeer { id } => {
             connect_peer(
@@ -192,8 +212,9 @@ async fn process_command(
                 &banned_addrs,
                 &banned_peers,
                 &internal_event_sender,
+                &event_sender,
             )
-            .await
+            .await?;
         }
         Command::SendMessage { message, to } => {
             send_message(message, &to, peers).await?;
@@ -250,111 +271,44 @@ async fn process_internal_event(
         InternalEvent::ConnectionEstablished {
             peer_id,
             peer_info,
-            origin,
             message_sender,
             ..
         } => {
-            // TODO: if the connection was outbound via `DialAddress` (hence cannot be in the peerlist yet)
-            // then we insert it as an `is_unknown` peer, that manually has to be upgraded to `known` for
-            // automatic reconnects
-            // if !peers.contains(&peer_id) && origin.is_outbound() {
-            //     peers.insert(
-            //         peer_id.clone(),
-            //         PeerInfo {
-            //             address: peer_address.clone(),
-            //             alias: None,
-            //             relation: PeerRelation::Unknown,
-            //         },
-            //     );
-            // }
+            peers.update_state(&peer_id, PeerState::Connected(message_sender))?;
 
-            peers.update_state(&peer_id, PeerState::Connected(message_sender));
-
-            // // TODO!!!
-            // if peers.insert(
-            //     peer_id.clone(),
-            //     PeerInfo {
-            //         relation,
-            //         connection: Some(message_sender),
-            //     },
-            // ) {
-            //     // publish
-            //     event_sender
-            //         .send_async(Event::PeerConnected {
-            //             id: peer_id,
-            //             address: peer_address,
-            //             alias,
-            //         })
-            //         .await
-            //         .map_err(|_| Error::EventSendFailure("PeerConnected"))?;
-            // } else {
-            //     // FIXME
-            //     unreachable!("already connected peer");
-            // }
+            event_sender
+                .send_async(Event::PeerConnected {
+                    id: peer_id,
+                    address: peer_info.address,
+                })
+                .await
+                .map_err(|_| Error::EventSendFailure("PeerConnected"))?;
         }
 
         InternalEvent::ConnectionDropped { peer_id } => {
-            if let Some(peer_info) = peers.get_info(&peer_id) {
-                match peer_info.relation {
-                    PeerRelation::Known => {
-                        //
-                    }
-                    _ => {
-                        //
-                    }
-                }
-            }
-            // NOTE: if the peer is known, then that means that we still like to keep the connection.
-            if peers.is_known(&peer_id) {
-                peers.update_state(
-                    &peer_id,
-                    PeerState::Connecting {
-                        remaining_attempts: Repeat::Forever,
-                    },
-                );
-                // TODO: try to immediatedly reconnect, and spawn the reconnector if that fails
+            peers.update_state(&peer_id, PeerState::Disconnected)?;
 
-                // connect_peer(
-                //     Some(peer_id),
-                //     peer_address,
-                //     &local_keys,
-                //     &peers,
-                //     &banned_addrs,
-                //     &banned_peers,
-                //     &internal_event_sender,
-                // )
-                // .await;
-            }
+            // TODO: maybe allow some fixed timespan for a connection recovery from either end before removing.
+            peers.remove_if(&peer_id, |info, _| info.is_unknown());
 
-            if peers.is_unknown(&peer_id) {
-                // TODO: should we remove it from the peer list, or allow manual reconnect via its peer id?
-            }
+            event_sender
+                .send_async(Event::PeerDisconnected { id: peer_id })
+                .await
+                .map_err(|_| Error::EventSendFailure("PeerDisconnected"))?;
         }
 
-        InternalEvent::MessageReceived { message, from } => event_sender
-            .send_async(Event::MessageReceived { message, from })
-            .await
-            .map_err(|_| Error::EventSendFailure("MessageReceived"))?,
-
+        InternalEvent::MessageReceived { message, from } => recv_message(message, from, &event_sender).await?,
         InternalEvent::ReconnectScheduled { peer_id } => {
-            if peers.is_known(&peer_id) {
-                if let Some(peer_info) = peers.get_info(&peer_id) {
-                    connect_peer(
-                        peer_id,
-                        &local_keys,
-                        &peers,
-                        &banned_addrs,
-                        &banned_peers,
-                        &internal_event_sender,
-                        &event_sender,
-                    )
-                    .await;
-                } else {
-                    trace!("Peer was removed in the mean-time. Stopping reconnects");
-                }
-            } else {
-                // peer was set to unknown or discovered in the mean-time
-            }
+            connect_peer(
+                peer_id,
+                &local_keys,
+                &peers,
+                &banned_addrs,
+                &banned_peers,
+                &internal_event_sender,
+                &event_sender,
+            )
+            .await?
         }
         _ => (),
     }
@@ -362,7 +316,6 @@ async fn process_internal_event(
     Ok(())
 }
 
-#[inline]
 async fn add_peer(
     id: PeerId,
     address: Multiaddr,
@@ -378,8 +331,8 @@ async fn add_peer(
     };
 
     // If the insert fails for some reason, we get the peer info back.
-    if let Err((info, e)) = peers.insert(id.clone(), info) {
-        // Tell the user that the command failed.
+    if let Err((id, info, e)) = peers.insert(id.clone(), info, PeerState::Disconnected) {
+        // Inform the user that the command failed.
         event_sender
             .send_async(Event::CommandFailed {
                 command: Command::AddPeer {
@@ -395,7 +348,7 @@ async fn add_peer(
         return Err(e);
     }
 
-    // Tell the user that the command succeeded.
+    // Inform the user that the command succeeded.
     event_sender
         .send_async(Event::PeerAdded { id })
         .await
@@ -404,11 +357,10 @@ async fn add_peer(
     Ok(())
 }
 
-#[inline]
 async fn remove_peer(id: PeerId, peers: &PeerList, event_sender: &EventSender) -> Result<(), Error> {
     match peers.remove(&id) {
         Err(e) => {
-            // Tell the user that the command failed.
+            // Inform the user that the command failed.
             event_sender
                 .send_async(Event::CommandFailed {
                     command: Command::RemovePeer { id },
@@ -419,7 +371,7 @@ async fn remove_peer(id: PeerId, peers: &PeerList, event_sender: &EventSender) -
             Err(e)
         }
         Ok(peer_info) => {
-            // Tell the user that the command succeeded.
+            // Inform the user that the command succeeded.
             event_sender
                 .send_async(Event::PeerRemoved { id })
                 .await
@@ -430,7 +382,6 @@ async fn remove_peer(id: PeerId, peers: &PeerList, event_sender: &EventSender) -
     }
 }
 
-#[inline]
 async fn connect_peer(
     id: PeerId,
     local_keys: &identity::Keypair,
@@ -440,50 +391,9 @@ async fn connect_peer(
     internal_event_sender: &InternalEventSender,
     event_sender: &EventSender,
 ) -> Result<(), Error> {
-    if let Err(e) = conns::dial_peer(id, local_keys, internal_event_sender, peers, banned_addrs, banned_peers).await {
-        // If only the dialing failed, then the peer might only be temporarily offline, and we should automatically try
-        // again.
-        if let ConnError::DialingFailed(_) = e {
-            // TODO: make this more sophisticated! Maybe something like a `ConnectionWatcher` that makes sure all
-            // `known` peers keep connected.
-
-            // tokio::spawn(send_reconnect_event_after_delay(
-            //     InternalEvent::ReconnectScheduled { peer_id: id },
-            //     internal_event_sender.clone(),
-            // ));
-        }
-    }
-
-    Ok(())
-}
-
-#[inline]
-async fn disconnect_peer(id: PeerId, peers: &PeerList, event_sender: &EventSender) -> Result<(), Error> {
-    // if !peers.update_state(peer_id, PeerState::Disconnected) {}
-
-    // if let Err(e) = peers.remove(peer_id) {
-    //     todo!()
-    // } else {
-    //     event_sender
-    //         .send_async(Event::PeerDisconnected { id })
-    //         .await
-    //         .map_err(|_| Error::EventSendFailure("PeerDisconnected"))?;
-
-    //     return Err(Error::DisconnectPeerFailure(id.short()));
-    // }
-    todo!()
-}
-
-async fn dial_address(
-    peer_address: Multiaddr,
-    local_keys: &identity::Keypair,
-    peers: &PeerList,
-    banned_addrs: &BannedAddrList,
-    banned_peers: &BannedPeerList,
-    internal_event_sender: &InternalEventSender,
-) {
-    if let Err(e) = conns::dial_address(
-        peer_address,
+    // Try to reach the peer by its known ID.
+    if let Err(e) = conns::dial_peer(
+        &id,
         local_keys,
         internal_event_sender,
         peers,
@@ -491,27 +401,105 @@ async fn dial_address(
         banned_peers,
     )
     .await
+    .map_err(|e| Error::ConnectFailure(e))
     {
-        error!("Failed dialing address. Error: {:?}", e);
+        // Inform the user that the command failed.
+        event_sender
+            .send_async(Event::CommandFailed {
+                command: Command::ConnectPeer { id },
+            })
+            .await
+            .map_err(|_| Error::EventSendFailure("CommandFailed"))?;
 
-        if let conns::Error::DialingFailed(_) = e {
-            // todo!("DialingFailed")
+        return Err(e);
+    }
+
+    Ok(())
+}
+
+async fn disconnect_peer(id: PeerId, peers: &PeerList, event_sender: &EventSender) -> Result<(), Error> {
+    match peers.update_state(&id, PeerState::Disconnected) {
+        Err(e) => {
+            // Inform the user that the command failed.
+            event_sender
+                .send_async(Event::CommandFailed {
+                    command: Command::DisconnectPeer { id },
+                })
+                .await
+                .map_err(|_| Error::EventSendFailure("CommandFailed"))?;
+
+            Err(e)
+        }
+        Ok(()) => {
+            // Inform the user that the command succeeded.
+            event_sender
+                .send_async(Event::PeerDisconnected { id })
+                .await
+                .map_err(|_| Error::EventSendFailure("PeerDisconnected"))?;
+
+            Ok(())
         }
     }
 }
 
-#[inline]
-async fn send_reconnect_event_after_delay(
-    internal_event: InternalEvent,
-    internal_event_sender: InternalEventSender,
+async fn dial_address(
+    address: Multiaddr,
+    local_keys: &identity::Keypair,
+    peers: &PeerList,
+    banned_addrs: &BannedAddrList,
+    banned_peers: &BannedPeerList,
+    internal_event_sender: &InternalEventSender,
+    event_sender: &EventSender,
 ) -> Result<(), Error> {
-    // TODO: should we randomize this a bit?
-    tokio::time::delay_for(Duration::from_millis(RECONNECT_MILLIS.load(Ordering::Relaxed))).await;
+    // Try to reach a peer by its known address.
+    if let Err(e) = conns::dial_address(
+        &address,
+        local_keys,
+        internal_event_sender,
+        peers,
+        banned_addrs,
+        banned_peers,
+    )
+    .await
+    .map_err(|e| Error::ConnectFailure(e))
+    {
+        // Inform the user that the command failed.
+        event_sender
+            .send_async(Event::CommandFailed {
+                command: Command::DialAddress { address },
+            })
+            .await
+            .map_err(|_| Error::EventSendFailure("CommandFailed"))?;
 
-    Ok(internal_event_sender
-        .send_async(internal_event)
-        .await
-        .map_err(|_| Error::InternalEventSendFailure("ReconnectScheduled"))?)
+        return Err(e);
+    }
+
+    Ok(())
+}
+
+fn spawn_reconnector_task(peers: &PeerList, internal_event_sender: InternalEventSender) -> Result<(), Error> {
+    let mut interval = tokio::time::interval(Duration::from_millis(RECONNECT_MILLIS.load(Ordering::Relaxed)));
+
+    let peers_clone = peers.clone();
+
+    tokio::spawn(async move {
+        loop {
+            let _ = interval.tick().await;
+
+            // Check, if there are any disconnected known peers, and schedule a reconnect attempt for each of those.
+            for peer_id in peers_clone.iter_if(|info, state| info.is_known() && state.is_disconnected()) {
+                if let Err(e) = internal_event_sender
+                    .send_async(InternalEvent::ReconnectScheduled { peer_id })
+                    .await
+                    .map_err(|_| Error::InternalEventSendFailure("ReconnectScheduled"))
+                {
+                    warn!("{:?}", e)
+                }
+            }
+        }
+    });
+
+    Ok(())
 }
 
 #[inline]
@@ -520,11 +508,9 @@ async fn send_message(message: Vec<u8>, to: &PeerId, peers: &PeerList) -> Result
 }
 
 #[inline]
-async fn handle_connection_established() -> Result<(), Error> {
-    todo!()
-}
-
-#[inline]
-async fn handle_connection_dropped(peer_id: &PeerId) -> Result<(), Error> {
-    todo!()
+async fn recv_message(message: Vec<u8>, from: PeerId, event_sender: &EventSender) -> Result<(), Error> {
+    event_sender
+        .send_async(Event::MessageReceived { message, from })
+        .await
+        .map_err(|_| Error::EventSendFailure("MessageReceived"))
 }
