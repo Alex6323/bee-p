@@ -38,10 +38,10 @@ async fn trigger_solidification_unchecked<B: Backend>(
     message_requester: &flume::Sender<MessageRequesterWorkerEvent>,
     requested_messages: &RequestedMessages,
     target_index: MilestoneIndex,
-    next_ms_index: &mut MilestoneIndex,
+    next_index: &mut MilestoneIndex,
 ) {
-    if let Some(target_hash) = tangle.get_milestone_message_id(target_index) {
-        if !tangle.is_solid_message(&target_hash) {
+    if let Some(target_id) = tangle.get_milestone_message_id(target_index) {
+        if !tangle.is_solid_message(&target_id) {
             debug!("Triggering solidification for milestone {}.", *target_index);
 
             // TODO: This wouldn't be necessary if the traversal code wasn't closure-driven
@@ -49,29 +49,23 @@ async fn trigger_solidification_unchecked<B: Backend>(
 
             traversal::visit_parents_depth_first(
                 &**tangle,
-                target_hash,
-                |hash, _, metadata| {
-                    (!metadata.flags().is_requested() || *hash == target_hash)
+                target_id,
+                |id, _, metadata| {
+                    (!metadata.flags().is_requested() || *id == target_id)
                         && !metadata.flags().is_solid()
-                        && !requested_messages.contains_key(&hash)
+                        && !requested_messages.contains_key(&id)
                 },
                 |_, _, _| {},
                 |_, _, _| {},
-                |missing_hash| missing.push(*missing_hash),
+                |missing_id| missing.push(*missing_id),
             );
 
-            for missing_hash in missing {
-                Protocol::request_message(
-                    tangle,
-                    message_requester,
-                    requested_messages,
-                    missing_hash,
-                    target_index,
-                )
-                .await;
+            for missing_id in missing {
+                Protocol::request_message(tangle, message_requester, requested_messages, missing_id, target_index)
+                    .await;
             }
         }
-        *next_ms_index = target_index + MilestoneIndex(1);
+        *next_index = target_index + MilestoneIndex(1);
     }
 }
 
@@ -104,7 +98,7 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
             let mut queue = vec![];
-            let mut next_ms_index = if let Ok(idx) = config.await {
+            let mut next_index = if let Ok(idx) = config.await {
                 idx
             } else {
                 return;
@@ -113,13 +107,13 @@ impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
             while let Some(MilestoneSolidifierWorkerEvent(index)) = receiver.next().await {
                 save_index(index, &mut queue);
                 while let Some(index) = queue.pop() {
-                    if index == next_ms_index {
+                    if index == next_index {
                         trigger_solidification_unchecked(
                             &tangle,
                             &message_requester,
                             &*requested_messages,
                             index,
-                            &mut next_ms_index,
+                            &mut next_index,
                         )
                         .await;
                     } else {
