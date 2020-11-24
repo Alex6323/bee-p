@@ -64,7 +64,7 @@ async fn main() {
     // for (peer_address, peer_id) in &config.peers {
     for peer_address in &config.peers {
         if let Err(e) = network
-            .send(ConnectUnknownPeer {
+            .send(DialAddress {
                 address: peer_address.clone(),
             })
             .await
@@ -212,7 +212,7 @@ impl NodeBuilder {
 
         info!("[EXAMPLE] Initializing network...");
         let local_keys = Keypair::generate();
-        let (network, events) = bee_network::init(network_config, local_keys, &mut shutdown).await;
+        let (network, events) = bee_network::init(network_config, local_keys, 1, &mut shutdown).await;
 
         info!("[EXAMPLE] Node initialized.");
         Node {
