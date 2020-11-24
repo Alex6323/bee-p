@@ -341,6 +341,12 @@ dependencies = [
 [[package]]
 name = "bee-pow"
 version = "0.1.0-alpha"
+dependencies = [
+ "bee-common-ext",
+ "bee-crypto",
+ "bee-ternary",
+ "blake2",
+]
 
 [[package]]
 name = "bee-protocol"
