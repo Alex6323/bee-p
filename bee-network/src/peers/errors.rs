@@ -27,8 +27,6 @@ pub enum Error {
     DisconnectedPeer(String),
     #[error("Failed to connect to peer. Cause: {:?}", .0)]
     ConnectFailure(ConnError),
-    #[error("Failed to disconnect from peer: {}", .0)]
-    DisconnectPeerFailure(String),
     #[error("Already banned that address: {}", .0)]
     AddressAlreadyBanned(Multiaddr),
     #[error("Already banned that peer: {}", .0)]
