@@ -42,7 +42,6 @@ use std::sync::Arc;
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 
 pub struct Protocol {
-    // pub(crate) network: Network,
     pub(crate) metrics: ProtocolMetrics,
     pub(crate) peer_manager: PeerManager,
 }
@@ -56,7 +55,6 @@ impl Protocol {
         node_builder: N::Builder,
     ) -> N::Builder {
         let protocol = Protocol {
-            // network: network.clone(),
             metrics: ProtocolMetrics::new(),
             peer_manager: PeerManager::new(),
         };
