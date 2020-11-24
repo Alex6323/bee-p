@@ -38,7 +38,7 @@ impl<N: Node> Worker<N> for BroadcasterWorker {
     type Config = ();
     type Error = Infallible;
 
-    async fn start(node: &mut N, _: Self::Config) -> Result<Self, Self::Error> {
+    async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
         let network = node.resource::<Network>();
