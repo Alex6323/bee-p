@@ -17,6 +17,7 @@ use bee_message::MessageId;
 use bee_snapshot::Snapshot;
 
 use async_trait::async_trait;
+use futures::StreamExt;
 use log::{error, warn};
 use tokio::time::interval;
 
@@ -51,19 +52,13 @@ impl<N: Node> Worker<N> for TangleWorker {
         tangle.update_pruning_index(config.header().sep_index().into());
         // tangle.add_milestone(config.sep_index().into(), *config.sep_id());
 
-        for message_id in config.solid_entry_points() {
-            // TODO no more indices ? What about TRSI ?
-            //TODO Remove index ?
-            tangle.add_solid_entry_point(*message_id, MilestoneIndex(0));
-        }
-
         tangle.add_solid_entry_point(MessageId::null(), MilestoneIndex(0));
 
-        node.spawn::<Self, _, _>(|shutdown| async move {
-            use futures::StreamExt;
-            use std::time::Duration;
-            use tokio::time::interval;
+        for message_id in config.solid_entry_points() {
+            tangle.add_solid_entry_point(*message_id, MilestoneIndex(config.header().sep_index()));
+        }
 
+        node.spawn::<Self, _, _>(|shutdown| async move {
             let mut ticker = ShutdownStream::new(shutdown, interval(Duration::from_secs(1)));
 
             while ticker.next().await.is_some() {
