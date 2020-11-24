@@ -17,15 +17,30 @@ use bech32::{self, ToBase32};
 use serde::{Deserialize, Serialize};
 
 use alloc::{string::String, vec};
+use core::{convert::TryInto, str::FromStr};
 
-const ADDRESS_LENGTH: usize = 32;
+pub const ED25519_ADDRESS_LENGTH: usize = 32;
 
 #[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Ord, PartialOrd)]
-pub struct Ed25519Address([u8; ADDRESS_LENGTH]);
+pub struct Ed25519Address([u8; ED25519_ADDRESS_LENGTH]);
 
-impl From<[u8; ADDRESS_LENGTH]> for Ed25519Address {
-    fn from(bytes: [u8; ADDRESS_LENGTH]) -> Self {
+impl From<[u8; ED25519_ADDRESS_LENGTH]> for Ed25519Address {
+    fn from(bytes: [u8; ED25519_ADDRESS_LENGTH]) -> Self {
         Self(bytes)
+    }
+}
+
+impl FromStr for Ed25519Address {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let bytes: [u8; ED25519_ADDRESS_LENGTH] = hex::decode(s)
+            .map_err(|_| Self::Err::InvalidHex)?
+            .as_slice()
+            .try_into()
+            .map_err(|_| Self::Err::InvalidHex)?;
+
+        Ok(Ed25519Address::from(bytes))
     }
 }
 
@@ -37,12 +52,12 @@ impl AsRef<[u8]> for Ed25519Address {
 }
 
 impl Ed25519Address {
-    pub fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
+    pub fn new(address: [u8; ED25519_ADDRESS_LENGTH]) -> Self {
         address.into()
     }
 
     pub fn len(&self) -> usize {
-        ADDRESS_LENGTH
+        ED25519_ADDRESS_LENGTH
     }
 
     pub fn is_empty(&self) -> bool {
@@ -72,7 +87,7 @@ impl Packable for Ed25519Address {
     type Error = Error;
 
     fn packed_len(&self) -> usize {
-        ADDRESS_LENGTH
+        ED25519_ADDRESS_LENGTH
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
@@ -85,7 +100,7 @@ impl Packable for Ed25519Address {
     where
         Self: Sized,
     {
-        let mut bytes = [0u8; ADDRESS_LENGTH];
+        let mut bytes = [0u8; ED25519_ADDRESS_LENGTH];
         reader.read_exact(&mut bytes)?;
 
         Ok(Self(bytes))

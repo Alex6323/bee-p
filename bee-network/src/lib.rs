@@ -48,8 +48,19 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 pub(crate) static MSG_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MSG_BUFFER_SIZE);
 pub(crate) static RECONNECT_MILLIS: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_MILLIS);
 pub(crate) static PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_PEER_LIMIT);
+pub(crate) static NETWORK_ID: AtomicU64 = AtomicU64::new(0);
 
-pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shutdown) -> (Network, EventReceiver) {
+pub async fn init(
+    config: NetworkConfig,
+    local_keys: Keypair,
+    network_id: u64,
+    shutdown: &mut Shutdown,
+) -> (Network, EventReceiver) {
+    MSG_BUFFER_SIZE.swap(config.msg_buffer_size, Ordering::Relaxed);
+    RECONNECT_MILLIS.swap(config.reconnect_millis, Ordering::Relaxed);
+    PEER_LIMIT.swap(config.peer_limit, Ordering::Relaxed);
+    NETWORK_ID.swap(network_id, Ordering::Relaxed);
+
     let local_keys = identity::Keypair::Ed25519(local_keys);
     let local_id = PeerId::from_public_key(local_keys.public());
 
@@ -96,10 +107,6 @@ pub async fn init(config: NetworkConfig, local_keys: Keypair, shutdown: &mut Shu
 
     shutdown.add_worker_shutdown(peer_manager_shutdown_sender, peer_manager_task);
     shutdown.add_worker_shutdown(conn_manager_shutdown_sender, conn_manager_task);
-
-    MSG_BUFFER_SIZE.swap(config.msg_buffer_size, Ordering::Relaxed);
-    RECONNECT_MILLIS.swap(config.reconnect_millis, Ordering::Relaxed);
-    PEER_LIMIT.swap(config.peer_limit, Ordering::Relaxed);
 
     (
         Network::new(config, command_sender, listen_address, local_id),

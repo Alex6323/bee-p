@@ -16,7 +16,10 @@ use super::{
 
 pub use bee_storage::storage::Backend;
 
-use bee_message::{payload::indexation::HASHED_INDEX_SIZE, MESSAGE_ID_LENGTH};
+use bee_message::{
+    payload::{indexation::HASHED_INDEX_LENGTH, transaction::ED25519_ADDRESS_LENGTH},
+    MESSAGE_ID_LENGTH,
+};
 
 use async_trait::async_trait;
 use rocksdb::{ColumnFamilyDescriptor, DBCompactionStyle, DBCompressionType, Options, SliceTransform, DB};
@@ -28,6 +31,7 @@ pub(crate) const CF_INDEX_TO_MESSAGE_ID: &str = "index_to_message_id";
 pub(crate) const CF_OUTPUT_ID_TO_OUTPUT: &str = "output_id_to_output";
 pub(crate) const CF_OUTPUT_ID_TO_SPENT: &str = "output_id_to_spent";
 pub(crate) const CF_OUTPUT_ID_UNSPENT: &str = "output_id_unspent";
+pub(crate) const CF_ED25519_ADDRESS_TO_OUTPUT_ID: &str = "ed25519_address_to_output_id";
 
 pub struct Storage {
     pub(crate) config: StorageConfig,
@@ -45,7 +49,7 @@ impl Storage {
         options.set_prefix_extractor(prefix_extractor);
         let cf_message_id_to_message_id = ColumnFamilyDescriptor::new(CF_MESSAGE_ID_TO_MESSAGE_ID, options);
 
-        let prefix_extractor = SliceTransform::create_fixed_prefix(HASHED_INDEX_SIZE);
+        let prefix_extractor = SliceTransform::create_fixed_prefix(HASHED_INDEX_LENGTH);
         let mut options = Options::default();
         options.set_prefix_extractor(prefix_extractor);
         let cf_index_to_message_id = ColumnFamilyDescriptor::new(CF_INDEX_TO_MESSAGE_ID, options);
@@ -55,6 +59,11 @@ impl Storage {
         let cf_output_id_to_spent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_TO_SPENT, Options::default());
 
         let cf_output_id_unspent = ColumnFamilyDescriptor::new(CF_OUTPUT_ID_UNSPENT, Options::default());
+
+        let prefix_extractor = SliceTransform::create_fixed_prefix(ED25519_ADDRESS_LENGTH);
+        let mut options = Options::default();
+        options.set_prefix_extractor(prefix_extractor);
+        let cf_ed25519_address_to_output_id = ColumnFamilyDescriptor::new(CF_ED25519_ADDRESS_TO_OUTPUT_ID, options);
 
         let mut opts = Options::default();
 
@@ -87,6 +96,7 @@ impl Storage {
             cf_output_id_to_output,
             cf_output_id_to_spent,
             cf_output_id_unspent,
+            cf_ed25519_address_to_output_id,
         ];
 
         Ok(DB::open_cf_descriptors(&opts, config.path, column_familes)?)

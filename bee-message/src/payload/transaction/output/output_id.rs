@@ -31,6 +31,17 @@ pub struct OutputId {
     index: u16,
 }
 
+impl From<[u8; OUTPUT_ID_LENGTH]> for OutputId {
+    fn from(bytes: [u8; OUTPUT_ID_LENGTH]) -> Self {
+        Self {
+            transaction_id: From::<[u8; TRANSACTION_ID_LENGTH]>::from(
+                bytes[0..TRANSACTION_ID_LENGTH].try_into().unwrap(),
+            ),
+            index: u16::from_le_bytes(bytes[TRANSACTION_ID_LENGTH..].try_into().unwrap()),
+        }
+    }
+}
+
 impl FromStr for OutputId {
     type Err = Error;
 

@@ -9,14 +9,14 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::storage::*;
+use crate::{error::Error, storage::*};
 
 use bee_common::packable::Packable;
 use bee_ledger::{output::Output, spent::Spent, unspent::Unspent};
 use bee_message::{
     payload::{
-        indexation::{HashedIndex, HASHED_INDEX_SIZE},
-        transaction::OutputId,
+        indexation::{HashedIndex, HASHED_INDEX_LENGTH},
+        transaction::{Ed25519Address, OutputId},
     },
     Message, MessageId, MESSAGE_ID_LENGTH,
 };
@@ -62,10 +62,10 @@ macro_rules! impl_stream {
             where
                 Self: Sized,
             {
-                let cf_handle = self.inner.cf_handle($cf).unwrap();
+                let cf = self.inner.cf_handle($cf).ok_or(Error::UnknownCf($cf))?;
 
                 Ok(StorageStream::new(
-                    self.inner.iterator_cf(cf_handle, IteratorMode::Start),
+                    self.inner.iterator_cf(cf, IteratorMode::Start),
                     self.config.iteration_budget,
                 ))
             }
@@ -138,9 +138,9 @@ impl<'a> StorageStream<'a, (MessageId, MessageId), ()> {
 
 impl<'a> StorageStream<'a, (HashedIndex, MessageId), ()> {
     fn unpack_key_value(key: &[u8], _: &[u8]) -> ((HashedIndex, MessageId), ()) {
-        let (index, mut message_id) = key.split_at(HASHED_INDEX_SIZE);
+        let (index, mut message_id) = key.split_at(HASHED_INDEX_LENGTH);
         // TODO review when we have fixed size index
-        let index: [u8; HASHED_INDEX_SIZE] = index.try_into().unwrap();
+        let index: [u8; HASHED_INDEX_LENGTH] = index.try_into().unwrap();
 
         (
             (HashedIndex::new(index), MessageId::unpack(&mut message_id).unwrap()),
@@ -167,6 +167,20 @@ impl<'a> StorageStream<'a, Unspent, ()> {
     }
 }
 
+impl<'a> StorageStream<'a, (Ed25519Address, OutputId), ()> {
+    fn unpack_key_value(key: &[u8], _: &[u8]) -> ((Ed25519Address, OutputId), ()) {
+        let (mut address, mut output_id) = key.split_at(MESSAGE_ID_LENGTH);
+
+        (
+            (
+                Ed25519Address::unpack(&mut address).unwrap(),
+                OutputId::unpack(&mut output_id).unwrap(),
+            ),
+            (),
+        )
+    }
+}
+
 impl_stream!(MessageId, Message, CF_MESSAGE_ID_TO_MESSAGE);
 impl_stream!(MessageId, MessageMetadata, CF_MESSAGE_ID_TO_METADATA);
 impl_stream!((MessageId, MessageId), (), CF_MESSAGE_ID_TO_MESSAGE_ID);
@@ -174,3 +188,4 @@ impl_stream!((HashedIndex, MessageId), (), CF_INDEX_TO_MESSAGE_ID);
 impl_stream!(OutputId, Output, CF_OUTPUT_ID_TO_OUTPUT);
 impl_stream!(OutputId, Spent, CF_OUTPUT_ID_TO_SPENT);
 impl_stream!(Unspent, (), CF_OUTPUT_ID_UNSPENT);
+impl_stream!((Ed25519Address, OutputId), (), CF_ED25519_ADDRESS_TO_OUTPUT_ID);

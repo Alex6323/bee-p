@@ -22,7 +22,8 @@ pub use constants::{INPUT_OUTPUT_COUNT_MAX, INPUT_OUTPUT_COUNT_RANGE, INPUT_OUTP
 pub use essence::{TransactionEssence, TransactionEssenceBuilder};
 pub use input::{Input, UTXOInput};
 pub use output::{
-    Address, Ed25519Address, Output, OutputId, SignatureLockedSingleOutput, WotsAddress, OUTPUT_ID_LENGTH,
+    Address, Ed25519Address, Output, OutputId, SignatureLockedSingleOutput, WotsAddress, ED25519_ADDRESS_LENGTH,
+    OUTPUT_ID_LENGTH,
 };
 pub use transaction_id::{TransactionId, TRANSACTION_ID_LENGTH};
 pub use unlock::{Ed25519Signature, ReferenceUnlock, SignatureUnlock, UnlockBlock, WotsSignature};
@@ -171,52 +172,52 @@ impl TransactionBuilder {
             return Err(Error::CountError);
         }
 
-        for (i, block) in self.unlock_blocks.iter().enumerate() {
-            // Signature Unlock Blocks must define either an Ed25519- or WOTS Signature
-            match block {
-                UnlockBlock::Reference(r) => {
-                    // Reference Unlock Blocks must specify a previous Unlock Block which is not of type Reference
-                    // Unlock Block. Since it's not the first input it unlocks, it must have
-                    // differente transaction id from previous one
-                    if i != 0 {
-                        match &essence.inputs()[i] {
-                            Input::UTXO(u) => match &essence.inputs()[i - 1] {
-                                Input::UTXO(v) => {
-                                    if u.output_id().transaction_id() != v.output_id().transaction_id() {
-                                        return Err(Error::InvalidIndex);
-                                    }
-                                }
-                            },
-                        }
-                    }
+        // for (i, block) in self.unlock_blocks.iter().enumerate() {
+        //     // Signature Unlock Blocks must define either an Ed25519- or WOTS Signature
+        //     match block {
+        //         UnlockBlock::Reference(r) => {
+        //             // Reference Unlock Blocks must specify a previous Unlock Block which is not of type Reference
+        //             // Unlock Block. Since it's not the first input it unlocks, it must have
+        //             // differente transaction id from previous one
+        //             if i != 0 {
+        //                 match &essence.inputs()[i] {
+        //                     Input::UTXO(u) => match &essence.inputs()[i - 1] {
+        //                         Input::UTXO(v) => {
+        //                             if u.output_id().transaction_id() != v.output_id().transaction_id() {
+        //                                 return Err(Error::InvalidIndex);
+        //                             }
+        //                         }
+        //                     },
+        //                 }
+        //             }
 
-                    // The reference index must therefore be < the index of the Reference Unlock Block
-                    if r.index() >= i as u16 {
-                        return Err(Error::InvalidIndex);
-                    }
-                }
-                UnlockBlock::Signature(_) => {
-                    // A Signature Unlock Block unlocking multiple inputs must only appear once (be unique) and be
-                    // positioned at same index of the first input it unlocks.
-                    if self.unlock_blocks.iter().filter(|j| *j == block).count() > 1 {
-                        return Err(Error::DuplicateError);
-                    }
+        //             // The reference index must therefore be < the index of the Reference Unlock Block
+        //             if r.index() >= i as u16 {
+        //                 return Err(Error::InvalidIndex);
+        //             }
+        //         }
+        //         UnlockBlock::Signature(_) => {
+        //             // A Signature Unlock Block unlocking multiple inputs must only appear once (be unique) and be
+        //             // positioned at same index of the first input it unlocks.
+        //             if self.unlock_blocks.iter().filter(|j| *j == block).count() > 1 {
+        //                 return Err(Error::DuplicateError);
+        //             }
 
-                    // Since it's first input it unlocks, it must have differente transaction id from previous one
-                    if i != 0 {
-                        match &essence.inputs()[i] {
-                            Input::UTXO(u) => match &essence.inputs()[i - 1] {
-                                Input::UTXO(v) => {
-                                    if u.output_id().transaction_id() == v.output_id().transaction_id() {
-                                        return Err(Error::InvalidIndex);
-                                    }
-                                }
-                            },
-                        }
-                    }
-                }
-            }
-        }
+        //             // Since it's first input it unlocks, it must have differente transaction id from previous one
+        //             if i != 0 {
+        //                 match &essence.inputs()[i] {
+        //                     Input::UTXO(u) => match &essence.inputs()[i - 1] {
+        //                         Input::UTXO(v) => {
+        //                             if u.output_id().transaction_id() == v.output_id().transaction_id() {
+        //                                 return Err(Error::InvalidIndex);
+        //                             }
+        //                         }
+        //                     },
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         Ok(Transaction {
             essence,

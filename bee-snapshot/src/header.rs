@@ -12,7 +12,6 @@
 use crate::{kind::Kind, Error};
 
 use bee_common::packable::{Packable, Read, Write};
-use bee_message::MessageId;
 
 const SNAPSHOT_VERSION: u8 = 1;
 
@@ -20,11 +19,9 @@ const SNAPSHOT_VERSION: u8 = 1;
 pub struct SnapshotHeader {
     pub(crate) kind: Kind,
     pub(crate) timestamp: u64,
-    pub(crate) network_id: u8,
+    pub(crate) network_id: u64,
     pub(crate) sep_index: u32,
-    pub(crate) sep_id: MessageId,
     pub(crate) ledger_index: u32,
-    pub(crate) ledger_id: MessageId,
 }
 
 impl SnapshotHeader {
@@ -36,7 +33,7 @@ impl SnapshotHeader {
         self.timestamp
     }
 
-    pub fn network_id(&self) -> u8 {
+    pub fn network_id(&self) -> u64 {
         self.network_id
     }
 
@@ -44,16 +41,8 @@ impl SnapshotHeader {
         self.sep_index
     }
 
-    pub fn sep_id(&self) -> &MessageId {
-        &self.sep_id
-    }
-
     pub fn ledger_index(&self) -> u32 {
         self.ledger_index
-    }
-
-    pub fn ledger_id(&self) -> &MessageId {
-        &self.ledger_id
     }
 }
 
@@ -66,9 +55,7 @@ impl Packable for SnapshotHeader {
             + self.timestamp.packed_len()
             + self.network_id.packed_len()
             + self.sep_index.packed_len()
-            + self.sep_id.packed_len()
             + self.ledger_index.packed_len()
-            + self.ledger_id.packed_len()
     }
 
     fn pack<W: Write>(&self, writer: &mut W) -> Result<(), Self::Error> {
@@ -77,9 +64,7 @@ impl Packable for SnapshotHeader {
         self.timestamp.pack(writer)?;
         self.network_id.pack(writer)?;
         self.sep_index.pack(writer)?;
-        self.sep_id.pack(writer)?;
         self.ledger_index.pack(writer)?;
-        self.ledger_id.pack(writer)?;
 
         Ok(())
     }
@@ -96,20 +81,16 @@ impl Packable for SnapshotHeader {
 
         let kind = Kind::unpack(reader)?;
         let timestamp = u64::unpack(reader)?;
-        let network_id = u8::unpack(reader)?;
+        let network_id = u64::unpack(reader)?;
         let sep_index = u32::unpack(reader)?;
-        let sep_id = MessageId::unpack(reader)?;
         let ledger_index = u32::unpack(reader)?;
-        let ledger_id = MessageId::unpack(reader)?;
 
         Ok(Self {
             kind,
             timestamp,
             network_id,
             sep_index,
-            sep_id,
             ledger_index,
-            ledger_id,
         })
     }
 }
