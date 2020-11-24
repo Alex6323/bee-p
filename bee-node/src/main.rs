@@ -11,7 +11,7 @@
 
 use bee_common::logger::logger_init;
 use bee_common_ext::node::{Node as _, NodeBuilder as _};
-use bee_node::{CliArgs, Node, NodeConfigBuilder, default_plugins};
+use bee_node::{default_plugins, CliArgs, Node, NodeConfigBuilder};
 use bee_storage_rocksdb::storage::Storage as Rocksdb;
 
 use log::error;

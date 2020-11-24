@@ -14,8 +14,8 @@ use crate::plugin::Plugin;
 use bee_common_ext::event::Bus;
 use bee_protocol::event::TpsMetricsUpdated;
 
-use log::info;
 use async_trait::async_trait;
+use log::info;
 
 use std::convert::Infallible;
 

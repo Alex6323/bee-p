@@ -11,6 +11,4 @@
 
 pub mod mps;
 
-pub use self::{
-    mps::Mps,
-};
+pub use self::mps::Mps;
