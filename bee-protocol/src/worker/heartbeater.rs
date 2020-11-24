@@ -11,7 +11,7 @@
 
 use crate::{protocol::Protocol, tangle::MsTangle, worker::TangleWorker};
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
@@ -19,7 +19,7 @@ use futures::stream::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::{any::TypeId, time::Duration};
+use std::{any::TypeId, convert::Infallible, time::Duration};
 
 const _HEARTBEAT_SEND_INTERVAL_SEC: u64 = 30;
 const _HEARTBEAT_RECEIVE_INTERVAL_SEC: u64 = 100;
@@ -31,7 +31,7 @@ pub(crate) struct HeartbeaterWorker {}
 #[async_trait]
 impl<N: Node> Worker<N> for HeartbeaterWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()

@@ -11,7 +11,7 @@
 
 use crate::{tangle::MsTangle, worker::TangleWorker};
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
@@ -19,7 +19,7 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::{any::TypeId, time::Duration};
+use std::{any::TypeId, convert::Infallible, time::Duration};
 
 const TIP_POOL_CLEANER_INTERVAL_SEC: u64 = 1;
 
@@ -29,7 +29,7 @@ pub(crate) struct TipPoolCleanerWorker {}
 #[async_trait]
 impl<N: Node> Worker<N> for TipPoolCleanerWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()

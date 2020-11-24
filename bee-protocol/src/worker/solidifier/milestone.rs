@@ -16,7 +16,7 @@ use crate::{
     worker::{MessageRequesterWorker, MessageRequesterWorkerEvent, RequestedMessages, TangleWorker},
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_storage::storage::Backend;
 use bee_tangle::traversal;
@@ -25,7 +25,7 @@ use async_trait::async_trait;
 use futures::{channel::oneshot, StreamExt};
 use log::{debug, info};
 
-use std::any::TypeId;
+use std::{any::TypeId, convert::Infallible};
 
 pub(crate) struct MilestoneSolidifierWorkerEvent(pub MilestoneIndex);
 
@@ -79,7 +79,7 @@ fn save_index(target_index: MilestoneIndex, queue: &mut Vec<MilestoneIndex>) {
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneSolidifierWorker {
     type Config = oneshot::Receiver<MilestoneIndex>;
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<MessageRequesterWorker>(), TypeId::of::<TangleWorker>()].leak()

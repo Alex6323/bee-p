@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
@@ -17,7 +17,7 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::time::Duration;
+use std::{convert::Infallible, time::Duration};
 
 const CHECK_INTERVAL_SEC: u64 = 3600;
 
@@ -27,7 +27,7 @@ pub(crate) struct VersionCheckerWorker {}
 #[async_trait]
 impl<N: Node> Worker<N> for VersionCheckerWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         node.spawn::<Self, _, _>(|shutdown| async move {

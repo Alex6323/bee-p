@@ -15,7 +15,7 @@ use crate::{
     protocol::{Protocol, Sender},
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
 
@@ -26,6 +26,7 @@ use log::{debug, info, trace};
 use tokio::time::interval;
 
 use std::{
+    convert::Infallible,
     ops::Deref,
     time::{Duration, Instant},
 };
@@ -123,7 +124,7 @@ async fn retry_requests(requested_messages: &RequestedMessages, counter: &mut us
 #[async_trait]
 impl<N: Node> Worker<N> for MessageRequesterWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();

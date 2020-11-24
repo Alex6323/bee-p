@@ -16,7 +16,7 @@ use crate::{
     worker::TangleWorker,
 };
 
-use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::{packable::Packable, shutdown_stream::ShutdownStream};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
 use bee_network::PeerId;
@@ -25,7 +25,7 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::info;
 
-use std::any::TypeId;
+use std::{any::TypeId, convert::Infallible};
 
 pub(crate) struct MessageResponderWorkerEvent {
     pub(crate) peer_id: PeerId,
@@ -39,7 +39,7 @@ pub(crate) struct MessageResponderWorker {
 #[async_trait]
 impl<N: Node> Worker<N> for MessageResponderWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()

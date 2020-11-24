@@ -17,7 +17,7 @@ use crate::{
     worker::TangleWorker,
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_network::PeerId;
 
@@ -29,6 +29,7 @@ use tokio::time::interval;
 
 use std::{
     any::TypeId,
+    convert::Infallible,
     ops::Deref,
     time::{Duration, Instant},
 };
@@ -122,7 +123,7 @@ async fn retry_requests(requested_milestones: &RequestedMilestones, counter: &mu
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneRequesterWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()

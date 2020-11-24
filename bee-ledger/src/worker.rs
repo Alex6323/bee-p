@@ -14,7 +14,7 @@ use crate::{
     storage::Backend, white_flag::visit_dfs,
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{
     event::Bus,
     node::{Node, ResHandle},
@@ -29,7 +29,7 @@ use blake2::Blake2b;
 use futures::stream::StreamExt;
 use log::{error, info};
 
-use std::{any::TypeId, sync::Arc};
+use std::{any::TypeId, convert::Infallible, sync::Arc};
 
 // TODO refactor errors
 
@@ -154,7 +154,7 @@ where
     N::Backend: Backend,
 {
     type Config = (MilestoneIndex, ProtocolCoordinatorConfig, Arc<Bus<'static>>);
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>(), TypeId::of::<StorageWorker>()].leak()

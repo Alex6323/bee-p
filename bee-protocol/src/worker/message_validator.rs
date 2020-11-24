@@ -11,7 +11,7 @@
 
 use crate::{tangle::MsTangle, worker::TangleWorker};
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
 
@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::info;
 
-use std::any::TypeId;
+use std::{any::TypeId, convert::Infallible};
 
 pub(crate) struct MessageValidatorWorkerEvent(pub(crate) MessageId);
 
@@ -30,7 +30,7 @@ pub(crate) struct MessageValidatorWorker {
 #[async_trait]
 impl<N: Node> Worker<N> for MessageValidatorWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()
