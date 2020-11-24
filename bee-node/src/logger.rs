@@ -9,11 +9,8 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use crate::{node::BeeNodeBuilder, storage::Backend};
 use bee_common::logger::logger_init;
-use crate::{
-    node::BeeNodeBuilder,
-    storage::Backend,
-};
 
 impl<B: Backend> BeeNodeBuilder<B> {
     pub fn with_logging(self) -> Self {

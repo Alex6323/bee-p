@@ -10,7 +10,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    banner::print_banner_and_version, config::NodeConfig, storage::Backend, version_checker::VersionCheckerWorker,
+    banner::print_banner_and_version, config::NodeConfig, plugin, storage::Backend,
+    version_checker::VersionCheckerWorker,
 };
 
 use bee_common::{shutdown, shutdown_stream::ShutdownStream};
@@ -271,7 +272,10 @@ impl<B: Backend> BeeNodeBuilder<B> {
         &self.config
     }
 
-    pub fn with_plugin<P: plugin::Plugin>(self) -> Self where P::Config: Default {
+    pub fn with_plugin<P: plugin::Plugin>(self) -> Self
+    where
+        P::Config: Default,
+    {
         self.with_worker::<plugin::PluginWorker<P>>()
     }
 
