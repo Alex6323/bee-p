@@ -11,9 +11,10 @@
 
 use crate::handlers;
 use bee_common_ext::node::ResHandle;
-use bee_protocol::tangle::MsTangle;
 use serde::de::DeserializeOwned;
 use warp::{reject, Filter, Rejection};
+
+use bee_protocol::{tangle::MsTangle, MessageSubmitterWorkerEvent};
 
 use crate::storage::Backend;
 use std::collections::HashMap;
@@ -29,10 +30,12 @@ impl reject::Reject for ServiceUnavailable {}
 pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
     storage: ResHandle<B>,
+    message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_health(tangle.clone())
         .or(get_info(tangle.clone()).or(get_milestone_by_milestone_index(tangle.clone())))
         .or(get_tips(tangle.clone()))
+        .or(post_raw_message(message_submitter))
         .or(get_message_by_index(storage.clone()))
         .or(get_message_by_message_id(tangle.clone()))
         .or(get_message_metadata(tangle.clone()))
@@ -73,6 +76,19 @@ fn get_tips<B: Backend>(
         .and(warp::path::end())
         .and(with_tangle(tangle))
         .and_then(handlers::get_tips)
+}
+
+fn post_raw_message(
+    message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::post()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("messages"))
+        .and(warp::path::end())
+        .and(warp::body::bytes())
+        .and(with_message_submitter(message_submitter))
+        .and_then(handlers::post_message_raw)
 }
 
 fn get_message_by_index<B: Backend>(
@@ -220,6 +236,17 @@ fn with_storage<B: Backend>(
     warp::any().map(move || storage.clone())
 }
 
+fn with_message_submitter(
+    message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
+) -> impl Filter<Extract = (flume::Sender<MessageSubmitterWorkerEvent>,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || message_submitter.clone())
+}
+
+
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
     warp::body::content_length_limit(1024 * 32).and(warp::body::json())
+}
+
+fn raw_bytes() -> impl Filter<Extract = (warp::hyper::body::Bytes,), Error = Rejection> + Copy {
+    warp::body::content_length_limit(1024 * 32).and(warp::body::bytes())
 }

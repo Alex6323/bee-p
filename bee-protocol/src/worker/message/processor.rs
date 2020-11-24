@@ -34,11 +34,14 @@ use futures::stream::StreamExt;
 use log::{error, info, trace, warn};
 
 use std::any::TypeId;
+use futures::channel::oneshot::Sender;
+use crate::worker::message_submitter::MessageSubmitterError;
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) pow_score: f64,
-    pub(crate) from: PeerId,
+    pub(crate) from: Option<PeerId>,
     pub(crate) message_packet: MessagePacket,
+    pub(crate) message_inserted_notifier: Option<Sender<Result<MessageId, MessageSubmitterError>>>,
 }
 
 pub(crate) struct ProcessorWorker {
@@ -81,6 +84,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 pow_score: _pow_score,
                 from,
                 message_packet,
+                               message_inserted_notifier: message_inserted_notifier,
             }) = receiver.next().await
             {
                 trace!("Processing received message...");
@@ -118,6 +122,11 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                 // store message
                 if let Some(message) = tangle.insert(message, message_id, metadata).await {
+
+                    if let Some(tx) = message_inserted_notifier {
+                        tx.send(Ok(message_id));
+                    }
+
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
@@ -156,7 +165,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         None => {
                             // Message was not requested.
                             if let Err(e) = broadcaster.send(BroadcasterWorkerEvent {
-                                source: Some(from),
+                                source: from,
                                 message: message_packet,
                             }) {
                                 warn!("Broadcasting message failed: {}.", e);

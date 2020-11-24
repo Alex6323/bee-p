@@ -18,7 +18,7 @@ use bee_common::packable::Packable;
 use bee_common_ext::node::ResHandle;
 use bee_ledger::spent::Spent;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
-use bee_protocol::{tangle::MsTangle, MilestoneIndex};
+use bee_protocol::{tangle::MsTangle, MilestoneIndex, MessageSubmitterWorkerEvent, MessageSubmitterError};
 use blake2::Blake2s;
 use digest::Digest;
 use std::{
@@ -27,10 +27,8 @@ use std::{
     ops::Deref,
     time::{SystemTime, UNIX_EPOCH},
 };
-use warp::{
-    http::{Response, StatusCode},
-    reject, Rejection, Reply,
-};
+use warp::{http::{Response, StatusCode}, reject, Rejection, Reply};
+use futures::channel::oneshot;
 
 // TODO: move constants to node configuration
 const YTRSI_DELTA: u32 = 8;
@@ -105,6 +103,47 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
             tip_2_message_id: tips.1.to_string(),
         }))),
         None => Err(reject::custom(ServiceUnavailable)),
+    }
+}
+
+pub async fn post_message_raw(
+    buf: warp::hyper::body::Bytes,
+    message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
+) -> Result<impl Reply, Rejection> {
+
+    let test_msg = tests::indexation_message();
+    let bytes = test_msg.pack_new();
+
+    let (sender, receiver) = oneshot::channel::<Result<MessageId, MessageSubmitterError>>();
+    let event = MessageSubmitterWorkerEvent {
+        buf: bytes,
+        message_inserted_notifier: sender,
+    };
+
+    match message_submitter.send(event) {
+        Ok(res) => {
+            match receiver.await {
+                Ok(message_id) => {
+                    match message_id {
+                        Ok(id) => {
+                            let x = message_id.to_string();
+                            println!("message id {}", x);
+                            Ok(StatusCode::OK)
+                        }
+                        Err(err) => {
+                            let x = message_id.to_string();
+                            println!("message id {}", x);
+                            Ok(StatusCode::OK)
+                        }
+                    }
+                }
+                Err(err) => {
+                    println!("err {:?}", err);
+                    Ok(StatusCode::OK)
+                }
+            }
+        }
+        Err(_err) => Err(reject::custom(ServiceUnavailable))
     }
 }
 

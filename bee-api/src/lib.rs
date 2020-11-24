@@ -25,7 +25,7 @@ use bee_common_ext::{
     node::{Node, NodeBuilder},
     worker::Worker,
 };
-use bee_protocol::{tangle::MsTangle, TangleWorker};
+use bee_protocol::{tangle::MsTangle, TangleWorker, MessageSubmitterWorker};
 use filters::{BadRequest, ServiceUnavailable};
 use log::info;
 use std::{any::TypeId, convert::Infallible};
@@ -50,17 +50,21 @@ where
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
-        vec![TypeId::of::<TangleWorker>()].leak()
+        vec![
+            TypeId::of::<TangleWorker>(),
+            TypeId::of::<MessageSubmitterWorker>(),
+        ].leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
         let tangle = node.resource::<MsTangle<N::Backend>>();
         let storage = node.storage();
+        let message_submitter = node.worker::<MessageSubmitterWorker>().unwrap().tx.clone();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let routes = filters::all(tangle, storage).recover(handle_rejection);
+            let routes = filters::all(tangle, storage, message_submitter).recover(handle_rejection);
 
             let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.binding_socket_addr(), async {
                 shutdown.await.ok();
