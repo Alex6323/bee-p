@@ -346,6 +346,11 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
     async fn finish(mut self) -> Result<BeeNode<B>, Error> {
         print_banner_and_version();
 
+        info!(
+            "Joining network {}({}).",
+            self.config.network_id.0, self.config.network_id.1
+        );
+
         let mut shutdown = Shutdown::new();
 
         let generated_new_local_keypair = self.config.peering.local_keypair.2;
