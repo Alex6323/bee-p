@@ -85,6 +85,15 @@ pub struct GetTipsResponse {
 
 impl DataBody for GetTipsResponse {}
 
+/// Response of POST /api/v1/messages/{message_id}
+#[derive(Clone, Debug, Serialize)]
+pub struct PostMessageResponse {
+    #[serde(rename = "messageId")]
+    pub message_id: String,
+}
+
+impl DataBody for PostMessageResponse {}
+
 /// Response of GET /api/v1/messages/{message_id}?index={INDEX}
 #[derive(Clone, Debug, Serialize)]
 pub struct GetMessagesByIndexResponse {

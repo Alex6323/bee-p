@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    filters::ServiceUnavailable,
+    filters::{BadRequest, ServiceUnavailable},
     storage::Backend,
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
 };
@@ -18,17 +18,20 @@ use bee_common::packable::Packable;
 use bee_common_ext::node::ResHandle;
 use bee_ledger::spent::Spent;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
-use bee_protocol::{tangle::MsTangle, MilestoneIndex, MessageSubmitterWorkerEvent, MessageSubmitterError};
+use bee_protocol::{tangle::MsTangle, MessageSubmitterError, MessageSubmitterWorkerEvent, MilestoneIndex};
 use blake2::Blake2s;
 use digest::Digest;
+use futures::channel::oneshot;
 use std::{
     convert::{Infallible, TryInto},
     iter::FromIterator,
     ops::Deref,
     time::{SystemTime, UNIX_EPOCH},
 };
-use warp::{http::{Response, StatusCode}, reject, Rejection, Reply};
-use futures::channel::oneshot;
+use warp::{
+    http::{Response, StatusCode},
+    reject, Rejection, Reply,
+};
 
 // TODO: move constants to node configuration
 const YTRSI_DELTA: u32 = 8;
@@ -110,40 +113,33 @@ pub async fn post_message_raw(
     buf: warp::hyper::body::Bytes,
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> Result<impl Reply, Rejection> {
+    // TODO: refactor as constants
+    let min_size: usize = 77;
+    let max_size: usize = 1024;
 
-    let test_msg = tests::indexation_message();
-    let bytes = test_msg.pack_new();
+    if buf.len() < min_size || buf.len() > max_size {
+        return Err(reject::custom(BadRequest));
+    }
 
-    let (sender, receiver) = oneshot::channel::<Result<MessageId, MessageSubmitterError>>();
+    let (message_inserted_notifier, message_inserted_waiter) =
+        oneshot::channel::<Result<MessageId, MessageSubmitterError>>();
     let event = MessageSubmitterWorkerEvent {
-        buf: bytes,
-        message_inserted_notifier: sender,
+        buf: buf.to_vec(),
+        message_inserted_notifier,
     };
 
-    match message_submitter.send(event) {
-        Ok(res) => {
-            match receiver.await {
-                Ok(message_id) => {
-                    match message_id {
-                        Ok(id) => {
-                            let x = message_id.to_string();
-                            println!("message id {}", x);
-                            Ok(StatusCode::OK)
-                        }
-                        Err(err) => {
-                            let x = message_id.to_string();
-                            println!("message id {}", x);
-                            Ok(StatusCode::OK)
-                        }
-                    }
-                }
-                Err(err) => {
-                    println!("err {:?}", err);
-                    Ok(StatusCode::OK)
-                }
-            }
-        }
-        Err(_err) => Err(reject::custom(ServiceUnavailable))
+    if let Err(err) = message_submitter.send(event) {
+        return Err(reject::custom(ServiceUnavailable));
+    }
+
+    match message_inserted_waiter.await {
+        Ok(result) => match result {
+            Ok(message_id) => Ok(warp::reply::json(&DataResponse::new(PostMessageResponse {
+                message_id: message_id.to_string(),
+            }))),
+            Err(err) => Err(reject::custom(BadRequest)),
+        },
+        Err(err) => Err(reject::custom(ServiceUnavailable)),
     }
 }
 

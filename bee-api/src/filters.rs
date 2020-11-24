@@ -242,7 +242,6 @@ fn with_message_submitter(
     warp::any().map(move || message_submitter.clone())
 }
 
-
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
     warp::body::content_length_limit(1024 * 32).and(warp::body::json())
 }
