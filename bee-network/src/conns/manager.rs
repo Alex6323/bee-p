@@ -11,9 +11,9 @@
 
 use crate::{
     interaction::events::InternalEventSender,
-    peers::{BannedAddrList, BannedPeerList, PeerInfo, PeerList, PeerRelation},
+    peers::{BannedAddrList, BannedPeerList, PeerInfo, PeerList, PeerRelation, PeerState},
     transport::build_transport,
-    Multiaddr, PeerId, ShortId, UNKNOWN_PEER_LIMIT,
+    Multiaddr, PeerId, ShortId,
 };
 
 use super::{errors::Error, spawn_connection_handler, Origin};
@@ -133,10 +133,12 @@ impl ConnectionManager {
                                 };
 
                                 // Prevent accepting duplicate connections.
-                                if peers.is_connected(&peer_id) {
-                                    trace!("Already connected to {}", peer_id);
-                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                    continue;
+                                if let Ok(connected) = peers.is(&peer_id, |_, state| state.is_connected()) {
+                                    if connected {
+                                        trace!("Already connected to {}", peer_id);
+                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                                        continue;
+                                    }
                                 }
 
                                 // Prevent accepting banned peers.
@@ -146,27 +148,26 @@ impl ConnectionManager {
                                     continue;
                                 }
 
-                                let peer_info = if let Some(peer_info) = peers.get_info(&peer_id) {
+                                let peer_info = if let Ok(peer_info) = peers.get_info(&peer_id) {
                                     // If we have this peer id in our peerlist (but are not already connected to it),
                                     // then we allow the connection.
                                     peer_info
                                 } else {
-                                    if peers.num_unknown() >= UNKNOWN_PEER_LIMIT.load(Ordering::Relaxed) {
-                                        trace!(
-                                            "Ignoring peer. Cause: Unknown Peer limit (={}) reached.",
-                                            UNKNOWN_PEER_LIMIT.load(Ordering::Relaxed)
-                                        );
+                                    let peer_info = PeerInfo {
+                                        address: peer_address,
+                                        alias: None,
+                                        relation: PeerRelation::Unknown
+                                    };
+
+                                    if peers.insert(peer_id.clone(), peer_info.clone(), PeerState::Disconnected).is_err() {
+                                        trace!("Ignoring peer. Cause: Denied by peerlist.");
                                         NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
                                         continue;
                                     } else {
                                         // We also allow for a certain number of unknown peers.
-                                        info!("Allowing connection to unknown peer '{}' [{}]", peer_id.short(), peer_address);
+                                        info!("Allowing connection to unknown peer '{}' [{}]", peer_id.short(), peer_info.address);
 
-                                        PeerInfo {
-                                            address: peer_address,
-                                            alias: None,
-                                            relation: PeerRelation::Unknown
-                                        }
+                                        peer_info
                                     }
                                 };
 

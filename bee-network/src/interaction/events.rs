@@ -36,7 +36,7 @@ pub enum Event {
     MessageReceived { message: Vec<u8>, from: PeerId },
     PeerBanned { id: PeerId },
     AddressBanned { address: Multiaddr },
-    CommandFailed { command: Command },
+    CommandFailed { command: Command }, // TODO: maybe we should provide the reason as well!
 }
 
 #[derive(Debug)]
@@ -50,11 +50,11 @@ pub enum InternalEvent {
     ConnectionDropped {
         peer_id: PeerId,
     },
-    ReconnectScheduled {
-        peer_id: PeerId,
-    },
     MessageReceived {
         message: Vec<u8>,
         from: PeerId,
+    },
+    ReconnectScheduled {
+        peer_id: PeerId,
     },
 }
