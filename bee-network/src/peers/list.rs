@@ -20,37 +20,6 @@ use std::sync::{atomic::Ordering, Arc};
 
 const DEFAULT_PEERLIST_CAPACITY: usize = 8;
 
-#[derive(Clone, Debug)]
-pub struct PeerInfo {
-    pub address: Multiaddr,
-    pub alias: Option<String>,
-    pub relation: PeerRelation,
-}
-
-#[derive(Clone, Debug)]
-pub enum PeerState {
-    Disconnected,
-    Connected(DataSender),
-}
-
-impl PeerState {
-    pub fn is_connected(&self) -> bool {
-        if let PeerState::Connected(_) = *self {
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn is_disconnected(&self) -> bool {
-        if let PeerState::Disconnected = *self {
-            true
-        } else {
-            false
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct PeerList(Arc<DashMap<PeerId, (PeerInfo, PeerState)>>);
 
@@ -113,6 +82,7 @@ impl PeerList {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn contains(&self, id: &PeerId) -> bool {
         self.0.contains_key(id)
     }
@@ -140,6 +110,7 @@ impl PeerList {
         }
     }
 
+    #[allow(dead_code)]
     pub fn count(&self) -> usize {
         self.0.len()
     }
@@ -189,60 +160,15 @@ impl PeerList {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct PeerInfo {
+    pub address: Multiaddr,
+    pub alias: Option<String>,
+    pub relation: PeerRelation,
+}
+
 macro_rules! impl_relation_iter {
-    ($type:tt, $is:tt, $iter:tt, $num:tt) => {
-        // pub struct $type {
-        //     peer_list: PeerList,
-        //     start: usize,
-        // }
-
-        // impl Iterator for $type {
-        //     type Item = PeerId;
-
-        //     fn next(&mut self) -> Option<Self::Item> {
-        //         let mut new_start = 0;
-        //         let result = self
-        //             .peer_list
-        //             .0
-        //             .iter()
-        //             .skip(self.start)
-        //             .enumerate()
-        //             .find_map(|(pos, kv)| {
-        //                 if kv.value().0.relation.$is() {
-        //                     new_start = pos;
-        //                     Some(kv.key().clone())
-        //                 } else {
-        //                     None
-        //                 }
-        //             });
-        //         self.start = new_start;
-        //         result
-        //     }
-        // }
-
-        // impl PeerList {
-        //     pub fn $iter(&self) -> $type {
-        //         $type {
-        //             peer_list: self.clone(),
-        //             start: 0,
-        //         }
-        //     }
-
-        //     pub fn $is(&self, peer_id: &PeerId) -> bool {
-        //         self.$iter().find(|id| id == peer_id).is_some()
-        //     }
-
-        //     pub fn $num(&self) -> usize {
-        //         self.0.iter().fold(0, |count, kv| {
-        //             if kv.value().0.relation.$is() {
-        //                 count + 1
-        //             } else {
-        //                 count
-        //             }
-        //         })
-        //     }
-        // }
-
+    ($is:tt) => {
         impl PeerInfo {
             pub fn $is(&self) -> bool {
                 self.relation.$is()
@@ -251,6 +177,30 @@ macro_rules! impl_relation_iter {
     };
 }
 
-impl_relation_iter!(KnownPeersIter, is_known, iter_known, num_known);
-impl_relation_iter!(UnknownPeersIter, is_unknown, iter_unknown, num_unknown);
-impl_relation_iter!(DiscoveredPeersIter, is_discovered, iter_discovered, num_discovered);
+impl_relation_iter!(is_known);
+impl_relation_iter!(is_unknown);
+impl_relation_iter!(is_discovered);
+
+#[derive(Clone, Debug)]
+pub enum PeerState {
+    Disconnected,
+    Connected(DataSender),
+}
+
+impl PeerState {
+    pub fn is_connected(&self) -> bool {
+        if let PeerState::Connected(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_disconnected(&self) -> bool {
+        if let PeerState::Disconnected = *self {
+            true
+        } else {
+            false
+        }
+    }
+}

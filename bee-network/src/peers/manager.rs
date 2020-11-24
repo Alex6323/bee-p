@@ -249,7 +249,9 @@ async fn process_command(
                 return Err(Error::PeerAlreadyUnbanned(id.short()));
             }
         }
-        Command::UpdateRelation { id, relation } => todo!("UpdateRelation"),
+        Command::UpdateRelation { id, relation } => {
+            peers.update_relation(&id, relation)?;
+        }
     }
 
     Ok(())
@@ -310,7 +312,6 @@ async fn process_internal_event(
             )
             .await?
         }
-        _ => (),
     }
 
     Ok(())
@@ -370,7 +371,7 @@ async fn remove_peer(id: PeerId, peers: &PeerList, event_sender: &EventSender) -
 
             Err(e)
         }
-        Ok(peer_info) => {
+        Ok(_) => {
             // Inform the user that the command succeeded.
             event_sender
                 .send_async(Event::PeerRemoved { id })
@@ -477,7 +478,7 @@ async fn dial_address(
     Ok(())
 }
 
-fn spawn_reconnector_task(peers: &PeerList, internal_event_sender: InternalEventSender) -> Result<(), Error> {
+fn spawn_reconnector_task(peers: &PeerList, internal_event_sender: InternalEventSender) {
     let mut interval = tokio::time::interval(Duration::from_millis(RECONNECT_MILLIS.load(Ordering::Relaxed)));
 
     let peers_clone = peers.clone();
@@ -498,8 +499,6 @@ fn spawn_reconnector_task(peers: &PeerList, internal_event_sender: InternalEvent
             }
         }
     });
-
-    Ok(())
 }
 
 #[inline]
