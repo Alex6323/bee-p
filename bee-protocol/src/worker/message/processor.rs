@@ -84,7 +84,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 pow_score,
                 from,
                 message_packet,
-                               message_inserted_notifier: message_inserted_notifier,
+                message_inserted_notifier,
             }) = receiver.next().await
             {
                 trace!("Processing received message...");
@@ -133,7 +133,9 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 if let Some(message) = tangle.insert(message, message_id, metadata).await {
 
                     if let Some(tx) = message_inserted_notifier {
-                        tx.send(Ok(message_id));
+                        if let Err(e) = tx.send(Ok(message_id)) {
+                            error!("Failed to return message id {}: {:?}.", message_id, e);
+                        }
                     }
 
                     // TODO this was temporarily moved from the tangle.

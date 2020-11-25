@@ -19,6 +19,7 @@ use bee_common_ext::node::ResHandle;
 use bee_ledger::spent::Spent;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
 use bee_protocol::{tangle::MsTangle, MessageSubmitterError, MessageSubmitterWorkerEvent, MilestoneIndex};
+use bee_storage::access::Fetch;
 use blake2::Blake2s;
 use digest::Digest;
 use futures::channel::oneshot;
@@ -80,7 +81,7 @@ pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     let version = String::from(env!("CARGO_PKG_VERSION"));
     let is_healthy = is_healthy(tangle.clone()).await;
     // TODO: get network_id from node; use a splaceholder for now
-    let network_id = "alphanet".to_string();
+    let network_id = "alphanet1".to_string();
     let latest_milestone_index = *tangle.get_latest_milestone_index();
     let solid_milestone_index = *tangle.get_latest_milestone_index();
     let pruning_index = *tangle.get_pruning_index();
@@ -178,7 +179,7 @@ pub async fn get_message_by_message_id<B: Backend>(
 ) -> Result<impl Reply, Rejection> {
     match tangle.get(&message_id).await {
         Some(message) => {
-            // let network_id = message.network_id().to_string();
+            let network_id = message.network_id().to_string();
             let parent_1_message_id = message.parent1().to_string();
             let parent_2_message_id = message.parent2().to_string();
             let payload = {
@@ -275,7 +276,7 @@ pub async fn get_message_by_message_id<B: Backend>(
             let nonce = message.nonce().to_string();
 
             Ok(warp::reply::json(&DataResponse::new(GetMessageResponse(MessageDto {
-                // network_id,
+                network_id,
                 parent_1_message_id,
                 parent_2_message_id,
                 payload,
@@ -469,13 +470,36 @@ pub async fn get_balance_by_address<B: Backend>(
     Ok(StatusCode::OK)
 }
 
+pub async fn get_outputs_for_address<B: Backend>(
+    addr: Ed25519Address,
+    storage: ResHandle<B>,
+) -> Result<impl Reply, Rejection> {
+    match Fetch::<Ed25519Address, Vec<OutputId>>::fetch(storage.deref(), &addr).await {
+        Ok(res) => match res {
+            Some(mut ids) => {
+                let max_results = 1000;
+                let count = ids.len();
+                ids.truncate(max_results);
+                Ok(warp::reply::json(&DataResponse::new(GetOutputsForAddressResponse {
+                    address: addr.to_string(),
+                    max_results,
+                    count,
+                    output_ids: ids.iter().map(|id| id.to_string()).collect(),
+                })))
+            }
+            None => Err(reject::not_found()),
+        },
+        Err(err) => Err(reject::custom(ServiceUnavailable)),
+    }
+}
+
 pub mod tests {
 
     use super::*;
 
     pub fn message_without_payload() -> Message {
         Message::builder()
-            //.with_network_id(1)
+            .with_network_id(1)
             .with_parent1(MessageId::new([
                 0xF5, 0x32, 0xA5, 0x35, 0x45, 0x10, 0x32, 0x76, 0xB4, 0x68, 0x76, 0xC4, 0x73, 0x84, 0x6D, 0x98, 0x64,
                 0x8E, 0xE4, 0x18, 0x46, 0x8B, 0xCE, 0x76, 0xDF, 0x48, 0x68, 0x64, 0x8D, 0xD7, 0x3E, 0x5D,
@@ -490,7 +514,7 @@ pub mod tests {
 
     pub fn indexation_message() -> Message {
         Message::builder()
-            //.with_network_id(1)
+            .with_network_id(1)
             .with_parent1(MessageId::new([
                 0xF5, 0x32, 0xA5, 0x35, 0x45, 0x10, 0x32, 0x76, 0xB4, 0x68, 0x76, 0xC4, 0x73, 0x84, 0x6D, 0x98, 0x64,
                 0x8E, 0xE4, 0x18, 0x46, 0x8B, 0xCE, 0x76, 0xDF, 0x48, 0x68, 0x64, 0x8D, 0xD7, 0x3E, 0x5D,

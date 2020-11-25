@@ -115,8 +115,8 @@ impl DataBody for GetMessageResponse {}
 
 #[derive(Clone, Debug, Serialize)]
 pub struct MessageDto {
-    //#[serde(rename = "networkId")]
-    // pub network_id: String,
+    #[serde(rename = "networkId")]
+    pub network_id: String,
     #[serde(rename = "parent1MessageId")]
     pub parent_1_message_id: String,
     #[serde(rename = "parent2MessageId")]
@@ -307,3 +307,16 @@ pub struct GetOutputByOutputIdResponse {
 }
 
 impl DataBody for GetOutputByOutputIdResponse {}
+
+/// Response of GET /api/v1/addresses/{address}
+#[derive(Clone, Debug, Serialize)]
+pub struct GetOutputsForAddressResponse {
+    pub address: String,
+    #[serde(rename = "maxResults")]
+    pub max_results: usize,
+    pub count: usize,
+    #[serde(rename = "outputIds")]
+    pub output_ids: Vec<String>,
+}
+
+impl DataBody for GetOutputsForAddressResponse {}

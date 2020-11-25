@@ -42,6 +42,7 @@ pub fn all<B: Backend>(
         .or(get_raw_message(tangle.clone()))
         .or(get_children_by_message_id(tangle.clone()))
         .or(get_output_by_output_id(storage.clone()))
+        .or(get_outputs_for_address(storage.clone()))
 }
 
 fn get_health<B: Backend>(
@@ -190,10 +191,23 @@ fn get_output_by_output_id<B: Backend>(
         .and_then(handlers::get_output_by_output_id)
 }
 
+fn get_outputs_for_address<B: Backend>(
+    storage: ResHandle<B>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("addresses"))
+        .and(custom_path_param::ed25519_address())
+        .and(warp::path::end())
+        .and(with_storage(storage))
+        .and_then(handlers::get_outputs_for_address)
+}
+
 mod custom_path_param {
 
     use super::*;
-    use bee_message::{payload::transaction::OutputId, MessageId};
+    use bee_message::{payload::transaction::OutputId, prelude::Ed25519Address, MessageId};
     use bee_protocol::MilestoneIndex;
 
     pub(super) fn output_id() -> impl Filter<Extract = (OutputId,), Error = Rejection> + Copy {
@@ -218,6 +232,15 @@ mod custom_path_param {
         warp::path::param().and_then(|value: String| async move {
             match value.parse::<u32>() {
                 Ok(i) => Ok(MilestoneIndex(i)),
+                Err(_) => Err(reject::custom(BadRequest)),
+            }
+        })
+    }
+
+    pub(super) fn ed25519_address() -> impl Filter<Extract = (Ed25519Address,), Error = Rejection> + Copy {
+        warp::path::param().and_then(|value: String| async move {
+            match value.parse::<Ed25519Address>() {
+                Ok(addr) => Ok(addr),
                 Err(_) => Err(reject::custom(BadRequest)),
             }
         })

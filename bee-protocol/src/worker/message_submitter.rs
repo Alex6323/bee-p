@@ -20,12 +20,20 @@ use log::{error, info};
 
 use std::{
     any::TypeId,
+    fmt,
 };
 use crate::worker::{HasherWorker, HasherWorkerEvent};
 use crate::packet::Message;
 
+#[derive(Debug)]
 pub struct MessageSubmitterError {
-    reason: String,
+    pub reason: String,
+}
+
+impl fmt::Display for MessageSubmitterError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.reason)
+    }
 }
 
 pub struct MessageSubmitterWorkerEvent {

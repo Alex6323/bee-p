@@ -12,7 +12,6 @@
 use crate::{
     event::{LatestSolidMilestoneChanged, MessageSolidified},
     milestone::Milestone,
-    protocol::Protocol,
     tangle::MsTangle,
     worker::{MessageValidatorWorker, MessageValidatorWorkerEvent, TangleWorker},
 };
