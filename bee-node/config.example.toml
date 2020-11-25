@@ -19,7 +19,7 @@ reconnect_millis  = 60000
 local_keypair = ""
 [peering.manual]
 limit   = 5
-[peering.manual.peers]
+[[peering.manual.peers]]
 
 [protocol]
 minimum_pow_score = 100
