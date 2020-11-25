@@ -22,7 +22,7 @@ const DEFAULT_LIMIT: usize = 5;
 #[derive(Default, Deserialize)]
 pub struct ManualPeeringConfigBuilder {
     pub(crate) limit: Option<usize>,
-    pub(crate) peers: Vec<Peer>,
+    pub(crate) peers: Option<Vec<Peer>>,
 }
 
 #[derive(Deserialize)]
@@ -41,24 +41,24 @@ impl ManualPeeringConfigBuilder {
         self
     }
 
-    pub fn add_peer(mut self, multiaddr: &str, alias: Option<&str>) {
-        self.peers.push(Peer {
-            address: multiaddr.to_owned(),
-            alias: alias.map(|s| s.to_owned()),
-        });
+    pub fn peers(mut self, peers: Vec<Peer>) -> Self {
+        self.peers.replace(peers);
+        self
     }
 
     pub fn finish(self) -> ManualPeeringConfig {
-        let peers = self
-            .peers
-            .into_iter()
-            .map(|peer| {
-                (
-                    Multiaddr::from_str(&peer.address[..]).expect("error parsing multiaddr."),
-                    peer.alias,
-                )
-            })
-            .collect();
+        let peers = match self.peers {
+            None => Vec::new(),
+            Some(peers) => peers
+                .into_iter()
+                .map(|peer| {
+                    (
+                        Multiaddr::from_str(&peer.address[..]).expect("error parsing multiaddr."),
+                        peer.alias,
+                    )
+                })
+                .collect(),
+        };
 
         ManualPeeringConfig {
             limit: self.limit.unwrap_or(DEFAULT_LIMIT),
