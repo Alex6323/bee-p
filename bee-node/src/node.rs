@@ -18,7 +18,7 @@ use bee_common_ext::{
     shutdown_tokio::Shutdown,
     worker::Worker,
 };
-use bee_network::{self, Event, Multiaddr, Network, PeerId};
+use bee_network::{self, Event, Multiaddr, Network, PeerId, ShortId};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::Protocol;
 
@@ -128,13 +128,23 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
     #[inline]
     async fn process_event(&mut self, event: Event) {
         match event {
+            Event::PeerAdded { id } => self.peer_added_handler(id).await,
+            Event::PeerRemoved { id } => self.peer_removed_handler(id).await,
             Event::PeerConnected { id, address } => self.peer_connected_handler(id, address).await,
             Event::PeerDisconnected { id } => self.peer_disconnected_handler(id).await,
             Event::MessageReceived { message, from } => self.peer_message_received_handler(message, from).await,
-            Event::PeerBanned { .. } => (),
-            Event::AddressBanned { .. } => (),
-            _ => warn!("Unsupported event {:?}.", event),
+            _ => (), // Ignore all other events for now
         }
+    }
+
+    #[inline]
+    async fn peer_added_handler(&mut self, id: PeerId) {
+        info!("Added peer: {}", id.short());
+    }
+
+    #[inline]
+    async fn peer_removed_handler(&mut self, id: PeerId) {
+        info!("Removed peer: {}", id.short());
     }
 
     #[inline]
@@ -150,7 +160,7 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
         // TODO unregister ?
         if let Some((_, shutdown)) = self.peers.remove(&id) {
             if let Err(e) = shutdown.send(()) {
-                warn!("Sending shutdown to {} failed: {:?}.", id, e);
+                warn!("Sending shutdown to {} failed: {:?}.", id.short(), e);
             }
         }
     }
@@ -159,7 +169,7 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
     async fn peer_message_received_handler(&mut self, message: Vec<u8>, from: PeerId) {
         if let Some(peer) = self.peers.get_mut(&from) {
             if let Err(e) = peer.0.send(message) {
-                warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", from, e);
+                warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", from.short(), e);
             }
         }
     }

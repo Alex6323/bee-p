@@ -140,7 +140,7 @@ impl ShortId for PeerId {
     fn short(&self) -> String {
         let s = self.to_string();
         format!(
-            "{}*{}",
+            "{}~{}",
             &s[0..Self::LEADING_LENGTH],
             &s[(Self::ORIGINAL_LENGTH - Self::TRAILING_LENGTH)..]
         )
