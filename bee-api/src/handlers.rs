@@ -22,7 +22,10 @@ use bee_protocol::{tangle::MsTangle, MessageSubmitterError, MessageSubmitterWork
 use bee_storage::access::Fetch;
 use blake2::Blake2s;
 use digest::Digest;
-use futures::channel::oneshot;
+use futures::{
+    channel::oneshot,
+    stream::{self, StreamExt},
+};
 use std::{
     convert::{Infallible, TryInto},
     iter::FromIterator,
@@ -463,11 +466,46 @@ pub async fn get_output_by_output_id<B: Backend>(
     }
 }
 
-pub async fn get_balance_by_address<B: Backend>(
-    output_id: OutputId,
+pub async fn get_balance_for_address<B: Backend>(
+    addr: Ed25519Address,
     storage: ResHandle<B>,
 ) -> Result<impl Reply, Rejection> {
-    Ok(StatusCode::OK)
+    match Fetch::<Ed25519Address, Vec<OutputId>>::fetch(storage.deref(), &addr)
+        .await
+        .map_err(|_| reject::custom(ServiceUnavailable))?
+    {
+        Some(mut ids) => {
+            let max_results = 1000;
+            let count = ids.len();
+            ids.truncate(max_results);
+            let mut balance = 0;
+
+            for id in ids {
+                if let Some(output) = Fetch::<OutputId, bee_ledger::output::Output>::fetch(storage.deref(), &id)
+                    .await
+                    .map_err(|_| reject::custom(ServiceUnavailable))?
+                {
+                    if let None = Fetch::<OutputId, Spent>::fetch(storage.deref(), &id)
+                        .await
+                        .map_err(|_| reject::custom(ServiceUnavailable))?
+                    {
+                        match output.inner() {
+                            Output::SignatureLockedSingle(o) => balance += o.amount().get() as u32,
+                            _ => {}
+                        }
+                    }
+                }
+            }
+
+            Ok(warp::reply::json(&DataResponse::new(GetBalanceForAddressResponse {
+                address: addr.to_string(),
+                max_results,
+                count,
+                balance,
+            })))
+        }
+        None => Err(reject::not_found()),
+    }
 }
 
 pub async fn get_outputs_for_address<B: Backend>(

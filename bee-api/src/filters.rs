@@ -21,10 +21,11 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct BadRequest;
-impl reject::Reject for BadRequest {}
 
 #[derive(Debug)]
 pub struct ServiceUnavailable;
+
+impl reject::Reject for BadRequest {}
 impl reject::Reject for ServiceUnavailable {}
 
 pub fn all<B: Backend>(
@@ -191,6 +192,19 @@ fn get_output_by_output_id<B: Backend>(
         .and_then(handlers::get_output_by_output_id)
 }
 
+fn get_balance_for_address<B: Backend>(
+    storage: ResHandle<B>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("addresses"))
+        .and(custom_path_param::ed25519_address())
+        .and(warp::path::end())
+        .and(with_storage(storage))
+        .and_then(handlers::get_balance_for_address)
+}
+
 fn get_outputs_for_address<B: Backend>(
     storage: ResHandle<B>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -199,6 +213,7 @@ fn get_outputs_for_address<B: Backend>(
         .and(warp::path("v1"))
         .and(warp::path("addresses"))
         .and(custom_path_param::ed25519_address())
+        .and(warp::path("outputs"))
         .and(warp::path::end())
         .and(with_storage(storage))
         .and_then(handlers::get_outputs_for_address)
@@ -267,8 +282,4 @@ fn with_message_submitter(
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
     warp::body::content_length_limit(1024 * 32).and(warp::body::json())
-}
-
-fn raw_bytes() -> impl Filter<Extract = (warp::hyper::body::Bytes,), Error = Rejection> + Copy {
-    warp::body::content_length_limit(1024 * 32).and(warp::body::bytes())
 }

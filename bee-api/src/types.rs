@@ -310,6 +310,18 @@ impl DataBody for GetOutputByOutputIdResponse {}
 
 /// Response of GET /api/v1/addresses/{address}
 #[derive(Clone, Debug, Serialize)]
+pub struct GetBalanceForAddressResponse {
+    pub address: String,
+    #[serde(rename = "maxResults")]
+    pub max_results: usize,
+    pub count: usize,
+    pub balance: u32,
+}
+
+impl DataBody for GetBalanceForAddressResponse {}
+
+/// Response of GET /api/v1/addresses/{address}/outputs
+#[derive(Clone, Debug, Serialize)]
 pub struct GetOutputsForAddressResponse {
     pub address: String,
     #[serde(rename = "maxResults")]
