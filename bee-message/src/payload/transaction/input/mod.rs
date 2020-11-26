@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
+#[serde(tag = "type", content = "data")]
 pub enum Input {
     UTXO(UTXOInput),
 }

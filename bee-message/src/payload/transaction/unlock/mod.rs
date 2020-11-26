@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(tag = "type", content = "data")]
 pub enum UnlockBlock {
     Signature(SignatureUnlock),
     Reference(ReferenceUnlock),

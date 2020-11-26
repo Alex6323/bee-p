@@ -16,12 +16,12 @@ use crate::{
 
 use bee_common::packable::{Packable, Read, Write};
 
-use serde::{Deserialize, Serialize};
-
 use core::{convert::From, str::FromStr};
 
-#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct UTXOInput(OutputId);
+
+string_serde_impl!(UTXOInput);
 
 impl From<OutputId> for UTXOInput {
     fn from(id: OutputId) -> Self {

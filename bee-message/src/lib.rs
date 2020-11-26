@@ -14,6 +14,8 @@
 #[macro_use]
 extern crate alloc;
 
+#[macro_use]
+mod serde;
 mod error;
 mod message;
 mod message_id;
