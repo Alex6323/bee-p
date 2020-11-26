@@ -16,7 +16,7 @@ use crate::{
     version_checker::VersionCheckerWorker,
 };
 
-use bee_api::config::ApiConfig;
+use bee_api::config::RestApiConfig;
 use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{
     node::{Node as _, NodeBuilder as _},
@@ -126,7 +126,7 @@ impl<B: Backend> NodeBuilder<B> {
         );
 
         info!("Initializing REST API...");
-        node_builder = bee_api::init::<BeeNode<B>>(ApiConfig::build().finish(), node_builder).await;
+        node_builder = bee_api::init::<BeeNode<B>>(RestApiConfig::build().finish(), self.config.network_id.clone(), node_builder).await;
 
         info!("Initializing plugins...");
         // plugin::init(bus.clone());

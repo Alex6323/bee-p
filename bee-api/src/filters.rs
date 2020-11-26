@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::handlers;
+use crate::{handlers, NetworkId};
 use bee_common_ext::node::ResHandle;
 use serde::de::DeserializeOwned;
 use warp::{reject, Filter, Rejection};
@@ -32,9 +32,10 @@ pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
     storage: ResHandle<B>,
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
+    network_id: NetworkId,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_health(tangle.clone())
-        .or(get_info(tangle.clone()).or(get_milestone_by_milestone_index(tangle.clone())))
+        .or(get_info(tangle.clone(), network_id).or(get_milestone_by_milestone_index(tangle.clone())))
         .or(get_tips(tangle.clone()))
         .or(post_raw_message(message_submitter))
         .or(get_message_by_index(storage.clone()))
@@ -58,6 +59,7 @@ fn get_health<B: Backend>(
 
 fn get_info<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
+    network_id: NetworkId,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::get()
         .and(warp::path("api"))
@@ -65,6 +67,7 @@ fn get_info<B: Backend>(
         .and(warp::path("info"))
         .and(warp::path::end())
         .and(with_tangle(tangle))
+        .and(with_network_id(network_id))
         .and_then(handlers::get_info)
 }
 
@@ -90,7 +93,7 @@ fn post_raw_message(
         .and(warp::path::end())
         .and(warp::body::bytes())
         .and(with_message_submitter(message_submitter))
-        .and_then(handlers::post_message_raw)
+        .and_then(handlers::post_raw_message)
 }
 
 fn get_message_by_index<B: Backend>(
@@ -278,6 +281,12 @@ fn with_message_submitter(
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> impl Filter<Extract = (flume::Sender<MessageSubmitterWorkerEvent>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || message_submitter.clone())
+}
+
+fn with_network_id(
+    network_id: NetworkId,
+) -> impl Filter<Extract = (NetworkId,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || network_id.clone())
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {

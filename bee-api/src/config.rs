@@ -16,14 +16,14 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 pub(crate) const DEFAULT_BINDING_PORT: u16 = 14265;
 pub(crate) const DEFAULT_BINDING_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
-/// API configuration builder.
+/// REST API configuration builder.
 #[derive(Default, Deserialize)]
-pub struct ApiConfigBuilder {
+pub struct RestApiConfigBuilder {
     binding_port: Option<u16>,
     binding_ip_addr: Option<IpAddr>,
 }
 
-impl ApiConfigBuilder {
+impl RestApiConfigBuilder {
     /// Creates a new config builder.
     pub fn new() -> Self {
         Self::default()
@@ -46,26 +46,26 @@ impl ApiConfigBuilder {
         self
     }
 
-    /// Builds the API config.
-    pub fn finish(self) -> ApiConfig {
+    /// Builds the REST API config.
+    pub fn finish(self) -> RestApiConfig {
         let binding_socket_addr = match self.binding_ip_addr.unwrap_or(DEFAULT_BINDING_IP_ADDR) {
             IpAddr::V4(ip) => SocketAddr::new(IpAddr::V4(ip), self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
             IpAddr::V6(ip) => SocketAddr::new(IpAddr::V6(ip), self.binding_port.unwrap_or(DEFAULT_BINDING_PORT)),
         };
-        ApiConfig { binding_socket_addr }
+        RestApiConfig { binding_socket_addr }
     }
 }
 
-/// API configuration.
+/// REST API configuration.
 #[derive(Clone, Copy, Debug)]
-pub struct ApiConfig {
+pub struct RestApiConfig {
     pub(crate) binding_socket_addr: SocketAddr,
 }
 
-impl ApiConfig {
+impl RestApiConfig {
     /// Returns a builder for this config.
-    pub fn build() -> ApiConfigBuilder {
-        ApiConfigBuilder::new()
+    pub fn build() -> RestApiConfigBuilder {
+        RestApiConfigBuilder::new()
     }
     /// Returns the binding address.
     pub fn binding_socket_addr(&self) -> SocketAddr {

@@ -13,6 +13,7 @@ use crate::{
     filters::{BadRequest, ServiceUnavailable},
     storage::Backend,
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
+    NetworkId,
 };
 use bee_common::packable::Packable;
 use bee_common_ext::node::ResHandle;
@@ -36,11 +37,6 @@ use warp::{
     http::{Response, StatusCode},
     reject, Rejection, Reply,
 };
-
-// TODO: move constants to node configuration
-const YTRSI_DELTA: u32 = 8;
-const OTRSI_DELTA: u32 = 13;
-const BELOW_MAX_DEPTH: u32 = 15;
 
 async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
     let mut is_healthy = true;
@@ -79,12 +75,15 @@ pub async fn get_health<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<im
     }
 }
 
-pub async fn get_info<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl Reply, Infallible> {
+pub async fn get_info<B: Backend>(
+    tangle: ResHandle<MsTangle<B>>,
+    network_id: NetworkId,
+) -> Result<impl Reply, Infallible> {
     let name = String::from("Bee");
     let version = String::from(env!("CARGO_PKG_VERSION"));
     let is_healthy = is_healthy(tangle.clone()).await;
     // TODO: get network_id from node; use a splaceholder for now
-    let network_id = "alphanet1".to_string();
+    let network_id = network_id.0;
     let latest_milestone_index = *tangle.get_latest_milestone_index();
     let solid_milestone_index = *tangle.get_latest_milestone_index();
     let pruning_index = *tangle.get_pruning_index();
@@ -113,7 +112,7 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
     }
 }
 
-pub async fn post_message_raw(
+pub async fn post_raw_message(
     buf: warp::hyper::body::Bytes,
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> Result<impl Reply, Rejection> {
@@ -298,6 +297,10 @@ pub async fn get_message_metadata<B: Backend>(
         return Err(reject::custom(ServiceUnavailable));
     }
 
+    let ytrsi_delta = 8;
+    let otrsi_delta = 13;
+    let below_max_depth = 15;
+
     match tangle.get_metadata(&message_id) {
         Some(metadata) => {
             match tangle.get(&message_id).await {
@@ -332,13 +335,13 @@ pub async fn get_message_metadata<B: Backend>(
                                 let mut should_reattach = false;
                                 let lsmi = *tangle.get_latest_solid_milestone_index();
 
-                                if (lsmi - OTRSI_DELTA) > BELOW_MAX_DEPTH {
+                                if (lsmi - otrsi_delta) > below_max_depth {
                                     should_promote = false;
                                     should_reattach = true;
-                                } else if (lsmi - YTRSI_DELTA) > YTRSI_DELTA {
+                                } else if (lsmi - ytrsi_delta) > ytrsi_delta {
                                     should_promote = true;
                                     should_reattach = false;
-                                } else if (lsmi - OTRSI_DELTA) > OTRSI_DELTA {
+                                } else if (lsmi - otrsi_delta) > otrsi_delta {
                                     should_promote = true;
                                     should_reattach = false;
                                 }

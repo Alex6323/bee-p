@@ -16,7 +16,7 @@ pub mod storage;
 mod types;
 
 use crate::{
-    config::ApiConfig,
+    config::RestApiConfig,
     types::{ErrorBody, ErrorResponse},
 };
 use async_trait::async_trait;
@@ -33,20 +33,21 @@ use warp::{http::StatusCode, Filter, Rejection, Reply};
 
 use crate::storage::Backend;
 
-pub async fn init<N: Node>(config: ApiConfig, node_builder: N::Builder) -> N::Builder
+pub(crate) type NetworkId = (String, u64);
+
+pub async fn init<N: Node>(config: RestApiConfig, network_id: NetworkId, node_builder: N::Builder) -> N::Builder
 where
     N::Backend: Backend,
 {
-    node_builder.with_worker_cfg::<ApiWorker>(config)
+    node_builder.with_worker_cfg::<ApiWorker>((config, network_id))
 }
-
 pub struct ApiWorker;
 #[async_trait]
 impl<N: Node> Worker<N> for ApiWorker
 where
     N::Backend: Backend,
 {
-    type Config = ApiConfig;
+    type Config = (RestApiConfig, NetworkId);
     type Error = WorkerError;
 
     fn dependencies() -> &'static [TypeId] {
@@ -54,6 +55,9 @@ where
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
+        let rest_config = config.0;
+        let network_id = config.1;
+
         let tangle = node.resource::<MsTangle<N::Backend>>();
         let storage = node.storage();
         let message_submitter = node.worker::<MessageSubmitterWorker>().unwrap().tx.clone();
@@ -61,11 +65,12 @@ where
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
-            let routes = filters::all(tangle, storage, message_submitter).recover(handle_rejection);
+            let routes = filters::all(tangle, storage, message_submitter, network_id).recover(handle_rejection);
 
-            let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(config.binding_socket_addr(), async {
-                shutdown.await.ok();
-            });
+            let (_, server) =
+                warp::serve(routes).bind_with_graceful_shutdown(rest_config.binding_socket_addr(), async {
+                    shutdown.await.ok();
+                });
 
             server.await;
 
