@@ -265,6 +265,12 @@ mod custom_path_param {
     }
 }
 
+fn with_network_id(
+    network_id: NetworkId,
+) -> impl Filter<Extract = (NetworkId,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || network_id.clone())
+}
+
 fn with_tangle<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> impl Filter<Extract = (ResHandle<MsTangle<B>>,), Error = std::convert::Infallible> + Clone {
@@ -281,12 +287,6 @@ fn with_message_submitter(
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> impl Filter<Extract = (flume::Sender<MessageSubmitterWorkerEvent>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || message_submitter.clone())
-}
-
-fn with_network_id(
-    network_id: NetworkId,
-) -> impl Filter<Extract = (NetworkId,), Error = std::convert::Infallible> + Clone {
-    warp::any().map(move || network_id.clone())
 }
 
 fn json_body<T: DeserializeOwned + Send>() -> impl Filter<Extract = (T,), Error = Rejection> + Copy {

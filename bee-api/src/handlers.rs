@@ -79,26 +79,15 @@ pub async fn get_info<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
     network_id: NetworkId,
 ) -> Result<impl Reply, Infallible> {
-    let name = String::from("Bee");
-    let version = String::from(env!("CARGO_PKG_VERSION"));
-    let is_healthy = is_healthy(tangle.clone()).await;
-    // TODO: get network_id from node; use a splaceholder for now
-    let network_id = network_id.0;
-    let latest_milestone_index = *tangle.get_latest_milestone_index();
-    let solid_milestone_index = *tangle.get_latest_milestone_index();
-    let pruning_index = *tangle.get_pruning_index();
-    // TODO: check enabled features
-    let features = Vec::new();
-
     Ok(warp::reply::json(&DataResponse::new(GetInfoResponse {
-        name,
-        version,
-        is_healthy,
-        network_id,
-        latest_milestone_index,
-        solid_milestone_index,
-        pruning_index,
-        features,
+        name: String::from("Bee"),
+        version: String::from(env!("CARGO_PKG_VERSION")),
+        is_healthy: is_healthy(tangle.clone()).await,
+        network_id: network_id.0,
+        latest_milestone_index: *tangle.get_latest_milestone_index(),
+        solid_milestone_index: *tangle.get_latest_milestone_index(),
+        pruning_index: *tangle.get_pruning_index(),
+        features: Vec::new(), // TODO: replace placeholder for features
     })))
 }
 
@@ -116,7 +105,6 @@ pub async fn post_raw_message(
     buf: warp::hyper::body::Bytes,
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> Result<impl Reply, Rejection> {
-    // TODO: refactor as constants
     let min_size: usize = 77;
     let max_size: usize = 1024;
 
@@ -126,23 +114,22 @@ pub async fn post_raw_message(
 
     let (message_inserted_notifier, message_inserted_waiter) =
         oneshot::channel::<Result<MessageId, MessageSubmitterError>>();
-    let event = MessageSubmitterWorkerEvent {
-        buf: buf.to_vec(),
-        message_inserted_notifier,
-    };
 
-    if let Err(err) = message_submitter.send(event) {
-        return Err(reject::custom(ServiceUnavailable));
-    }
+    message_submitter
+        .send(MessageSubmitterWorkerEvent {
+            buf: buf.to_vec(),
+            message_inserted_notifier,
+        })
+        .map_err(|e| reject::custom(ServiceUnavailable))?;
 
-    match message_inserted_waiter.await {
-        Ok(result) => match result {
-            Ok(message_id) => Ok(warp::reply::json(&DataResponse::new(PostMessageResponse {
-                message_id: message_id.to_string(),
-            }))),
-            Err(err) => Err(reject::custom(BadRequest)),
-        },
-        Err(err) => Err(reject::custom(ServiceUnavailable)),
+    match message_inserted_waiter
+        .await
+        .map_err(|e| reject::custom(ServiceUnavailable))?
+    {
+        Ok(message_id) => Ok(warp::reply::json(&DataResponse::new(PostMessageResponse {
+            message_id: message_id.to_string(),
+        }))),
+        Err(err) => Err(reject::custom(BadRequest)),
     }
 }
 
