@@ -12,19 +12,20 @@
 use crate::constants::{BEE_GIT_COMMIT, BEE_VERSION};
 
 pub fn print_banner_and_version() {
-    let commit = if BEE_GIT_COMMIT.is_empty() {
-        "".to_owned()
+    let version = if BEE_GIT_COMMIT.is_empty() {
+        BEE_VERSION.to_owned()
     } else {
-        "-".to_owned() + &BEE_GIT_COMMIT[0..7]
+        BEE_VERSION.to_owned() + "-" + &BEE_GIT_COMMIT[0..7]
     };
     println!(
         "
- ██████╗░███████╗███████╗
- ██╔══██╗██╔════╝██╔════╝
- ██████╦╝█████╗░░█████╗░░
- ██╔══██╗██╔══╝░░██╔══╝░░
- ██████╦╝███████╗███████╗
- ╚═════╝░╚══════╝╚══════╝\n   v{}{}\n",
-        BEE_VERSION, commit,
+██████╗░███████╗███████╗
+██╔══██╗██╔════╝██╔════╝
+██████╦╝█████╗░░█████╗░░
+██╔══██╗██╔══╝░░██╔══╝░░
+██████╦╝███████╗███████╗
+╚═════╝░╚══════╝╚══════╝
+{: ^24}\n",
+        version
     );
 }
