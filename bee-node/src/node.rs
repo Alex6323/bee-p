@@ -32,7 +32,7 @@ use futures::{
     future::Future,
     stream::{Fuse, StreamExt},
 };
-use log::{error, info, trace, warn};
+use log::{debug, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
@@ -97,7 +97,6 @@ impl<B: Backend> BeeNode<B> {
         let mut runtime = NodeRuntime {
             peers: PeerList::default(),
             config: &config,
-            network: &network,
             node: &self,
         };
 
@@ -125,7 +124,6 @@ impl<B: Backend> BeeNode<B> {
 struct NodeRuntime<'a, B: Backend> {
     peers: PeerList,
     config: &'a NodeConfig<B>,
-    network: &'a Network,
     node: &'a BeeNode<B>,
 }
 
@@ -136,8 +134,8 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
             Event::PeerConnected { id, address } => self.peer_connected_handler(id, address).await,
             Event::PeerDisconnected { id } => self.peer_disconnected_handler(id).await,
             Event::MessageReceived { message, from } => self.peer_message_received_handler(message, from).await,
-            Event::PeerBanned { id } => (),
-            Event::AddrBanned { ip } => (),
+            Event::PeerBanned { .. } => (),
+            Event::AddrBanned { .. } => (),
             _ => warn!("Unsupported event {:?}.", event),
         }
     }
@@ -313,7 +311,7 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
             TypeId::of::<W>(),
             Box::new(|node| {
                 Box::pin(async move {
-                    info!("Starting worker `{}`...", type_name::<W>());
+                    debug!("Starting worker {}...", type_name::<W>());
                     match W::start(node, config).await {
                         Ok(w) => node.add_worker(w),
                         Err(e) => panic!("Worker `{}` failed to start: {:?}.", type_name::<W>(), e),
@@ -325,7 +323,7 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
             TypeId::of::<W>(),
             Box::new(|node| {
                 Box::pin(async move {
-                    info!("Stopping worker `{}`...", type_name::<W>());
+                    debug!("Stopping worker {}...", type_name::<W>());
                     match node.remove_worker::<W>().stop(node).await {
                         Ok(()) => {}
                         Err(e) => panic!("Worker `{}` failed to stop: {:?}.", type_name::<W>(), e),

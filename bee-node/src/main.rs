@@ -9,12 +9,9 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::logger::logger_init;
 use bee_common_ext::node::{Node as _, NodeBuilder as _};
 use bee_node::{default_plugins, CliArgs, Node, NodeConfigBuilder};
 use bee_storage_rocksdb::storage::Storage as Rocksdb;
-
-use log::error;
 
 const CONFIG_PATH: &str = "./config.toml";
 
