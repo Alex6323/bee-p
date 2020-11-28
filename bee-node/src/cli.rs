@@ -27,6 +27,8 @@ pub struct CliArgs {
         help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\"."
     )]
     log_level: Option<LevelFilter>,
+    #[structopt(short = "v", long = "version", help = "Prints bee version.")]
+    version: bool,
 }
 
 impl CliArgs {
@@ -40,6 +42,10 @@ impl CliArgs {
 
     pub fn log_level(&self) -> Option<&LevelFilter> {
         self.log_level.as_ref()
+    }
+
+    pub fn version(&self) -> bool {
+        self.version
     }
 }
 

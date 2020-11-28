@@ -9,10 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    banner::print_banner_and_version, config::NodeConfig, plugin, storage::Backend,
-    version_checker::VersionCheckerWorker,
-};
+use crate::{config::NodeConfig, plugin, storage::Backend, version_checker::VersionCheckerWorker};
 
 use bee_common::{shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::{
@@ -342,8 +339,6 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
     }
 
     async fn finish(mut self) -> Result<BeeNode<B>, Error> {
-        print_banner_and_version();
-
         info!(
             "Joining network {}({}).",
             self.config.network_id.0, self.config.network_id.1
