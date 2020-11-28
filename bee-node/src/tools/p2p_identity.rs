@@ -9,20 +9,11 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod banner;
-mod cli;
-mod config;
-mod constants;
-mod logger;
-mod node;
-mod plugin;
-mod storage;
-mod version_checker;
+use structopt::StructOpt;
 
-pub mod default_plugins;
-pub mod tools;
+#[derive(Debug, StructOpt)]
+pub struct P2pIdentityTool {}
 
-pub use banner::print_banner_and_version;
-pub use cli::CliArgs;
-pub use config::NodeConfigBuilder;
-pub use node::{BeeNode as Node, Error};
+pub fn exec(tool: &P2pIdentityTool) {
+    println!("{:?}", tool);
+}

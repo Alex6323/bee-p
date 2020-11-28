@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::config::NodeConfigBuilder;
+use crate::{config::NodeConfigBuilder, tools::Tool};
 
 use bee_common::logger::LOGGER_STDOUT_NAME;
 use bee_storage::storage::Backend;
@@ -27,6 +27,8 @@ pub struct CliArgs {
         help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\"."
     )]
     log_level: Option<LevelFilter>,
+    #[structopt(subcommand)]
+    tool: Option<Tool>,
     #[structopt(short = "v", long = "version", help = "Prints bee version.")]
     version: bool,
 }
@@ -42,6 +44,10 @@ impl CliArgs {
 
     pub fn log_level(&self) -> Option<&LevelFilter> {
         self.log_level.as_ref()
+    }
+
+    pub fn tool(&self) -> Option<&Tool> {
+        self.tool.as_ref()
     }
 
     pub fn version(&self) -> bool {

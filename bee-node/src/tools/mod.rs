@@ -9,20 +9,23 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-mod banner;
-mod cli;
-mod config;
-mod constants;
-mod logger;
-mod node;
-mod plugin;
-mod storage;
-mod version_checker;
+mod ed25519;
+mod p2p_identity;
 
-pub mod default_plugins;
-pub mod tools;
+use structopt::StructOpt;
 
-pub use banner::print_banner_and_version;
-pub use cli::CliArgs;
-pub use config::NodeConfigBuilder;
-pub use node::{BeeNode as Node, Error};
+#[non_exhaustive]
+#[derive(Debug, StructOpt)]
+pub enum Tool {
+    /// Generates a set of Ed25519 public and private keys.
+    Ed25519(ed25519::Ed25519Tool),
+    /// Generates a p2p identity.
+    P2pIdentity(p2p_identity::P2pIdentityTool),
+}
+
+pub fn exec(tool: &Tool) {
+    match tool {
+        Tool::Ed25519(tool) => ed25519::exec(tool),
+        Tool::P2pIdentity(tool) => p2p_identity::exec(tool),
+    }
+}

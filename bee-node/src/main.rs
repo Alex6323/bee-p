@@ -10,18 +10,23 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use bee_common_ext::node::{Node as _, NodeBuilder as _};
-use bee_node::{default_plugins, print_banner_and_version, CliArgs, Node, NodeConfigBuilder};
+use bee_node::{default_plugins, print_banner_and_version, tools, CliArgs, Node, NodeConfigBuilder};
 use bee_storage_rocksdb::storage::Storage as Rocksdb;
 
 const CONFIG_PATH: &str = "./config.toml";
 
 #[tokio::main]
 async fn main() {
-    print_banner_and_version();
-
     let cli = CliArgs::new();
 
+    print_banner_and_version();
+
     if cli.version() {
+        return;
+    }
+
+    if let Some(tool) = cli.tool() {
+        tools::exec(tool);
         return;
     }
 
