@@ -319,6 +319,7 @@ dependencies = [
  "blake2",
  "flume",
  "futures",
+ "hex",
  "log",
  "serde",
  "structopt",

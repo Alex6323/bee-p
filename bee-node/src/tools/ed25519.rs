@@ -16,4 +16,5 @@ pub struct Ed25519Tool {}
 
 pub fn exec(tool: &Ed25519Tool) {
     println!("{:?}", tool);
+    // TODO impl
 }

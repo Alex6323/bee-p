@@ -19,14 +19,14 @@ const CONFIG_PATH: &str = "./config.toml";
 async fn main() {
     let cli = CliArgs::new();
 
-    print_banner_and_version();
-
-    if cli.version() {
+    if let Some(tool) = cli.tool() {
+        tools::exec(tool);
         return;
     }
 
-    if let Some(tool) = cli.tool() {
-        tools::exec(tool);
+    print_banner_and_version();
+
+    if cli.version() {
         return;
     }
 
