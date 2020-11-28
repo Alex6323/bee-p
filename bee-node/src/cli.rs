@@ -19,17 +19,27 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub struct CliArgs {
+    #[structopt(short = "c", long = "config", help = "Path of the configuration file.")]
+    config: Option<String>,
     #[structopt(
         short = "l",
         long = "log-level",
-        help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\""
+        help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\"."
     )]
     log_level: Option<LevelFilter>,
 }
 
-impl Default for CliArgs {
-    fn default() -> Self {
+impl CliArgs {
+    pub fn new() -> Self {
         Self::from_args()
+    }
+
+    pub fn config(&self) -> Option<&String> {
+        self.config.as_ref()
+    }
+
+    pub fn log_level(&self) -> Option<&LevelFilter> {
+        self.log_level.as_ref()
     }
 }
 

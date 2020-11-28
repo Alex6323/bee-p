@@ -17,10 +17,15 @@ const CONFIG_PATH: &str = "./config.toml";
 
 #[tokio::main]
 async fn main() {
-    let config = NodeConfigBuilder::from_file(CONFIG_PATH)
-        .expect("Error when creating node config builder")
-        .with_cli_args(CliArgs::default())
-        .finish();
+    let cli = CliArgs::new();
+
+    let config = NodeConfigBuilder::from_file(match cli.config() {
+        Some(path) => path,
+        None => CONFIG_PATH,
+    })
+    .expect("Error when creating node config builder")
+    .with_cli_args(cli)
+    .finish();
 
     Node::<Rocksdb>::build(config)
         .with_plugin::<default_plugins::Mps>()
