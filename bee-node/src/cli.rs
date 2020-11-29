@@ -11,7 +11,7 @@
 
 use crate::{config::NodeConfigBuilder, tools::Tool};
 
-use bee_common::logger::LOGGER_STDOUT_NAME;
+use bee_common::logger::{LoggerConfigBuilder, LOGGER_STDOUT_NAME};
 use bee_storage::storage::Backend;
 
 use log::LevelFilter;
@@ -58,7 +58,10 @@ impl CliArgs {
 impl<B: Backend> NodeConfigBuilder<B> {
     pub fn with_cli_args(mut self, args: CliArgs) -> Self {
         if let Some(log_level) = args.log_level {
-            self.logger.level(LOGGER_STDOUT_NAME, log_level);
+            if self.logger.is_none() {
+                self.logger = Some(LoggerConfigBuilder::default());
+            }
+            self.logger.as_mut().unwrap().level(LOGGER_STDOUT_NAME, log_level);
         }
         self
     }

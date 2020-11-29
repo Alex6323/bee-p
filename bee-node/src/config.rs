@@ -39,12 +39,12 @@ pub enum Error {
 #[derive(Default, Deserialize)]
 pub struct NodeConfigBuilder<B: Backend> {
     pub(crate) network_id: Option<String>,
-    pub(crate) logger: LoggerConfigBuilder,
-    pub(crate) network: NetworkConfigBuilder,
-    pub(crate) peering: PeeringConfigBuilder,
-    pub(crate) protocol: ProtocolConfigBuilder,
-    pub(crate) snapshot: SnapshotConfigBuilder,
-    pub(crate) database: B::ConfigBuilder,
+    pub(crate) logger: Option<LoggerConfigBuilder>,
+    pub(crate) network: Option<NetworkConfigBuilder>,
+    pub(crate) peering: Option<PeeringConfigBuilder>,
+    pub(crate) protocol: Option<ProtocolConfigBuilder>,
+    pub(crate) snapshot: Option<SnapshotConfigBuilder>,
+    pub(crate) database: Option<B::ConfigBuilder>,
 }
 
 impl<B: Backend> NodeConfigBuilder<B> {
@@ -64,12 +64,12 @@ impl<B: Backend> NodeConfigBuilder<B> {
 
         NodeConfig {
             network_id,
-            logger: self.logger.finish(),
-            network: self.network.finish(),
-            peering: self.peering.finish(),
-            protocol: self.protocol.finish(),
-            snapshot: self.snapshot.finish(),
-            database: self.database.into(),
+            logger: self.logger.unwrap_or_default().finish(),
+            network: self.network.unwrap_or_default().finish(),
+            peering: self.peering.unwrap_or_default().finish(),
+            protocol: self.protocol.unwrap_or_default().finish(),
+            snapshot: self.snapshot.unwrap_or_default().finish(),
+            database: self.database.unwrap_or_default().into(),
         }
     }
 }
