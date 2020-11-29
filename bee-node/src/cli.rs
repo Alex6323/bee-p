@@ -19,17 +19,17 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub struct CliArgs {
-    #[structopt(short = "c", long = "config", help = "Path of the configuration file.")]
+    #[structopt(short = "c", long = "config", help = "Path of the configuration file")]
     config: Option<String>,
     #[structopt(
         short = "l",
         long = "log-level",
-        help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\"."
+        help = "Stdout log level amongst \"trace\", \"debug\", \"info\", \"warn\" and \"error\""
     )]
     log_level: Option<LevelFilter>,
     #[structopt(subcommand)]
     tool: Option<Tool>,
-    #[structopt(short = "v", long = "version", help = "Prints bee version.")]
+    #[structopt(short = "v", long = "version", help = "Prints bee version")]
     version: bool,
 }
 

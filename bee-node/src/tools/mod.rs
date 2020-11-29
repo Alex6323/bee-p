@@ -18,11 +18,11 @@ use structopt::StructOpt;
 #[non_exhaustive]
 #[derive(Debug, StructOpt)]
 pub enum Tool {
-    /// Generates a set of Ed25519 public and private keys.
+    /// Generates Ed25519 public/private keys and addresses.
     Ed25519(ed25519::Ed25519Tool),
     /// Generates a p2p identity.
     P2pIdentity(p2p_identity::P2pIdentityTool),
-    /// Reads information from a snapshot file.
+    /// Outputs information about a snapshot file.
     SnapshotInfo(snapshot_info::SnapshotInfo),
 }
 
