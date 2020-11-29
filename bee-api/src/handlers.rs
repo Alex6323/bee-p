@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    filters::Error::{BadRequest, ServiceUnavailable},
+    filters::CustomRejection::{BadRequest, NotFound, ServiceUnavailable},
     storage::Backend,
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
     NetworkId,
@@ -316,7 +316,7 @@ pub async fn get_message_by_message_id<B: Backend>(
                 nonce,
             }))))
         }
-        None => Err(reject::not_found()),
+        None => Err(reject::custom(NotFound("can not find data"))),
     }
 }
 
@@ -407,10 +407,10 @@ pub async fn get_message_metadata<B: Backend>(
 
                     Ok(warp::reply::json(&DataResponse::new(res)))
                 }
-                None => Err(reject::not_found()),
+                None => Err(reject::custom(NotFound("can not find data"))),
             }
         }
-        None => Err(reject::not_found()),
+        None => Err(reject::custom(NotFound("can not find data"))),
     }
 }
 
@@ -422,7 +422,7 @@ pub async fn get_raw_message<B: Backend>(
         Some(message) => Ok(Response::builder()
             .header("Content-Type", "application/octet-stream")
             .body(message.pack_new())),
-        None => Err(reject::not_found()),
+        None => Err(reject::custom(NotFound("can not find data"))),
     }
 }
 
@@ -442,7 +442,7 @@ pub async fn get_children_by_message_id<B: Backend>(
             children_message_ids: children.iter().map(|id| id.to_string()).collect(),
         })))
     } else {
-        Err(reject::not_found())
+        Err(reject::custom(NotFound("can not find data")))
     }
 }
 
@@ -452,17 +452,14 @@ pub async fn get_milestone_by_milestone_index<B: Backend>(
 ) -> Result<impl Reply, Rejection> {
     match tangle.get_milestone_message_id(milestone_index) {
         Some(message_id) => match tangle.get_metadata(&message_id) {
-            Some(metadata) => {
-                let timestamp = metadata.arrival_timestamp();
-                Ok(warp::reply::json(&DataResponse::new(GetMilestoneResponse {
-                    milestone_index: *milestone_index,
-                    message_id: message_id.to_string(),
-                    timestamp,
-                })))
-            }
-            None => Err(reject::not_found()),
+            Some(metadata) => Ok(warp::reply::json(&DataResponse::new(GetMilestoneResponse {
+                milestone_index: *milestone_index,
+                message_id: message_id.to_string(),
+                timestamp: metadata.arrival_timestamp(),
+            }))),
+            None => Err(reject::custom(NotFound("can not find data"))),
         },
-        None => Err(reject::not_found()),
+        None => Err(reject::custom(NotFound("can not find data"))),
     }
 }
 
@@ -495,7 +492,7 @@ pub async fn get_output_by_output_id<B: Backend>(
                     _ => panic!("unexpected signature scheme"),
                 },
             }))),
-            None => Err(reject::not_found()),
+            None => Err(reject::custom(NotFound("can not find data"))),
         }
     } else {
         Err(reject::custom(ServiceUnavailable(
@@ -546,7 +543,7 @@ pub async fn get_balance_for_address<B: Backend>(
                 balance,
             })))
         }
-        None => Err(reject::not_found()),
+        None => Err(reject::custom(NotFound("can not find data"))),
     }
 }
 
@@ -567,7 +564,7 @@ pub async fn get_outputs_for_address<B: Backend>(
                     output_ids: ids.iter().map(|id| id.to_string()).collect(),
                 })))
             }
-            None => Err(reject::not_found()),
+            None => Err(reject::custom(NotFound("can not find data"))),
         },
         Err(_err) => Err(reject::custom(ServiceUnavailable(
             "service unavailable: can not fetch from storage",

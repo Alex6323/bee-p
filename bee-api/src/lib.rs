@@ -30,7 +30,7 @@ use log::info;
 use std::{any::TypeId, convert::Infallible};
 use warp::{http::StatusCode, Filter, Rejection, Reply};
 
-use crate::storage::Backend;
+use crate::{filters::CustomRejection, storage::Backend};
 
 pub(crate) type NetworkId = (String, u64);
 
@@ -81,33 +81,20 @@ where
 }
 
 async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
-    let http_code;
-    let message_code;
-    let message_text;
-
-    if err.is_not_found() {
-        http_code = StatusCode::NOT_FOUND;
-        message_code = "404";
-        message_text = "could not find data";
-    } else if let Some(filters::Error::BadRequest(msg)) = err.find() {
-        http_code = StatusCode::BAD_REQUEST;
-        message_code = "400";
-        message_text = msg;
-    } else if let Some(filters::Error::ServiceUnavailable(msg)) = err.find() {
-        http_code = StatusCode::SERVICE_UNAVAILABLE;
-        message_code = "503";
-        message_text = msg;
-    } else {
-        http_code = StatusCode::INTERNAL_SERVER_ERROR;
-        message_code = "500";
-        message_text = "internal server error";
-        eprintln!("unhandled rejection: {:?}", err);
-    }
+    let (http_code, err_code, desc) = match err.find() {
+        Some(CustomRejection::NotFound(msg)) => (StatusCode::NOT_FOUND, "404", msg),
+        Some(CustomRejection::BadRequest(msg)) => (StatusCode::BAD_REQUEST, "400", msg),
+        Some(CustomRejection::ServiceUnavailable(msg)) => (StatusCode::SERVICE_UNAVAILABLE, "503", msg),
+        _ => {
+            eprintln!("unhandled rejection: {:?}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "500", &"internal server error")
+        }
+    };
 
     Ok(warp::reply::with_status(
         warp::reply::json(&ErrorResponse::new(ErrorBody {
-            code: message_code,
-            message: message_text,
+            code: err_code,
+            message: desc,
         })),
         http_code,
     ))

@@ -16,16 +16,17 @@ use warp::{reject, Filter, Rejection};
 
 use bee_protocol::{tangle::MsTangle, MessageSubmitterWorkerEvent};
 
-use crate::{filters::Error::BadRequest, storage::Backend};
+use crate::{filters::CustomRejection::BadRequest, storage::Backend};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Error {
+pub(crate) enum CustomRejection {
     BadRequest(&'static str),
+    NotFound(&'static str),
     ServiceUnavailable(&'static str),
 }
 
-impl reject::Reject for Error {}
+impl reject::Reject for CustomRejection {}
 
 pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
@@ -271,10 +272,7 @@ mod custom_path_param {
     pub(super) fn milestone_index() -> impl Filter<Extract = (MilestoneIndex,), Error = Rejection> + Copy {
         warp::path::param().and_then(|value: String| async move {
             match value.parse::<u32>() {
-                Ok(i) => {
-                    println!("a x {}", i);
-                    Ok(MilestoneIndex(i))
-                }
+                Ok(i) => Ok(MilestoneIndex(i)),
                 Err(_) => Err(reject::custom(BadRequest("invalid milestone index"))),
             }
         })
