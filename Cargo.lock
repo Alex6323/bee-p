@@ -317,6 +317,7 @@ dependencies = [
  "bee-storage",
  "bee-storage-rocksdb",
  "blake2",
+ "chrono",
  "flume",
  "futures",
  "hex",

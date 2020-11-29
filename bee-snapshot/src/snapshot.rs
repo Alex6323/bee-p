@@ -38,6 +38,14 @@ impl Snapshot {
         &self.solid_entry_points
     }
 
+    pub fn outputs_len(&self) -> usize {
+        self.outputs.len()
+    }
+
+    pub fn milestone_diffs_len(&self) -> usize {
+        self.milestone_diffs.len()
+    }
+
     pub fn from_file(path: &str) -> Result<Snapshot, Error> {
         let mut reader = BufReader::new(OpenOptions::new().read(true).open(path).map_err(Error::Io)?);
 
