@@ -14,7 +14,7 @@ use crate::tangle::MsTangle;
 use bee_message::MessageId;
 use bee_storage::storage::Backend;
 
-use log::info;
+use log::debug;
 use rand::seq::IteratorRandom;
 
 use std::{
@@ -66,6 +66,10 @@ pub(crate) struct UrtsTipPool {
 }
 
 impl UrtsTipPool {
+    pub(crate) fn non_lazy_tips(&self) -> &HashSet<MessageId> {
+        &self.non_lazy_tips
+    }
+
     pub(crate) async fn insert<B: Backend>(
         &mut self,
         tangle: &MsTangle<B>,
@@ -152,7 +156,7 @@ impl UrtsTipPool {
             self.non_lazy_tips.remove(&tip);
         }
 
-        info!("non-lazy {}", self.non_lazy_tips.len());
+        debug!("Non-lazy tips {}", self.non_lazy_tips.len());
     }
 
     async fn tip_score<B: Backend>(&self, tangle: &MsTangle<B>, hash: &MessageId) -> Score {

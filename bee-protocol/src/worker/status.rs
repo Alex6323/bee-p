@@ -52,20 +52,22 @@ impl<N: Node> Worker<N> for StatusWorker {
 
                 // TODO Threshold
                 // TODO use tangle synced method
-                if latest_solid_milestone_index == latest_milestone_index {
-                    info!("Synchronized at {}.", latest_milestone_index);
+                let status = if latest_solid_milestone_index == latest_milestone_index {
+                    format!("Synchronized at {}", latest_milestone_index)
                 } else {
                     let progress = ((latest_solid_milestone_index - snapshot_index) as f32 * 100.0
                         / (latest_milestone_index - snapshot_index) as f32) as u8;
-                    info!(
-                        "Synchronizing {}..{}..{} ({}%) - Requested {}.",
+                    format!(
+                        "Synchronizing {}..{}..{} ({}%) - Requested {}",
                         snapshot_index,
                         latest_solid_milestone_index,
                         latest_milestone_index,
                         progress,
-                        requested_messages.len()
-                    );
+                        requested_messages.len(),
+                    )
                 };
+
+                info!("{} - Tips {}.", status, tangle.non_lazy_tips_num().await);
             }
 
             info!("Stopped.");
