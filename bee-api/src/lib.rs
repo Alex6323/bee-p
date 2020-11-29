@@ -17,6 +17,7 @@ mod types;
 
 use crate::{
     config::RestApiConfig,
+    filters::Error::{BadRequest, ServiceUnavailable},
     types::{ErrorBody, ErrorResponse},
 };
 use async_trait::async_trait;
@@ -26,7 +27,6 @@ use bee_common_ext::{
     worker::Worker,
 };
 use bee_protocol::{tangle::MsTangle, MessageSubmitterWorker, TangleWorker};
-use filters::{BadRequest, ServiceUnavailable};
 use log::info;
 use std::{any::TypeId, convert::Infallible};
 use warp::{http::StatusCode, Filter, Rejection, Reply};
@@ -88,20 +88,20 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
 
     if err.is_not_found() {
         http_code = StatusCode::NOT_FOUND;
-        message_code = String::from("not_found");
-        message_text = String::from("could not find data");
-    } else if let Some(BadRequest) = err.find() {
+        message_code = "404";
+        message_text = "could not find data";
+    } else if let Some(filters::Error::BadRequest(msg)) = err.find() {
         http_code = StatusCode::BAD_REQUEST;
-        message_code = String::from("invalid_data");
-        message_text = String::from("invalid data provided");
-    } else if let Some(ServiceUnavailable) = err.find() {
+        message_code = "400";
+        message_text = msg;
+    } else if let Some(filters::Error::ServiceUnavailable(msg)) = err.find() {
         http_code = StatusCode::SERVICE_UNAVAILABLE;
-        message_code = String::from("service_unavailable");
-        message_text = String::from("service unavailable");
+        message_code = "503";
+        message_text = msg;
     } else {
         http_code = StatusCode::INTERNAL_SERVER_ERROR;
-        message_code = String::from("internal_server_error");
-        message_text = String::from("internal server error");
+        message_code = "500";
+        message_text = "internal server error";
         eprintln!("unhandled rejection: {:?}", err);
     }
 

@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use crate::{
-    filters::{BadRequest, ServiceUnavailable},
+    filters::Error::{BadRequest, ServiceUnavailable},
     storage::Backend,
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
     NetworkId,
@@ -27,6 +27,7 @@ use futures::{
     channel::oneshot,
     stream::{self, StreamExt},
 };
+use serde_json::{json, Value};
 use std::{
     convert::{Infallible, TryInto},
     iter::FromIterator,
@@ -87,7 +88,7 @@ pub async fn get_info<B: Backend>(
         latest_milestone_index: *tangle.get_latest_milestone_index(),
         solid_milestone_index: *tangle.get_latest_milestone_index(),
         pruning_index: *tangle.get_pruning_index(),
-        features: Vec::new(), // TODO: replace placeholder for features
+        features: Vec::new(), // TODO: replace placeholder
     })))
 }
 
@@ -97,19 +98,70 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
             tip_1_message_id: tips.0.to_string(),
             tip_2_message_id: tips.1.to_string(),
         }))),
-        None => Err(reject::custom(ServiceUnavailable)),
+        None => Err(reject::custom(ServiceUnavailable("no tips available"))),
     }
+}
+
+pub async fn post_json_message<B: Backend>(
+    input: serde_json::Value,
+    message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
+    network_id: NetworkId,
+    tangle: ResHandle<MsTangle<B>>,
+) -> Result<impl Reply, Rejection> {
+    let network_id = if input["network_id"].is_null() {
+        network_id.1
+    } else {
+        input["network_id"]
+            .as_str()
+            .ok_or(reject::custom(BadRequest("invalid network id: not a string")))?
+            .parse::<u64>()
+            .map_err(|_| reject::custom(BadRequest("invalid network id: can not parse u64 from string")))?
+    };
+
+    let (parent_1_message_id, parent_2_message_id) = {
+        let parent_1 = &input["parent1MessageId"];
+        let parent_2 = &input["parent2MessageId"];
+        if parent_1.is_null() && parent_2.is_null() {
+            tangle
+                .get_messages_to_approve()
+                .await
+                .ok_or(reject::custom(ServiceUnavailable("no tips, try again later")))?
+        } else {
+            if !parent_1.is_null() && !parent_2.is_null() {
+                (
+                    parent_1
+                        .as_str()
+                        .ok_or(reject::custom(BadRequest("invalid parent: not a string")))?
+                        .parse::<MessageId>()
+                        .map_err(|_| reject::custom(BadRequest("invalid parent provided")))?,
+                    parent_2
+                        .as_str()
+                        .ok_or(reject::custom(BadRequest("invalid parent: not a string")))?
+                        .parse::<MessageId>()
+                        .map_err(|_| reject::custom(BadRequest("invalid parent provided")))?,
+                )
+            } else {
+                return Err(reject::custom(BadRequest("one parent is missing")));
+            }
+        }
+    };
+
+    let payload = {
+        unimplemented!();
+    };
+
+    Ok(StatusCode::OK)
 }
 
 pub async fn post_raw_message(
     buf: warp::hyper::body::Bytes,
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> Result<impl Reply, Rejection> {
-    let min_size: usize = 77;
-    let max_size: usize = 1024;
+    let min_msg_size: usize = 77;
+    let max_msg_size: usize = 1024;
 
-    if buf.len() < min_size || buf.len() > max_size {
-        return Err(reject::custom(BadRequest));
+    if buf.len() < min_msg_size || buf.len() > max_msg_size {
+        return Err(reject::custom(BadRequest("invalid message length")));
     }
 
     let (message_inserted_notifier, message_inserted_waiter) =
@@ -120,16 +172,16 @@ pub async fn post_raw_message(
             buf: buf.to_vec(),
             message_inserted_notifier,
         })
-        .map_err(|e| reject::custom(ServiceUnavailable))?;
+        .map_err(|e| reject::custom(ServiceUnavailable("service unavailable")))?;
 
     match message_inserted_waiter
         .await
-        .map_err(|e| reject::custom(ServiceUnavailable))?
+        .map_err(|e| reject::custom(ServiceUnavailable("service unavailable")))?
     {
         Ok(message_id) => Ok(warp::reply::json(&DataResponse::new(PostMessageResponse {
             message_id: message_id.to_string(),
         }))),
-        Err(err) => Err(reject::custom(BadRequest)),
+        Err(err) => Err(reject::custom(BadRequest("invalid message"))),
     }
 }
 
@@ -158,7 +210,7 @@ pub async fn get_message_by_index<B: Backend>(index: String, storage: ResHandle<
                 message_ids: vec![],
             }))),
         },
-        Err(_) => Err(reject::custom(ServiceUnavailable)),
+        Err(_) => Err(reject::custom(ServiceUnavailable("service unavailable"))),
     }
 }
 
@@ -281,7 +333,9 @@ pub async fn get_message_metadata<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
 ) -> Result<impl Reply, Rejection> {
     if !tangle.is_synced() {
-        return Err(reject::custom(ServiceUnavailable));
+        return Err(reject::custom(ServiceUnavailable(
+            "service unavailable: the tangle is not synced",
+        )));
     }
 
     let ytrsi_delta = 8;
@@ -452,7 +506,9 @@ pub async fn get_output_by_output_id<B: Backend>(
             None => Err(reject::not_found()),
         }
     } else {
-        Err(reject::custom(ServiceUnavailable))
+        Err(reject::custom(ServiceUnavailable(
+            "service unavailable: can not fetch from storage",
+        )))
     }
 }
 
@@ -462,7 +518,7 @@ pub async fn get_balance_for_address<B: Backend>(
 ) -> Result<impl Reply, Rejection> {
     match Fetch::<Ed25519Address, Vec<OutputId>>::fetch(storage.deref(), &addr)
         .await
-        .map_err(|_| reject::custom(ServiceUnavailable))?
+        .map_err(|_| reject::custom(ServiceUnavailable("service unavailable: can not fetch from storage")))?
     {
         Some(mut ids) => {
             let max_results = 1000;
@@ -473,11 +529,15 @@ pub async fn get_balance_for_address<B: Backend>(
             for id in ids {
                 if let Some(output) = Fetch::<OutputId, bee_ledger::output::Output>::fetch(storage.deref(), &id)
                     .await
-                    .map_err(|_| reject::custom(ServiceUnavailable))?
+                    .map_err(|_| {
+                        reject::custom(ServiceUnavailable("service unavailable: can not fetch from storage"))
+                    })?
                 {
                     if let None = Fetch::<OutputId, Spent>::fetch(storage.deref(), &id)
                         .await
-                        .map_err(|_| reject::custom(ServiceUnavailable))?
+                        .map_err(|_| {
+                            reject::custom(ServiceUnavailable("service unavailable: can not fetch from storage"))
+                        })?
                     {
                         match output.inner() {
                             Output::SignatureLockedSingle(o) => balance += o.amount().get() as u32,
@@ -517,7 +577,9 @@ pub async fn get_outputs_for_address<B: Backend>(
             }
             None => Err(reject::not_found()),
         },
-        Err(err) => Err(reject::custom(ServiceUnavailable)),
+        Err(err) => Err(reject::custom(ServiceUnavailable(
+            "service unavailable: can not fetch from storage",
+        ))),
     }
 }
 

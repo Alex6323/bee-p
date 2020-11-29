@@ -16,17 +16,16 @@ use warp::{reject, Filter, Rejection};
 
 use bee_protocol::{tangle::MsTangle, MessageSubmitterWorkerEvent};
 
-use crate::storage::Backend;
+use crate::{filters::Error::BadRequest, storage::Backend};
 use std::collections::HashMap;
 
-#[derive(Debug)]
-pub struct BadRequest;
+#[derive(Debug, Clone)]
+pub(crate) enum Error {
+    BadRequest(&'static str),
+    ServiceUnavailable(&'static str),
+}
 
-#[derive(Debug)]
-pub struct ServiceUnavailable;
-
-impl reject::Reject for BadRequest {}
-impl reject::Reject for ServiceUnavailable {}
+impl reject::Reject for Error {}
 
 pub fn all<B: Backend>(
     tangle: ResHandle<MsTangle<B>>,
@@ -35,9 +34,14 @@ pub fn all<B: Backend>(
     network_id: NetworkId,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_health(tangle.clone())
-        .or(get_info(tangle.clone(), network_id).or(get_milestone_by_milestone_index(tangle.clone())))
+        .or(get_info(tangle.clone(), network_id.clone()).or(get_milestone_by_milestone_index(tangle.clone())))
         .or(get_tips(tangle.clone()))
-        .or(post_raw_message(message_submitter))
+        .or(post_json_message(
+            message_submitter.clone(),
+            network_id.clone(),
+            tangle.clone(),
+        ))
+        .or(post_raw_message(message_submitter.clone()))
         .or(get_message_by_index(storage.clone()))
         .or(get_message_by_message_id(tangle.clone()))
         .or(get_message_metadata(tangle.clone()))
@@ -83,6 +87,23 @@ fn get_tips<B: Backend>(
         .and_then(handlers::get_tips)
 }
 
+fn post_json_message<B: Backend>(
+    message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
+    network_id: NetworkId,
+    tangle: ResHandle<MsTangle<B>>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::post()
+        .and(warp::path("api"))
+        .and(warp::path("v1"))
+        .and(warp::path("messages"))
+        .and(warp::path::end())
+        .and(warp::body::json())
+        .and(with_message_submitter(message_submitter))
+        .and(with_network_id(network_id))
+        .and(with_tangle(tangle))
+        .and_then(handlers::post_json_message)
+}
+
 fn post_raw_message(
     message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
@@ -107,7 +128,7 @@ fn get_message_by_index<B: Backend>(
         .and(warp::query().and_then(|query: HashMap<String, String>| async move {
             match query.get("index") {
                 Some(i) => Ok(i.to_string()),
-                None => Err(reject::custom(BadRequest)),
+                None => Err(reject::custom(BadRequest("invalid query parameter"))),
             }
         }))
         .and(with_storage(storage))
@@ -232,7 +253,7 @@ mod custom_path_param {
         warp::path::param().and_then(|value: String| async move {
             match value.parse::<OutputId>() {
                 Ok(id) => Ok(id),
-                Err(_) => Err(reject::custom(BadRequest)),
+                Err(_) => Err(reject::custom(BadRequest("invalid output id"))),
             }
         })
     }
@@ -241,7 +262,7 @@ mod custom_path_param {
         warp::path::param().and_then(|value: String| async move {
             match value.parse::<MessageId>() {
                 Ok(msg) => Ok(msg),
-                Err(_) => Err(reject::custom(BadRequest)),
+                Err(_) => Err(reject::custom(BadRequest("invalid message id"))),
             }
         })
     }
@@ -249,8 +270,11 @@ mod custom_path_param {
     pub(super) fn milestone_index() -> impl Filter<Extract = (MilestoneIndex,), Error = Rejection> + Copy {
         warp::path::param().and_then(|value: String| async move {
             match value.parse::<u32>() {
-                Ok(i) => Ok(MilestoneIndex(i)),
-                Err(_) => Err(reject::custom(BadRequest)),
+                Ok(i) => {
+                    println!("a x {}", i);
+                    Ok(MilestoneIndex(i))
+                }
+                Err(e) => Err(reject::custom(BadRequest("invalid milestone index"))),
             }
         })
     }
@@ -259,7 +283,7 @@ mod custom_path_param {
         warp::path::param().and_then(|value: String| async move {
             match value.parse::<Ed25519Address>() {
                 Ok(addr) => Ok(addr),
-                Err(_) => Err(reject::custom(BadRequest)),
+                Err(_) => Err(reject::custom(BadRequest("invalid ed25519 address"))),
             }
         })
     }

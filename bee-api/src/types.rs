@@ -33,8 +33,8 @@ impl<T: DataBody> DataResponse<T> {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ErrorBody {
-    pub code: String,
-    pub message: String,
+    pub code: &'static str,
+    pub message: &'static str,
 }
 
 /// Error response.
@@ -85,7 +85,7 @@ pub struct GetTipsResponse {
 
 impl DataBody for GetTipsResponse {}
 
-/// Response of POST /api/v1/messages/{message_id}
+/// Response of POST /api/v1/messages
 #[derive(Clone, Debug, Serialize)]
 pub struct PostMessageResponse {
     #[serde(rename = "messageId")]
