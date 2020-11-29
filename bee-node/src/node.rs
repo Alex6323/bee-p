@@ -33,6 +33,7 @@ use log::{debug, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
+use bee_api::config::RestApiConfig;
 use std::{
     any::{type_name, Any, TypeId},
     collections::{HashMap, HashSet},
@@ -391,6 +392,10 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
             config.network_id.1,
             builder,
         );
+
+        info!("Initializing REST API...");
+        let builder =
+            bee_api::init::<BeeNode<B>>(RestApiConfig::build().finish(), config.network_id.clone(), builder).await; // TODO: Read config from file
 
         let mut builder = builder.with_worker::<VersionCheckerWorker>();
 

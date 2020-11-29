@@ -49,6 +49,7 @@ pub fn all<B: Backend>(
         .or(get_children_by_message_id(tangle.clone()))
         .or(get_output_by_output_id(storage.clone()))
         .or(get_outputs_for_address(storage.clone()))
+        .or(get_balance_for_address(storage.clone()))
 }
 
 fn get_health<B: Backend>(
@@ -97,7 +98,7 @@ fn post_json_message<B: Backend>(
         .and(warp::path("v1"))
         .and(warp::path("messages"))
         .and(warp::path::end())
-        .and(warp::body::json())
+        .and(json_body())
         .and(with_message_submitter(message_submitter))
         .and(with_network_id(network_id))
         .and(with_tangle(tangle))
@@ -274,7 +275,7 @@ mod custom_path_param {
                     println!("a x {}", i);
                     Ok(MilestoneIndex(i))
                 }
-                Err(e) => Err(reject::custom(BadRequest("invalid milestone index"))),
+                Err(_) => Err(reject::custom(BadRequest("invalid milestone index"))),
             }
         })
     }

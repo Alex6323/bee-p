@@ -17,7 +17,6 @@ mod types;
 
 use crate::{
     config::RestApiConfig,
-    filters::Error::{BadRequest, ServiceUnavailable},
     types::{ErrorBody, ErrorResponse},
 };
 use async_trait::async_trait;

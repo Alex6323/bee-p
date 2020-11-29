@@ -23,11 +23,7 @@ use bee_protocol::{tangle::MsTangle, MessageSubmitterError, MessageSubmitterWork
 use bee_storage::access::Fetch;
 use blake2::Blake2s;
 use digest::Digest;
-use futures::{
-    channel::oneshot,
-    stream::{self, StreamExt},
-};
-use serde_json::{json, Value};
+use futures::channel::oneshot;
 use std::{
     convert::{Infallible, TryInto},
     iter::FromIterator,
@@ -104,11 +100,11 @@ pub async fn get_tips<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> Result<impl
 
 pub async fn post_json_message<B: Backend>(
     input: serde_json::Value,
-    message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
+    _message_submitter: flume::Sender<MessageSubmitterWorkerEvent>,
     network_id: NetworkId,
     tangle: ResHandle<MsTangle<B>>,
 ) -> Result<impl Reply, Rejection> {
-    let network_id = if input["network_id"].is_null() {
+    let _network_id = if input["network_id"].is_null() {
         network_id.1
     } else {
         input["network_id"]
@@ -118,7 +114,7 @@ pub async fn post_json_message<B: Backend>(
             .map_err(|_| reject::custom(BadRequest("invalid network id: can not parse u64 from string")))?
     };
 
-    let (parent_1_message_id, parent_2_message_id) = {
+    let (_parent_1_message_id, _parent_2_message_id) = {
         let parent_1 = &input["parent1MessageId"];
         let parent_2 = &input["parent2MessageId"];
         if parent_1.is_null() && parent_2.is_null() {
@@ -146,10 +142,6 @@ pub async fn post_json_message<B: Backend>(
         }
     };
 
-    let payload = {
-        unimplemented!();
-    };
-
     Ok(StatusCode::OK)
 }
 
@@ -172,16 +164,16 @@ pub async fn post_raw_message(
             buf: buf.to_vec(),
             message_inserted_notifier,
         })
-        .map_err(|e| reject::custom(ServiceUnavailable("service unavailable")))?;
+        .map_err(|_| reject::custom(ServiceUnavailable("service unavailable")))?;
 
     match message_inserted_waiter
         .await
-        .map_err(|e| reject::custom(ServiceUnavailable("service unavailable")))?
+        .map_err(|_| reject::custom(ServiceUnavailable("service unavailable")))?
     {
         Ok(message_id) => Ok(warp::reply::json(&DataResponse::new(PostMessageResponse {
             message_id: message_id.to_string(),
         }))),
-        Err(err) => Err(reject::custom(BadRequest("invalid message"))),
+        Err(_err) => Err(reject::custom(BadRequest("invalid message"))),
     }
 }
 
@@ -577,7 +569,7 @@ pub async fn get_outputs_for_address<B: Backend>(
             }
             None => Err(reject::not_found()),
         },
-        Err(err) => Err(reject::custom(ServiceUnavailable(
+        Err(_err) => Err(reject::custom(ServiceUnavailable(
             "service unavailable: can not fetch from storage",
         ))),
     }
