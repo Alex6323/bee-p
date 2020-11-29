@@ -39,20 +39,22 @@ impl<N: Node> Worker<N> for MessageValidatorWorker {
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let (tx, rx) = flume::unbounded();
 
-        let _tangle = node.resource::<MsTangle<N::Backend>>();
+        let tangle = node.resource::<MsTangle<N::Backend>>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
 
             let mut receiver = ShutdownStream::new(shutdown, rx.into_stream());
 
-            while let Some(MessageValidatorWorkerEvent(_hash)) = receiver.next().await {
-                // if let Ok(bundle) = builder.validate() {
-                //     tangle.update_metadata(&hash, |metadata| {
-                //         metadata.flags_mut().set_valid(true);
-                //     });
-                //     tangle.insert_tip(hash, *bundle.parent1(), *bundle.parent2()).await;
-                // }
+            while let Some(MessageValidatorWorkerEvent(id)) = receiver.next().await {
+                if let Some(message) = tangle.get(&id).await {
+                    tangle.insert_tip(id, *message.parent1(), *message.parent2()).await;
+                    // if let Ok(bundle) = builder.validate() {
+                    //     tangle.update_metadata(&hash, |metadata| {
+                    //         metadata.flags_mut().set_valid(true);
+                    //     });
+                    // }
+                }
             }
 
             info!("Stopped.");
