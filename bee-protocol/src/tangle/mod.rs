@@ -268,6 +268,10 @@ impl<B: Backend> MsTangle<B> {
     pub async fn reduce_tips(&self) {
         self.tip_pool.lock().await.reduce_tips();
     }
+
+    pub(crate) async fn non_lazy_tips_num(&self) -> usize {
+        self.tip_pool.lock().await.non_lazy_tips().len()
+    }
 }
 
 // #[cfg(test)]

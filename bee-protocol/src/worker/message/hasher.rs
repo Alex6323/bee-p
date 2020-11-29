@@ -17,7 +17,7 @@ use crate::{
     worker::message::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{b1t6, node::Node, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
@@ -40,7 +40,7 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use std::{any::TypeId, pin::Pin};
+use std::{any::TypeId, convert::Infallible, pin::Pin};
 use crate::worker::message_submitter::MessageSubmitterError;
 
 // If a batch has less than this number of messages, the regular CurlP hasher is used instead of the batched one.
@@ -93,7 +93,7 @@ fn send_hashes(
 #[async_trait]
 impl<N: Node> Worker<N> for HasherWorker {
     type Config = usize;
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<ProcessorWorker>()].leak()

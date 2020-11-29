@@ -16,16 +16,16 @@ use crate::{
     worker::TangleWorker,
 };
 
-use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::{packable::Packable, shutdown_stream::ShutdownStream};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
-use bee_network::PeerId;
+use bee_network::{Network, PeerId};
 
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::info;
 
-use std::any::TypeId;
+use std::{any::TypeId, convert::Infallible};
 
 pub(crate) struct MilestoneResponderWorkerEvent {
     pub(crate) peer_id: PeerId,
@@ -39,7 +39,7 @@ pub(crate) struct MilestoneResponderWorker {
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneResponderWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()
@@ -49,6 +49,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
         let (tx, rx) = flume::unbounded();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
+        let network = node.resource::<Network>();
 
         node.spawn::<Self, _, _>(|shutdown| async move {
             info!("Running.");
@@ -66,7 +67,7 @@ impl<N: Node> Worker<N> for MilestoneResponderWorker {
                         let mut bytes = Vec::new();
 
                         if message.pack(&mut bytes).is_ok() {
-                            Sender::<MessagePacket>::send(&peer_id, MessagePacket::new(&bytes));
+                            Sender::<MessagePacket>::send(&network, &peer_id, MessagePacket::new(&bytes));
                         }
                     }
                 }

@@ -14,7 +14,7 @@ use crate::{
     worker::{MessageRequesterWorker, RequestedMessages, TangleWorker},
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
@@ -22,7 +22,7 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::{any::TypeId, time::Duration};
+use std::{any::TypeId, convert::Infallible, time::Duration};
 
 #[derive(Default)]
 pub(crate) struct StatusWorker;
@@ -30,7 +30,7 @@ pub(crate) struct StatusWorker;
 #[async_trait]
 impl<N: Node> Worker<N> for StatusWorker {
     type Config = u64;
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>(), TypeId::of::<MessageRequesterWorker>()].leak()
@@ -52,20 +52,22 @@ impl<N: Node> Worker<N> for StatusWorker {
 
                 // TODO Threshold
                 // TODO use tangle synced method
-                if latest_solid_milestone_index == latest_milestone_index {
-                    info!("Synchronized at {}.", latest_milestone_index);
+                let status = if latest_solid_milestone_index == latest_milestone_index {
+                    format!("Synchronized at {}", latest_milestone_index)
                 } else {
                     let progress = ((latest_solid_milestone_index - snapshot_index) as f32 * 100.0
                         / (latest_milestone_index - snapshot_index) as f32) as u8;
-                    info!(
-                        "Synchronizing {}..{}..{} ({}%) - Requested {}.",
+                    format!(
+                        "Synchronizing {}..{}..{} ({}%) - Requested {}",
                         snapshot_index,
                         latest_solid_milestone_index,
                         latest_milestone_index,
                         progress,
-                        requested_messages.len()
-                    );
+                        requested_messages.len(),
+                    )
                 };
+
+                info!("{} - Tips {}.", status, tangle.non_lazy_tips_num().await);
             }
 
             info!("Stopped.");

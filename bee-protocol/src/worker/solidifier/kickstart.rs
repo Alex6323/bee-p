@@ -16,7 +16,7 @@ use crate::{
     worker::{MilestoneRequesterWorker, RequestedMilestones, TangleWorker},
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
@@ -24,7 +24,7 @@ use futures::{channel::oneshot, StreamExt};
 use log::{error, info};
 use tokio::time::interval;
 
-use std::{any::TypeId, time::Duration};
+use std::{any::TypeId, convert::Infallible, time::Duration};
 
 const KICKSTART_INTERVAL_SEC: u64 = 1;
 
@@ -34,7 +34,7 @@ pub(crate) struct KickstartWorker {}
 #[async_trait]
 impl<N: Node> Worker<N> for KickstartWorker {
     type Config = (oneshot::Sender<MilestoneIndex>, u32);
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<MilestoneRequesterWorker>(), TypeId::of::<TangleWorker>()].leak()

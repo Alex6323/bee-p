@@ -28,7 +28,11 @@ pub use interaction::{
     events::{self, Event},
 };
 #[doc(inline)]
-pub use libp2p::{core::identity::ed25519::Keypair, multiaddr::Protocol, Multiaddr, PeerId};
+pub use libp2p::{
+    core::identity::{ed25519::Keypair, PublicKey},
+    multiaddr::Protocol,
+    Multiaddr, PeerId,
+};
 pub use network::Network;
 
 pub type EventReceiver = flume::Receiver<Event>;

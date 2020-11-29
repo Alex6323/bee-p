@@ -50,4 +50,3 @@ delay   = 60480
 
 [database]
 path = "./database/alphanet"
-[database.storage]

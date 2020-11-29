@@ -62,7 +62,7 @@ impl StorageConfigBuilder {
 
 #[derive(Default, Deserialize)]
 pub struct RocksDBConfigBuilder {
-    storage: StorageConfigBuilder,
+    storage: Option<StorageConfigBuilder>,
     path: Option<String>,
     create_if_missing: Option<bool>,
     create_missing_column_families: Option<bool>,
@@ -97,7 +97,7 @@ impl RocksDBConfigBuilder {
 impl From<RocksDBConfigBuilder> for RocksDBConfig {
     fn from(builder: RocksDBConfigBuilder) -> Self {
         RocksDBConfig {
-            storage: builder.storage.finish(),
+            storage: builder.storage.unwrap_or_default().finish(),
             path: builder.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
             create_if_missing: builder.create_if_missing.unwrap_or(DEFAULT_CREATE_IF_MISSING),
             create_missing_column_families: builder

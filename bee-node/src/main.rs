@@ -9,36 +9,42 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common::logger::logger_init;
-use bee_node::{CliArgs, Node, NodeConfigBuilder};
-
-use log::error;
+use bee_common_ext::node::{Node as _, NodeBuilder as _};
+use bee_node::{default_plugins, print_banner_and_version, tools, CliArgs, Node, NodeConfigBuilder};
+use bee_storage_rocksdb::storage::Storage as Rocksdb;
 
 const CONFIG_PATH: &str = "./config.toml";
 
 #[tokio::main]
 async fn main() {
-    match NodeConfigBuilder::from_file(CONFIG_PATH) {
-        Ok(mut config_builder) => {
-            CliArgs::default().apply_to_config(&mut config_builder);
-            let config = config_builder.finish();
+    let cli = CliArgs::new();
 
-            logger_init(config.logger.clone()).unwrap();
-
-            match Node::<bee_storage_rocksdb::storage::Storage>::builder(config)
-                .finish()
-                .await
-            {
-                Ok(node) => {
-                    if let Err(e) = node.run().await {
-                        error!("{}", e);
-                    }
-                }
-                Err(e) => error!("{}", e),
-            }
-        }
-        Err(e) => {
-            eprintln!("{}", e);
-        }
+    if let Some(tool) = cli.tool() {
+        tools::exec(tool);
+        return;
     }
+
+    print_banner_and_version();
+
+    if cli.version() {
+        return;
+    }
+
+    let config = NodeConfigBuilder::from_file(match cli.config() {
+        Some(path) => path,
+        None => CONFIG_PATH,
+    })
+    .expect("Error when creating node config builder")
+    .with_cli_args(cli)
+    .finish();
+
+    Node::<Rocksdb>::build(config)
+        .with_plugin::<default_plugins::Mps>()
+        .with_logging()
+        .finish()
+        .await
+        .expect("Failed to build node")
+        .run()
+        .await
+        .expect("Failed to run node");
 }

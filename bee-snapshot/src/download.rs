@@ -42,6 +42,6 @@ pub async fn download_snapshot(config: &SnapshotConfig) -> Result<(), Error> {
         Ok(())
     } else {
         error!("No working download source available.");
-        Err(Error::Download)
+        Err(Error::NoDownloadSourceAvailable)
     }
 }

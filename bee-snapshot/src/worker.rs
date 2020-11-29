@@ -18,7 +18,7 @@ use crate::{
     pruning::prune_database,
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_protocol::{tangle::MsTangle, Milestone, MilestoneIndex, TangleWorker};
 use bee_storage::storage::Backend;
@@ -27,7 +27,7 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::{error, info, warn};
 
-use std::any::TypeId;
+use std::{convert::Infailible, any::TypeId};
 
 pub(crate) struct SnapshotWorkerEvent(pub(crate) Milestone);
 
@@ -92,7 +92,7 @@ fn should_prune<B: Backend>(tangle: &MsTangle<B>, mut index: MilestoneIndex, con
 #[async_trait]
 impl<N: Node> Worker<N> for SnapshotWorker {
     type Config = SnapshotConfig;
-    type Error = WorkerError;
+    type Error = Infailible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()

@@ -16,7 +16,7 @@ pub enum Error {
     Io(std::io::Error),
     InvalidVariant,
     InvalidVersion(u8, u8),
-    Download,
+    NoDownloadSourceAvailable,
     Message(MessageError),
 }
 
@@ -26,7 +26,7 @@ impl std::fmt::Display for Error {
             Error::Io(e) => write!(f, "I/O error happened: {}.", e),
             Error::InvalidVariant => write!(f, "Invalid variant read."),
             Error::InvalidVersion(expected, actual) => write!(f, "Invalid version read: {}, {}.", expected, actual),
-            Error::Download => write!(f, ""),
+            Error::NoDownloadSourceAvailable => write!(f, ""),
             Error::Message(_) => write!(f, ""),
         }
     }

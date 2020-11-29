@@ -13,10 +13,13 @@ use crate::{
     event::{LatestSolidMilestoneChanged, MessageSolidified},
     milestone::Milestone,
     tangle::MsTangle,
-    worker::{MessageValidatorWorker, MessageValidatorWorkerEvent, TangleWorker},
+    worker::{
+        milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent},
+        MessageValidatorWorker, MessageValidatorWorkerEvent, TangleWorker,
+    },
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_message::MessageId;
 
@@ -24,10 +27,10 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::{error, info, warn};
 
-use crate::worker::milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 use std::{
     any::TypeId,
     cmp::{max, min},
+    convert::Infallible,
 };
 
 pub(crate) struct PropagatorWorkerEvent(pub(crate) MessageId);
@@ -39,7 +42,7 @@ pub(crate) struct PropagatorWorker {
 #[async_trait]
 impl<N: Node> Worker<N> for PropagatorWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![

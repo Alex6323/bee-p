@@ -9,21 +9,12 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use bee_common_ext::event::Bus;
+use crate::{node::BeeNodeBuilder, storage::Backend};
+use bee_common::logger::logger_init;
 
-use std::sync::Arc;
-
-mod tps;
-
-pub trait Plugin {
-    type Error;
-
-    fn name(&self) -> &str;
-    fn init(&mut self, bus: Arc<Bus>) -> Result<(), Self::Error>;
-    fn start(&mut self) -> Result<(), Self::Error>;
-}
-
-pub(crate) fn init(bus: Arc<Bus>) {
-    let result = tps::TpsPlugin::new().init(bus);
-    debug_assert!(result.is_ok());
+impl<B: Backend> BeeNodeBuilder<B> {
+    pub fn with_logging(self) -> Self {
+        logger_init(self.config().logger.clone()).unwrap();
+        self
+    }
 }

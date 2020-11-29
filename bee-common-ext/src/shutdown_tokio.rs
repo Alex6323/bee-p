@@ -28,10 +28,10 @@ pub type ShutdownNotifier = oneshot::Sender<()>;
 pub type ShutdownListener = oneshot::Receiver<()>;
 
 /// A type alias for the termination `Future` of an asynchronous worker.
-pub type WorkerShutdown = Box<dyn Future<Output = Result<Result<(), WorkerError>, JoinError>> + Unpin>;
+pub type WorkerShutdown = Box<dyn Future<Output = Result<Result<(), WorkerError>, JoinError>> + Unpin + Send>;
 
 /// A type alias for a closure, that is executed during the final step of the shutdown procedure.
-pub type Action = Box<dyn FnOnce()>;
+pub type Action = Box<dyn FnOnce() + Send>;
 
 /// Handles the graceful shutdown of asynchronous workers.
 #[derive(Default)]
@@ -51,14 +51,14 @@ impl Shutdown {
     pub fn add_worker_shutdown(
         &mut self,
         notifier: ShutdownNotifier,
-        worker: impl Future<Output = Result<Result<(), WorkerError>, JoinError>> + Unpin + 'static,
+        worker: impl Future<Output = Result<Result<(), WorkerError>, JoinError>> + Unpin + Send + 'static,
     ) {
         self.notifiers.push(notifier);
         self.worker_shutdowns.push(Box::new(worker));
     }
 
     /// Adds teardown logic that is executed during shutdown.
-    pub fn add_action(&mut self, action: impl FnOnce() + 'static) {
+    pub fn add_action(&mut self, action: impl FnOnce() + Send + 'static) {
         self.actions.push(Box::new(action));
     }
 

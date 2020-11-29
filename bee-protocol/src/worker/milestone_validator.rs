@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::{packable::Packable, shutdown_stream::ShutdownStream};
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 use bee_message::{payload::Payload, MessageId};
 
@@ -28,7 +28,7 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use log::{debug, error, info};
 
-use std::any::TypeId;
+use std::{any::TypeId, convert::Infallible};
 
 #[derive(Debug)]
 pub(crate) enum Error {
@@ -124,7 +124,7 @@ where
     N: Node,
 {
     type Config = ProtocolConfig;
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![

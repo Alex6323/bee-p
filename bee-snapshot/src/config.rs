@@ -26,7 +26,7 @@ pub struct SnapshotConfigBuilder {
     depth: Option<u32>,
     interval_synced: Option<u32>,
     interval_unsynced: Option<u32>,
-    pruning: PruningConfigBuilder,
+    pruning: Option<PruningConfigBuilder>,
 }
 
 impl SnapshotConfigBuilder {
@@ -66,7 +66,7 @@ impl SnapshotConfigBuilder {
             depth: self.depth.unwrap_or(DEFAULT_DEPTH),
             interval_synced: self.interval_synced.unwrap_or(DEFAULT_INTERVAL_SYNCED),
             interval_unsynced: self.interval_unsynced.unwrap_or(DEFAULT_INTERVAL_UNSYNCED),
-            pruning: self.pruning.finish(),
+            pruning: self.pruning.unwrap_or_default().finish(),
         }
     }
 }

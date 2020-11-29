@@ -10,8 +10,9 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 use async_trait::async_trait;
+use bee_network::Network;
 
 #[async_trait]
 pub trait PeerManager {
-    async fn run(self);
+    async fn run(self, network: &Network);
 }

@@ -11,7 +11,7 @@
 
 use crate::{tangle::MsTangle, worker::TangleWorker, Milestone, MilestoneIndex};
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
 
@@ -23,6 +23,7 @@ use std::{
     any::TypeId,
     cmp::{max, min},
     collections::HashSet,
+    convert::Infallible,
 };
 
 pub(crate) struct MilestoneConeUpdaterWorkerEvent(pub(crate) Milestone);
@@ -34,7 +35,7 @@ pub(crate) struct MilestoneConeUpdaterWorker {
 #[async_trait]
 impl<N: Node> Worker<N> for MilestoneConeUpdaterWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![TypeId::of::<TangleWorker>()].leak()

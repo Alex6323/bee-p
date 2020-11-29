@@ -11,7 +11,7 @@
 
 use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::shutdown_stream::ShutdownStream;
 use bee_common_ext::{event::Bus, node::Node, worker::Worker};
 
 use async_trait::async_trait;
@@ -19,7 +19,7 @@ use futures::StreamExt;
 use log::info;
 use tokio::time::interval;
 
-use std::time::Duration;
+use std::{convert::Infallible, time::Duration};
 
 const MPS_INTERVAL_SEC: u64 = 1;
 
@@ -29,7 +29,7 @@ pub(crate) struct MpsWorker {}
 #[async_trait]
 impl<N: Node> Worker<N> for MpsWorker {
     type Config = ();
-    type Error = WorkerError;
+    type Error = Infallible;
 
     async fn start(node: &mut N, _config: Self::Config) -> Result<Self, Self::Error> {
         let bus = node.resource::<Bus>();

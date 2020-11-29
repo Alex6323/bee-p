@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-use bee_common::{packable::Packable, shutdown_stream::ShutdownStream, worker::Error as WorkerError};
+use bee_common::{packable::Packable, shutdown_stream::ShutdownStream};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::{payload::Payload, Message, MessageId, MESSAGE_ID_LENGTH};
 use bee_network::PeerId;
@@ -33,7 +33,7 @@ use blake2::{
 use futures::stream::StreamExt;
 use log::{error, info, trace, warn};
 
-use std::any::TypeId;
+use std::{any::TypeId, convert::Infallible};
 use futures::channel::oneshot::Sender;
 use crate::worker::message_submitter::MessageSubmitterError;
 
@@ -51,7 +51,7 @@ pub(crate) struct ProcessorWorker {
 #[async_trait]
 impl<N: Node> Worker<N> for ProcessorWorker {
     type Config = (ProtocolConfig, u64);
-    type Error = WorkerError;
+    type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
         vec![

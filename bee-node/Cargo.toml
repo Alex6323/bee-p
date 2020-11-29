@@ -27,8 +27,11 @@ bee-storage-rocksdb = { path = "../bee-storage/bee-storage-rocksdb" }
 anymap = "0.12"
 async-trait = "0.1"
 blake2 = "0.9"
+chrono = "0.4"
+iota-crypto = { git = "https://github.com/iotaledger/crypto.rs", branch = "dev", features = ["ed25519", "random", "blake2b"] }
 flume = "0.9"
 futures = "0.3"
+hex = "0.4"
 log = "0.4"
 serde = { version = "1.0", features = ["derive" ] }
 structopt = { version = "0.3", default-features = false }
