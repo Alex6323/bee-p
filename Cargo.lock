@@ -223,8 +223,6 @@ dependencies = [
  "futures",
  "hex",
  "log",
- "thiserror",
- "tokio",
 ]
 
 [[package]]
