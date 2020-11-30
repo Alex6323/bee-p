@@ -9,7 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{Multiaddr, PeerId};
+use crate::{conns::Error as ConnError, Multiaddr};
 
 use thiserror::Error as ErrorAttr;
 
@@ -20,19 +20,25 @@ pub enum Error {
     #[error("Failed to send an internal event ({}).", .0)]
     InternalEventSendFailure(&'static str),
     #[error("Failed to send a message to {}", .0)]
-    SendMessageFailure(PeerId),
-    #[error("Unknown peer: {}", .0)]
-    UnknownPeer(PeerId),
+    SendMessageFailure(String),
+    #[error("Unlisted peer: {}", .0)]
+    UnlistedPeer(String),
     #[error("Disconnected peer: {}", .0)]
-    DisconnectedPeer(PeerId),
-    #[error("Failed to disconnect from peer: {}", .0)]
-    DisconnectPeerFailure(PeerId),
+    DisconnectedPeer(String),
+    #[error("Failed to connect to peer. Cause: {:?}", .0)]
+    ConnectFailure(ConnError),
     #[error("Already banned that address: {}", .0)]
     AddressAlreadyBanned(Multiaddr),
     #[error("Already banned that peer: {}", .0)]
-    PeerAlreadyBanned(PeerId),
+    PeerAlreadyBanned(String),
     #[error("Already unbanned that address: {}", .0)]
     AddressAlreadyUnbanned(Multiaddr),
     #[error("Already unbanned that peer: {}", .0)]
-    PeerAlreadyUnbanned(PeerId),
+    PeerAlreadyUnbanned(String),
+    #[error("Already added that peer: {}", .0)]
+    PeerAlreadyAdded(String),
+    #[error("Tried to add more known peers than allowed ({}).", .0)]
+    KnownPeerLimitReached(usize),
+    #[error("Tried to add more unknown peers than allowed ({}).", .0)]
+    UnknownPeerLimitReached(usize),
 }

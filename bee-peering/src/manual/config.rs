@@ -17,12 +17,18 @@ use std::str::FromStr;
 
 // TODO add acceptAnyConnection
 
-const DEFAULT_LIMIT: u8 = 5;
+const DEFAULT_LIMIT: usize = 5;
 
 #[derive(Default, Deserialize)]
 pub struct ManualPeeringConfigBuilder {
-    pub(crate) limit: Option<u8>,
-    pub(crate) peers: Vec<String>,
+    pub(crate) limit: Option<usize>,
+    pub(crate) peers: Option<Vec<Peer>>,
+}
+
+#[derive(Deserialize)]
+pub struct Peer {
+    address: String,
+    alias: Option<String>,
 }
 
 impl ManualPeeringConfigBuilder {
@@ -30,21 +36,29 @@ impl ManualPeeringConfigBuilder {
         Self::default()
     }
 
-    pub fn limit(mut self, limit: u8) -> Self {
+    pub fn limit(mut self, limit: usize) -> Self {
         self.limit.replace(limit);
         self
     }
 
-    pub fn add_peer(mut self, peer_address_id: &str) {
-        self.peers.push(peer_address_id.to_owned());
+    pub fn peers(mut self, peers: Vec<Peer>) -> Self {
+        self.peers.replace(peers);
+        self
     }
 
     pub fn finish(self) -> ManualPeeringConfig {
-        let peers = self
-            .peers
-            .iter()
-            .map(|s| Multiaddr::from_str(s).expect("error parsing Multiaddr"))
-            .collect();
+        let peers = match self.peers {
+            None => Vec::new(),
+            Some(peers) => peers
+                .into_iter()
+                .map(|peer| {
+                    (
+                        Multiaddr::from_str(&peer.address[..]).expect("error parsing multiaddr."),
+                        peer.alias,
+                    )
+                })
+                .collect(),
+        };
 
         ManualPeeringConfig {
             limit: self.limit.unwrap_or(DEFAULT_LIMIT),
@@ -55,8 +69,8 @@ impl ManualPeeringConfigBuilder {
 
 #[derive(Clone)]
 pub struct ManualPeeringConfig {
-    pub(crate) limit: u8,
-    pub(crate) peers: Vec<Multiaddr>,
+    pub(crate) limit: usize,
+    pub(crate) peers: Vec<(Multiaddr, Option<String>)>,
 }
 
 impl ManualPeeringConfig {

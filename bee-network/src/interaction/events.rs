@@ -9,11 +9,13 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{conns::Origin, peers::DataSender};
+use crate::{
+    conns::Origin,
+    peers::{DataSender, PeerInfo},
+    Multiaddr, PeerId,
+};
 
-use libp2p::{Multiaddr, PeerId};
-
-use std::net::IpAddr;
+use super::commands::Command;
 
 pub type EventReceiver = flume::Receiver<Event>;
 pub type EventSender = flume::Sender<Event>;
@@ -25,35 +27,34 @@ pub fn channel<T>() -> (flume::Sender<T>, flume::Receiver<T>) {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
+pub enum Event {
+    PeerAdded { id: PeerId },
+    PeerRemoved { id: PeerId },
+    PeerConnected { id: PeerId, address: Multiaddr },
+    PeerDisconnected { id: PeerId },
+    MessageReceived { message: Vec<u8>, from: PeerId },
+    PeerBanned { id: PeerId },
+    AddressBanned { address: Multiaddr },
+    CommandFailed { command: Command }, // TODO: maybe we should provide the reason as well!
+}
+
+#[derive(Debug)]
 pub enum InternalEvent {
     ConnectionEstablished {
         peer_id: PeerId,
-        peer_address: Multiaddr,
+        peer_info: PeerInfo,
         origin: Origin,
         message_sender: DataSender,
     },
     ConnectionDropped {
         peer_id: PeerId,
-        peer_address: Multiaddr,
-    },
-    ReconnectScheduled {
-        peer_id: Option<PeerId>,
-        peer_address: Multiaddr,
     },
     MessageReceived {
         message: Vec<u8>,
         from: PeerId,
     },
-}
-
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum Event {
-    PeerConnected { id: PeerId, address: Multiaddr },
-
-    PeerDisconnected { id: PeerId },
-
-    MessageReceived { message: Vec<u8>, from: PeerId },
-    PeerBanned { id: PeerId },
-    AddrBanned { ip: IpAddr },
+    ReconnectScheduled {
+        peer_id: PeerId,
+    },
 }

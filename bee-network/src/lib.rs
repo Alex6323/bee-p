@@ -34,10 +34,11 @@ pub use libp2p::{
     Multiaddr, PeerId,
 };
 pub use network::Network;
+pub use peers::PeerRelation;
 
 pub type EventReceiver = flume::Receiver<Event>;
 
-use config::{DEFAULT_MSG_BUFFER_SIZE, DEFAULT_PEER_LIMIT, DEFAULT_RECONNECT_MILLIS};
+use config::{DEFAULT_KNOWN_PEER_LIMIT, DEFAULT_MSG_BUFFER_SIZE, DEFAULT_RECONNECT_MILLIS, DEFAULT_UNKNOWN_PEER_LIMIT};
 use conns::ConnectionManager;
 use interaction::events::InternalEvent;
 use peers::{BannedAddrList, BannedPeerList, PeerList, PeerManager};
@@ -51,7 +52,8 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 pub(crate) static MSG_BUFFER_SIZE: AtomicUsize = AtomicUsize::new(DEFAULT_MSG_BUFFER_SIZE);
 pub(crate) static RECONNECT_MILLIS: AtomicU64 = AtomicU64::new(DEFAULT_RECONNECT_MILLIS);
-pub(crate) static PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_PEER_LIMIT);
+pub(crate) static KNOWN_PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_KNOWN_PEER_LIMIT);
+pub(crate) static UNKNOWN_PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_UNKNOWN_PEER_LIMIT);
 pub(crate) static NETWORK_ID: AtomicU64 = AtomicU64::new(0);
 
 pub async fn init(
@@ -62,7 +64,8 @@ pub async fn init(
 ) -> (Network, EventReceiver) {
     MSG_BUFFER_SIZE.swap(config.msg_buffer_size, Ordering::Relaxed);
     RECONNECT_MILLIS.swap(config.reconnect_millis, Ordering::Relaxed);
-    PEER_LIMIT.swap(config.peer_limit, Ordering::Relaxed);
+    KNOWN_PEER_LIMIT.swap(config.known_peer_limit, Ordering::Relaxed);
+    UNKNOWN_PEER_LIMIT.swap(config.unknown_peer_limit, Ordering::Relaxed);
     NETWORK_ID.swap(network_id, Ordering::Relaxed);
 
     let local_keys = identity::Keypair::Ed25519(local_keys);
@@ -116,4 +119,30 @@ pub async fn init(
         Network::new(config, command_sender, listen_address, local_id),
         event_receiver,
     )
+}
+
+pub trait ShortId
+where
+    Self: ToString,
+{
+    const ORIGINAL_LENGTH: usize;
+    const LEADING_LENGTH: usize;
+    const TRAILING_LENGTH: usize;
+
+    fn short(&self) -> String;
+}
+
+impl ShortId for PeerId {
+    const ORIGINAL_LENGTH: usize = 52;
+    const LEADING_LENGTH: usize = 2;
+    const TRAILING_LENGTH: usize = 6;
+
+    fn short(&self) -> String {
+        let s = self.to_string();
+        format!(
+            "{}~{}",
+            &s[0..Self::LEADING_LENGTH],
+            &s[(Self::ORIGINAL_LENGTH - Self::TRAILING_LENGTH)..]
+        )
+    }
 }
