@@ -1,13 +1,5 @@
 // Copyright 2020 IOTA Stiftung
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 //! This example shows how to create and run 2 TCP nodes using `bee_network`, that will
 //! automatically add eachother as peers and exchange the messages 'ping' and 'pong'
@@ -64,7 +56,7 @@ async fn main() {
     // for (peer_address, peer_id) in &config.peers {
     for peer_address in &config.peers {
         if let Err(e) = network
-            .send(ConnectUnknownPeer {
+            .send(DialAddress {
                 address: peer_address.clone(),
             })
             .await
@@ -212,7 +204,7 @@ impl NodeBuilder {
 
         info!("[EXAMPLE] Initializing network...");
         let local_keys = Keypair::generate();
-        let (network, events) = bee_network::init(network_config, local_keys, &mut shutdown).await;
+        let (network, events) = bee_network::init(network_config, local_keys, 1, &mut shutdown).await;
 
         info!("[EXAMPLE] Node initialized.");
         Node {

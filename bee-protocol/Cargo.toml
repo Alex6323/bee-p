@@ -14,11 +14,11 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-common-ext = { path = "../bee-common-ext" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
-bee-message = { path = "../bee-message" }
+bee-message = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-network = { path = "../bee-network" }
 bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-snapshot = { path = "../bee-snapshot" }
-bee-storage = { path = "../bee-storage/bee-storage" }
+bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 
@@ -30,6 +30,7 @@ flume = "0.9"
 futures = "0.3"
 futures-util = "0.3"
 hex = "0.4"
+iota-crypto = { git = "https://github.com/iotaledger/crypto.rs", branch = "dev", features = ["ed25519"] }
 log = "0.4"
 pin-project = "1.0"
 rand = "0.7"

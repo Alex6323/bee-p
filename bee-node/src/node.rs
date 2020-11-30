@@ -1,13 +1,5 @@
 // Copyright 2020 IOTA Stiftung
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::NodeConfig, plugin, storage::Backend, version_checker::VersionCheckerWorker};
 
@@ -18,7 +10,7 @@ use bee_common_ext::{
     shutdown_tokio::Shutdown,
     worker::Worker,
 };
-use bee_network::{self, Event, Multiaddr, Network, PeerId};
+use bee_network::{self, Event, Multiaddr, Network, PeerId, ShortId};
 use bee_peering::{ManualPeerManager, PeerManager};
 use bee_protocol::Protocol;
 
@@ -65,6 +57,7 @@ pub struct BeeNode<B> {
     resources: Map<dyn AnyMapAny + Send + Sync>,
     worker_stops: HashMap<TypeId, Box<WorkerStop<Self>>>,
     worker_order: Vec<TypeId>,
+    #[allow(dead_code)]
     shutdown: Shutdown,
     phantom: PhantomData<B>,
 }
@@ -90,11 +83,8 @@ impl<B: Backend> BeeNode<B> {
 
         let mut network_events_stream = self.remove_resource::<NetworkEventStream>().unwrap();
 
-        let config = self.config();
-        let network = self.resource::<Network>();
         let mut runtime = NodeRuntime {
             peers: PeerList::default(),
-            config: &config,
             node: &self,
         };
 
@@ -121,7 +111,6 @@ impl<B: Backend> BeeNode<B> {
 
 struct NodeRuntime<'a, B: Backend> {
     peers: PeerList,
-    config: &'a NodeConfig<B>,
     node: &'a BeeNode<B>,
 }
 
@@ -129,19 +118,28 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
     #[inline]
     async fn process_event(&mut self, event: Event) {
         match event {
+            Event::PeerAdded { id } => self.peer_added_handler(id).await,
+            Event::PeerRemoved { id } => self.peer_removed_handler(id).await,
             Event::PeerConnected { id, address } => self.peer_connected_handler(id, address).await,
             Event::PeerDisconnected { id } => self.peer_disconnected_handler(id).await,
             Event::MessageReceived { message, from } => self.peer_message_received_handler(message, from).await,
-            Event::PeerBanned { .. } => (),
-            Event::AddrBanned { .. } => (),
-            _ => warn!("Unsupported event {:?}.", event),
+            _ => (), // Ignore all other events for now
         }
     }
 
     #[inline]
+    async fn peer_added_handler(&mut self, id: PeerId) {
+        info!("Added peer: {}", id.short());
+    }
+
+    #[inline]
+    async fn peer_removed_handler(&mut self, id: PeerId) {
+        info!("Removed peer: {}", id.short());
+    }
+
+    #[inline]
     async fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr) {
-        let (receiver_tx, receiver_shutdown_tx) =
-            Protocol::register(self.node, &self.config.protocol, id.clone(), address).await;
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(self.node, id.clone(), address).await;
 
         self.peers.insert(id, (receiver_tx, receiver_shutdown_tx));
     }
@@ -151,7 +149,7 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
         // TODO unregister ?
         if let Some((_, shutdown)) = self.peers.remove(&id) {
             if let Err(e) = shutdown.send(()) {
-                warn!("Sending shutdown to {} failed: {:?}.", id, e);
+                warn!("Sending shutdown to {} failed: {:?}.", id.short(), e);
             }
         }
     }
@@ -160,7 +158,7 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
     async fn peer_message_received_handler(&mut self, message: Vec<u8>, from: PeerId) {
         if let Some(peer) = self.peers.get_mut(&from) {
             if let Err(e) = peer.0.send(message) {
-                warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", from, e);
+                warn!("Sending PeerWorkerEvent::Message to {} failed: {}.", from.short(), e);
             }
         }
     }

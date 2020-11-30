@@ -1,52 +1,44 @@
 // Copyright 2020 IOTA Stiftung
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
-use crate::{Multiaddr, PeerId};
+use crate::Multiaddr;
 
 use thiserror::Error as ErrorAttr;
 
 #[derive(Debug, ErrorAttr)]
 pub enum Error {
-    #[error("Tried to connect to more peers than allowed ({}).", .0)]
-    PeerLimitReached(usize),
     #[error("Building the underlying transport layer failed.")]
     CreatingTransportFailed,
     #[error("Binding to {} failed.", .0)]
     BindingAddressFailed(Multiaddr),
     #[error("Not listening on an address.")]
     NotListeningError,
-    #[error("Failed to extract the IP address from a multiaddress.")]
-    // InvalidMultiaddr,
-    // #[error("Tried to dial a banned address: {}.", .0)]
-    DialedBannedAddress(String),
+    #[error("Tried to dial a banned address: {}.", .0)]
+    DialedBannedAddress(Multiaddr),
     #[error("Tried to dial a banned peer: {}.", .0)]
-    DialedBannedPeer(PeerId),
+    DialedBannedPeer(String),
+    #[error("Tried to dial an unlisted peer: {}.", .0)]
+    DialedUnlistedPeer(String),
+    #[error("Tried to dial a peer, that was rejected from the peerlist: {}.", .0)]
+    DialedRejectedPeer(String),
     #[error("Failed dialing address: {}.", .0)]
     DialingFailed(Multiaddr),
     #[error("Already connected to peer: {}.", .0)]
-    DuplicateConnection(PeerId),
+    DuplicateConnection(String),
     #[error("Peer identifies with {}, but we expected: {}", .received, .expected)]
-    PeerIdMismatch { expected: PeerId, received: PeerId },
-    #[error("Creating outbound substream failed.")]
-    CreatingOutboundSubstreamFailed,
-    #[error("Creating inbound substream failed.")]
-    CreatingInboundSubstreamFailed,
-    #[error("Failed to upgrade a substream.")]
-    SubstreamProtocolUpgradeFailed,
+    PeerIdMismatch { expected: String, received: String },
+    #[error("Creating outbound substream with {} failed.", .0)]
+    CreatingOutboundSubstreamFailed(String),
+    #[error("Creating inbound substream with {} failed.", .0)]
+    CreatingInboundSubstreamFailed(String),
+    #[error("Failed to upgrade a substream with {}.", .0)]
+    SubstreamProtocolUpgradeFailed(String),
     #[error("Failed to send an internal event ({}).", .0)]
     InternalEventSendFailure(&'static str),
-    #[error("Failed to send the message by writing to an underlying stream.")]
+    #[error("Failed to write a message to a stream.")]
     MessageSendError,
-    #[error("Failed to recv the message by reading from an underlying stream.")]
+    #[error("Failed to read a message from a stream.")]
     MessageRecvError,
-    #[error("The remote peer stopped the stream (EOF).")]
+    #[error("The remote peer {} stopped the stream (EOF).", 0)]
     StreamClosedByRemote,
 }
