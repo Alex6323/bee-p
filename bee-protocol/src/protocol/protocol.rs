@@ -10,10 +10,10 @@ use crate::{
     tangle::MsTangle,
     worker::{
         BroadcasterWorker, HasherWorker, HeartbeaterWorker, KickstartWorker, MessageRequesterWorker,
-        MessageResponderWorker, MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker,
-        MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        MpsWorker, PeerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones, StatusWorker, StorageWorker,
-        TangleWorker, TipPoolCleanerWorker,
+        MessageResponderWorker, MessageSubmitterWorker, MessageValidatorWorker, MilestoneConeUpdaterWorker,
+        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
+        MilestoneValidatorWorker, MpsWorker, PeerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones,
+        StatusWorker, StorageWorker, TangleWorker, TipPoolCleanerWorker,
     },
 };
 
@@ -27,7 +27,7 @@ use bee_storage::storage::Backend;
 
 use futures::channel::oneshot;
 use log::{debug, error, info};
-use tokio::spawn;
+use tokio::task::spawn;
 
 use std::sync::Arc;
 
@@ -75,6 +75,7 @@ impl Protocol {
             .with_worker::<TipPoolCleanerWorker>()
             .with_worker_cfg::<StatusWorker>(config.workers.status_interval)
             .with_worker::<HeartbeaterWorker>()
+            .with_worker::<MessageSubmitterWorker>()
     }
 
     pub fn events<N: Node>(node: &N, config: ProtocolConfig) {

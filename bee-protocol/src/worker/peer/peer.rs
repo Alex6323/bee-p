@@ -127,8 +127,9 @@ impl PeerWorker {
                     Ok(message) => {
                         self.hasher
                             .send(HasherWorkerEvent {
-                                from: self.peer.id.clone(),
+                                from: Some(self.peer.id.clone()),
                                 message_packet: message,
+                                notifier: None,
                             })
                             .map_err(|_| PeerWorkerError::FailedSend)?;
 

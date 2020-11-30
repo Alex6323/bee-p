@@ -6,7 +6,10 @@
 use crate::{
     packet::Message as MessagePacket,
     protocol::Protocol,
-    worker::message::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
+    worker::{
+        message::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
+        message_submitter::MessageSubmitterError,
+    },
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
@@ -15,7 +18,7 @@ use bee_crypto::ternary::{
     sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
     HASH_LENGTH,
 };
-use bee_message::MESSAGE_ID_LENGTH;
+use bee_message::{MessageId, MESSAGE_ID_LENGTH};
 use bee_network::PeerId;
 use bee_ternary::{Btrit, T5B1Buf, TritBuf};
 
@@ -25,6 +28,7 @@ use blake2::{
     VarBlake2b,
 };
 use futures::{
+    channel::oneshot::Sender,
     stream::{Fuse, Stream, StreamExt},
     task::{Context, Poll},
 };
@@ -37,8 +41,9 @@ use std::{any::TypeId, convert::Infallible, pin::Pin};
 const BATCH_SIZE_THRESHOLD: usize = 3;
 
 pub(crate) struct HasherWorkerEvent {
-    pub(crate) from: PeerId,
+    pub(crate) from: Option<PeerId>,
     pub(crate) message_packet: MessagePacket,
+    pub(crate) notifier: Option<Sender<Result<MessageId, MessageSubmitterError>>>,
 }
 
 pub(crate) struct HasherWorker {
@@ -63,7 +68,15 @@ fn send_hashes(
     events: &mut Vec<HasherWorkerEvent>,
     processor_worker: &mut flume::Sender<ProcessorWorkerEvent>,
 ) {
-    for (HasherWorkerEvent { from, message_packet }, hash) in events.drain(..).zip(hashes) {
+    for (
+        HasherWorkerEvent {
+            from,
+            message_packet,
+            notifier: message_inserted_tx,
+        },
+        hash,
+    ) in events.drain(..).zip(hashes)
+    {
         let zeros = hash.iter().rev().take_while(|t| *t == Btrit::Zero).count() as u32;
         let pow_score = 3u128.pow(zeros) as f64 / message_packet.bytes.len() as f64;
         // TODO check score
@@ -72,6 +85,7 @@ fn send_hashes(
             pow_score,
             from,
             message_packet,
+            notifier: message_inserted_tx,
         }) {
             warn!("Sending event to the processor worker failed: {}.", e);
         }

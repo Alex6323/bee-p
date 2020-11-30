@@ -3,6 +3,7 @@
 
 use crate::{config::NodeConfig, plugin, storage::Backend, version_checker::VersionCheckerWorker};
 
+use bee_api::config::RestApiConfig;
 use bee_common::{shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::{
     event::Bus,
@@ -389,6 +390,10 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
             config.network_id.1,
             builder,
         );
+
+        info!("Initializing REST API...");
+        let builder =
+            bee_api::init::<BeeNode<B>>(RestApiConfig::build().finish(), config.network_id.clone(), builder).await; // TODO: Read config from file
 
         let mut builder = builder.with_worker::<VersionCheckerWorker>();
 
