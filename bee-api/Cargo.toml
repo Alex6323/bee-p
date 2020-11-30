@@ -15,10 +15,10 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-common-ext = { path = "../bee-common-ext" }
 bee-ledger = { path = "../bee-ledger" }
-bee-message = { path = "../bee-message" }
+bee-message = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-protocol = { path = "../bee-protocol" }
 bee-tangle = { path = "../bee-tangle" }
-bee-storage = { path = "../bee-storage/bee-storage" }
+bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 
 async-trait = "0.1"
 blake2 = "0.9"
