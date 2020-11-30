@@ -15,7 +15,6 @@ use bee_common::{shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::{
     event::Bus,
     node::{Node, NodeBuilder, ResHandle},
-    shutdown_tokio::Shutdown,
     worker::Worker,
 };
 use bee_network::{self, Event, Multiaddr, Network, PeerId, ShortId};
@@ -64,7 +63,6 @@ pub struct BeeNode<B> {
     resources: Map<dyn AnyMapAny + Send + Sync>,
     worker_stops: HashMap<TypeId, Box<WorkerStop<Self>>>,
     worker_order: Vec<TypeId>,
-    shutdown: Shutdown,
     phantom: PhantomData<B>,
 }
 
@@ -354,33 +352,29 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
             self.config.network_id.0, self.config.network_id.1
         );
 
-        let mut shutdown = Shutdown::new();
-
         let generated_new_local_keypair = self.config.peering.local_keypair.2;
         if generated_new_local_keypair {
             info!("Generated new local keypair: {}", self.config.peering.local_keypair.1);
             info!("Add this to your config, and restart the node.");
         }
-        let local_keys = self.config.peering.local_keypair.0.clone();
-
-        info!("Initializing network...");
-        let (network, events) = bee_network::init(
-            self.config.network.clone(),
-            local_keys,
-            self.config.network_id.1,
-            &mut shutdown,
-        )
-        .await;
-        info!("Own Peer Id = {}", network.local_id());
 
         let config = self.config.clone();
-        let builder = self
-            .with_resource(network)
-            .with_resource(ShutdownStream::new(ctrl_c_listener(), events.into_stream()))
+
+        let network_config = config.network.clone();
+        let network_id = config.network_id.1;
+        let local_keys = config.peering.local_keypair.0.clone();
+
+        let this = self
             .with_resource(config.clone()) // TODO: Remove clone
             .with_resource(PeerList::default());
 
-        let (builder, snapshot) = bee_snapshot::init::<BeeNode<B>>(&config.snapshot, builder)
+        info!("Initializing network layer...");
+        let (mut this, events) = bee_network::init::<BeeNode<B>>(network_config, local_keys, network_id, this).await;
+
+        this = this.with_resource(ShutdownStream::new(ctrl_c_listener(), events.into_stream()));
+
+        info!("Initializing snapshot handler...");
+        let (this, snapshot) = bee_snapshot::init::<BeeNode<B>>(&config.snapshot, this)
             .await
             .map_err(Error::SnapshotError)?;
 
@@ -393,33 +387,32 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
         //     bus.clone(),
         // );
 
-        info!("Initializing protocol...");
-        let builder = Protocol::init::<BeeNode<B>>(
+        info!("Initializing protocol layer...");
+        let mut this = Protocol::init::<BeeNode<B>>(
             config.protocol.clone(),
             config.database.clone(),
             snapshot,
-            config.network_id.1,
-            builder,
+            network_id,
+            this,
         );
 
-        let mut builder = builder.with_worker::<VersionCheckerWorker>();
+        this = this.with_worker::<VersionCheckerWorker>();
 
         let mut node = BeeNode {
             workers: Map::new(),
             tasks: HashMap::new(),
             resources: Map::new(),
-            worker_stops: builder.worker_stops,
-            worker_order: TopologicalOrder::sort(builder.deps),
-            shutdown,
+            worker_stops: this.worker_stops,
+            worker_order: TopologicalOrder::sort(this.deps),
             phantom: PhantomData,
         };
 
-        for f in builder.resource_registers {
+        for f in this.resource_registers {
             f(&mut node);
         }
 
         for id in node.worker_order.clone() {
-            builder.worker_starts.remove(&id).unwrap()(&mut node).await;
+            this.worker_starts.remove(&id).unwrap()(&mut node).await;
         }
 
         // TODO: turn into worker

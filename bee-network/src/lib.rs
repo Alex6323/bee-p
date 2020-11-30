@@ -39,14 +39,14 @@ pub use peers::PeerRelation;
 pub type EventReceiver = flume::Receiver<Event>;
 
 use config::{DEFAULT_KNOWN_PEER_LIMIT, DEFAULT_MSG_BUFFER_SIZE, DEFAULT_RECONNECT_MILLIS, DEFAULT_UNKNOWN_PEER_LIMIT};
-use conns::ConnectionManager;
+use conns::{ConnectionManager, ConnectionManagerConfig};
 use interaction::events::InternalEvent;
-use peers::{BannedAddrList, BannedPeerList, PeerList, PeerManager};
+use peers::{BannedAddrList, BannedPeerList, PeerList, PeerManager, PeerManagerConfig};
 
-use bee_common_ext::shutdown_tokio::Shutdown;
+use bee_common_ext::node::{Node, NodeBuilder};
 
-use futures::channel::oneshot;
 use libp2p::identity;
+use log::info;
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
@@ -56,12 +56,12 @@ pub(crate) static KNOWN_PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_KNOWN
 pub(crate) static UNKNOWN_PEER_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_UNKNOWN_PEER_LIMIT);
 pub(crate) static NETWORK_ID: AtomicU64 = AtomicU64::new(0);
 
-pub async fn init(
+pub async fn init<N: Node>(
     config: NetworkConfig,
     local_keys: Keypair,
     network_id: u64,
-    shutdown: &mut Shutdown,
-) -> (Network, EventReceiver) {
+    mut node_builder: N::Builder,
+) -> (N::Builder, EventReceiver) {
     MSG_BUFFER_SIZE.swap(config.msg_buffer_size, Ordering::Relaxed);
     RECONNECT_MILLIS.swap(config.reconnect_millis, Ordering::Relaxed);
     KNOWN_PEER_LIMIT.swap(config.known_peer_limit, Ordering::Relaxed);
@@ -70,55 +70,48 @@ pub async fn init(
 
     let local_keys = identity::Keypair::Ed25519(local_keys);
     let local_id = PeerId::from_public_key(local_keys.public());
+    info!("Own Peer Id = {}", local_id);
 
     let (command_sender, command_receiver) = commands::channel();
     let (event_sender, event_receiver) = events::channel::<Event>();
     let (internal_event_sender, internal_event_receiver) = events::channel::<InternalEvent>();
 
-    let (peer_manager_shutdown_sender, peer_manager_shutdown_receiver) = oneshot::channel();
-    let (conn_manager_shutdown_sender, conn_manager_shutdown_receiver) = oneshot::channel();
-
     let banned_addrs = BannedAddrList::new();
     let banned_peers = BannedPeerList::new();
     let peers = PeerList::new();
 
-    let peer_manager = PeerManager::new(
+    let peer_manager_config = PeerManagerConfig::new(
         local_keys.clone(),
-        command_receiver,
-        event_sender,
-        internal_event_receiver,
-        internal_event_sender.clone(),
         peers.clone(),
         banned_addrs.clone(),
         banned_peers.clone(),
-        peer_manager_shutdown_receiver,
+        event_sender,
+        internal_event_sender.clone(),
+        command_receiver,
+        internal_event_receiver,
     );
 
-    let conn_manager = ConnectionManager::new(
+    let conn_manager_config = ConnectionManagerConfig::new(
         local_keys,
         config.bind_address.clone(),
-        internal_event_sender,
-        conn_manager_shutdown_receiver,
         peers,
         banned_addrs,
         banned_peers,
+        internal_event_sender,
     )
     .unwrap_or_else(|e| {
         panic!("Fatal error: {}", e);
     });
 
-    let listen_address = conn_manager.listen_address.clone();
+    let listen_address = conn_manager_config.listen_address.clone();
+    let network = Network::new(config, command_sender, listen_address, local_id);
 
-    let peer_manager_task = tokio::spawn(peer_manager.run());
-    let conn_manager_task = tokio::spawn(conn_manager.run());
+    node_builder = node_builder
+        .with_worker_cfg::<PeerManager>(peer_manager_config)
+        .with_worker_cfg::<ConnectionManager>(conn_manager_config)
+        .with_resource(network);
 
-    shutdown.add_worker_shutdown(peer_manager_shutdown_sender, peer_manager_task);
-    shutdown.add_worker_shutdown(conn_manager_shutdown_sender, conn_manager_task);
-
-    (
-        Network::new(config, command_sender, listen_address, local_id),
-        event_receiver,
-    )
+    (node_builder, event_receiver)
 }
 
 pub trait ShortId
