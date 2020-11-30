@@ -9,10 +9,7 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use crate::{
-    worker::Worker,
-    event::Bus,
-};
+use crate::{event::Bus, worker::Worker};
 
 use bee_common::shutdown;
 use bee_storage::storage::Backend;
