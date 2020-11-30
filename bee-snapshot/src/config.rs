@@ -1,13 +1,5 @@
 // Copyright 2020 IOTA Stiftung
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 use crate::pruning::{PruningConfig, PruningConfigBuilder};
 
@@ -26,7 +18,7 @@ pub struct SnapshotConfigBuilder {
     depth: Option<u32>,
     interval_synced: Option<u32>,
     interval_unsynced: Option<u32>,
-    pruning: PruningConfigBuilder,
+    pruning: Option<PruningConfigBuilder>,
 }
 
 impl SnapshotConfigBuilder {
@@ -66,7 +58,7 @@ impl SnapshotConfigBuilder {
             depth: self.depth.unwrap_or(DEFAULT_DEPTH),
             interval_synced: self.interval_synced.unwrap_or(DEFAULT_INTERVAL_SYNCED),
             interval_unsynced: self.interval_unsynced.unwrap_or(DEFAULT_INTERVAL_UNSYNCED),
-            pruning: self.pruning.finish(),
+            pruning: self.pruning.unwrap_or_default().finish(),
         }
     }
 }

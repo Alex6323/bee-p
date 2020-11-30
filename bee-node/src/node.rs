@@ -1,13 +1,5 @@
 // Copyright 2020 IOTA Stiftung
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::NodeConfig, plugin, storage::Backend, version_checker::VersionCheckerWorker};
 
@@ -87,11 +79,8 @@ impl<B: Backend> BeeNode<B> {
 
         let mut network_events_stream = self.remove_resource::<NetworkEventStream>().unwrap();
 
-        let config = self.config();
-        let network = self.resource::<Network>();
         let mut runtime = NodeRuntime {
             peers: PeerList::default(),
-            config: &config,
             node: &self,
         };
 
@@ -118,7 +107,6 @@ impl<B: Backend> BeeNode<B> {
 
 struct NodeRuntime<'a, B: Backend> {
     peers: PeerList,
-    config: &'a NodeConfig<B>,
     node: &'a BeeNode<B>,
 }
 
@@ -147,8 +135,7 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
 
     #[inline]
     async fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr) {
-        let (receiver_tx, receiver_shutdown_tx) =
-            Protocol::register(self.node, &self.config.protocol, id.clone(), address).await;
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(self.node, id.clone(), address).await;
 
         self.peers.insert(id, (receiver_tx, receiver_shutdown_tx));
     }

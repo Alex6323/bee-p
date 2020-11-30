@@ -32,11 +32,15 @@ minimum_pow_score = 100
 [protocol.coordinator]
 public_key_count  = 2
 [[protocol.coordinator.public_key_ranges]]
-public_key  = "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c"
+public_key  = "7205c145525cee64f1c9363696811d239919d830ad964b4e29359e6475848f5a"
 start       = 0
 end         = 0
 [[protocol.coordinator.public_key_ranges]]
-public_key  = "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"
+public_key  = "e468e82df33d10dea3bd0eadcd7867946a674d207c39f5af4cc44365d268a7e6"
+start       = 0
+end         = 0
+[[protocol.coordinator.public_key_ranges]]
+public_key  = "0758028d34508079ba1f223907ac3bb5ce8f6bdccc6b961c7c85a2f460b30c1d"
 start       = 0
 end         = 0
 [protocol.workers]
@@ -56,4 +60,3 @@ delay   = 60480
 
 [database]
 path = "./database/alphanet"
-[database.storage]

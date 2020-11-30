@@ -1,13 +1,5 @@
 // Copyright 2020 IOTA Stiftung
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 use bee_common::logger::{LoggerConfig, LoggerConfigBuilder};
 use bee_network::{NetworkConfig, NetworkConfigBuilder};
@@ -39,12 +31,12 @@ pub enum Error {
 #[derive(Default, Deserialize)]
 pub struct NodeConfigBuilder<B: Backend> {
     pub(crate) network_id: Option<String>,
-    pub(crate) logger: LoggerConfigBuilder,
-    pub(crate) network: NetworkConfigBuilder,
-    pub(crate) peering: PeeringConfigBuilder,
-    pub(crate) protocol: ProtocolConfigBuilder,
-    pub(crate) snapshot: SnapshotConfigBuilder,
-    pub(crate) database: B::ConfigBuilder,
+    pub(crate) logger: Option<LoggerConfigBuilder>,
+    pub(crate) network: Option<NetworkConfigBuilder>,
+    pub(crate) peering: Option<PeeringConfigBuilder>,
+    pub(crate) protocol: Option<ProtocolConfigBuilder>,
+    pub(crate) snapshot: Option<SnapshotConfigBuilder>,
+    pub(crate) database: Option<B::ConfigBuilder>,
 }
 
 impl<B: Backend> NodeConfigBuilder<B> {
@@ -64,12 +56,12 @@ impl<B: Backend> NodeConfigBuilder<B> {
 
         NodeConfig {
             network_id,
-            logger: self.logger.finish(),
-            network: self.network.finish(),
-            peering: self.peering.finish(),
-            protocol: self.protocol.finish(),
-            snapshot: self.snapshot.finish(),
-            database: self.database.into(),
+            logger: self.logger.unwrap_or_default().finish(),
+            network: self.network.unwrap_or_default().finish(),
+            peering: self.peering.unwrap_or_default().finish(),
+            protocol: self.protocol.unwrap_or_default().finish(),
+            snapshot: self.snapshot.unwrap_or_default().finish(),
+            database: self.database.unwrap_or_default().into(),
         }
     }
 }

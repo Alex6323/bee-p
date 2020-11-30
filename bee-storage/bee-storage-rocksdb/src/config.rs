@@ -1,13 +1,5 @@
 // Copyright 2020 IOTA Stiftung
-//
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
-// an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 use crate::{compaction::CompactionStyle, compression::CompressionType};
 
@@ -62,7 +54,7 @@ impl StorageConfigBuilder {
 
 #[derive(Default, Deserialize)]
 pub struct RocksDBConfigBuilder {
-    storage: StorageConfigBuilder,
+    storage: Option<StorageConfigBuilder>,
     path: Option<String>,
     create_if_missing: Option<bool>,
     create_missing_column_families: Option<bool>,
@@ -97,7 +89,7 @@ impl RocksDBConfigBuilder {
 impl From<RocksDBConfigBuilder> for RocksDBConfig {
     fn from(builder: RocksDBConfigBuilder) -> Self {
         RocksDBConfig {
-            storage: builder.storage.finish(),
+            storage: builder.storage.unwrap_or_default().finish(),
             path: builder.path.unwrap_or_else(|| DEFAULT_PATH.to_string()),
             create_if_missing: builder.create_if_missing.unwrap_or(DEFAULT_CREATE_IF_MISSING),
             create_missing_column_families: builder
