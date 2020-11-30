@@ -267,6 +267,7 @@ dependencies = [
 [[package]]
 name = "bee-message"
 version = "0.1.0-alpha"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#39950c3bc11556b86bea70fc29ed2b31161312ac"
 dependencies = [
  "bech32",
  "bee-common",
