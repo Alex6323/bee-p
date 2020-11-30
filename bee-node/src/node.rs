@@ -3,6 +3,7 @@
 
 use crate::{config::NodeConfig, plugin, storage::Backend, version_checker::VersionCheckerWorker};
 
+use bee_api::config::RestApiConfig;
 use bee_common::{shutdown, shutdown_stream::ShutdownStream};
 use bee_common_ext::{
     event::Bus,
@@ -25,7 +26,6 @@ use log::{debug, info, trace, warn};
 use thiserror::Error;
 use tokio::spawn;
 
-use bee_api::config::RestApiConfig;
 use std::{
     any::{type_name, Any, TypeId},
     collections::{HashMap, HashSet},

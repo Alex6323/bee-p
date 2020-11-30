@@ -7,24 +7,27 @@ use crate::{
     types::{DataResponse, GetInfoResponse, GetMilestoneResponse, GetTipsResponse, *},
     NetworkId,
 };
+
 use bee_common::packable::Packable;
 use bee_common_ext::node::ResHandle;
 use bee_ledger::spent::Spent;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
 use bee_protocol::{tangle::MsTangle, MessageSubmitterError, MessageSubmitterWorkerEvent, MilestoneIndex};
 use bee_storage::access::Fetch;
+
 use blake2::Blake2s;
 use digest::Digest;
 use futures::channel::oneshot;
+use warp::{
+    http::{Response, StatusCode},
+    reject, Rejection, Reply,
+};
+
 use std::{
     convert::{Infallible, TryInto},
     iter::FromIterator,
     ops::Deref,
     time::{SystemTime, UNIX_EPOCH},
-};
-use warp::{
-    http::{Response, StatusCode},
-    reject, Rejection, Reply,
 };
 
 async fn is_healthy<B: Backend>(tangle: ResHandle<MsTangle<B>>) -> bool {
@@ -148,17 +151,16 @@ pub async fn post_raw_message(
         return Err(reject::custom(BadRequest("invalid message length")));
     }
 
-    let (message_inserted_notifier, message_inserted_waiter) =
-        oneshot::channel::<Result<MessageId, MessageSubmitterError>>();
+    let (notifier_tx, notifier_rx) = oneshot::channel::<Result<MessageId, MessageSubmitterError>>();
 
     message_submitter
         .send(MessageSubmitterWorkerEvent {
             buf: buf.to_vec(),
-            message_inserted_notifier,
+            notifier: notifier_tx,
         })
         .map_err(|_| reject::custom(ServiceUnavailable("service unavailable")))?;
 
-    match message_inserted_waiter
+    match notifier_rx
         .await
         .map_err(|_| reject::custom(ServiceUnavailable("service unavailable")))?
     {
@@ -568,6 +570,7 @@ pub mod tests {
 
     use super::*;
 
+    #[allow(dead_code)]
     pub fn message_without_payload() -> Message {
         Message::builder()
             .with_network_id(1)
@@ -583,6 +586,7 @@ pub mod tests {
             .unwrap()
     }
 
+    #[allow(dead_code)]
     pub fn indexation_message() -> Message {
         Message::builder()
             .with_network_id(1)
@@ -605,6 +609,7 @@ pub mod tests {
             .unwrap()
     }
 
+    #[allow(dead_code)]
     pub fn milestone_message() -> Message {
         Message::builder()
             //.with_network_id(1)

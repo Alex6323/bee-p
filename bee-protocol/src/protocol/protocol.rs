@@ -10,10 +10,10 @@ use crate::{
     tangle::MsTangle,
     worker::{
         BroadcasterWorker, HasherWorker, HeartbeaterWorker, KickstartWorker, MessageRequesterWorker,
-        MessageResponderWorker, MessageValidatorWorker, MilestoneConeUpdaterWorker, MilestoneRequesterWorker,
-        MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent, MilestoneValidatorWorker,
-        MpsWorker, PeerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones, StatusWorker, StorageWorker,
-        TangleWorker, TipPoolCleanerWorker,
+        MessageResponderWorker, MessageSubmitterWorker, MessageValidatorWorker, MilestoneConeUpdaterWorker,
+        MilestoneRequesterWorker, MilestoneResponderWorker, MilestoneSolidifierWorker, MilestoneSolidifierWorkerEvent,
+        MilestoneValidatorWorker, MpsWorker, PeerWorker, ProcessorWorker, PropagatorWorker, RequestedMilestones,
+        StatusWorker, StorageWorker, TangleWorker, TipPoolCleanerWorker,
     },
 };
 
@@ -29,7 +29,6 @@ use futures::channel::oneshot;
 use log::{debug, error, info};
 use tokio::task::spawn;
 
-use crate::worker::MessageSubmitterWorker;
 use std::sync::Arc;
 
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);

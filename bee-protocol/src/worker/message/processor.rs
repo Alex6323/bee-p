@@ -7,8 +7,9 @@ use crate::{
     protocol::Protocol,
     tangle::{MessageMetadata, MsTangle},
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, MessageRequesterWorker, MilestoneValidatorWorker,
-        MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent, RequestedMessages, TangleWorker,
+        message_submitter::MessageSubmitterError, BroadcasterWorker, BroadcasterWorkerEvent, MessageRequesterWorker,
+        MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent,
+        RequestedMessages, TangleWorker,
     },
 };
 
@@ -22,18 +23,16 @@ use blake2::{
     digest::{Update, VariableOutput},
     VarBlake2b,
 };
-use futures::stream::StreamExt;
+use futures::{channel::oneshot::Sender, stream::StreamExt};
 use log::{error, info, trace, warn};
 
-use crate::worker::message_submitter::MessageSubmitterError;
-use futures::channel::oneshot::Sender;
 use std::{any::TypeId, convert::Infallible};
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) pow_score: f64,
     pub(crate) from: Option<PeerId>,
     pub(crate) message_packet: MessagePacket,
-    pub(crate) message_inserted_notifier: Option<Sender<Result<MessageId, MessageSubmitterError>>>,
+    pub(crate) notifier: Option<Sender<Result<MessageId, MessageSubmitterError>>>,
 }
 
 pub(crate) struct ProcessorWorker {
@@ -76,7 +75,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 pow_score,
                 from,
                 message_packet,
-                message_inserted_notifier,
+                notifier,
             }) = receiver.next().await
             {
                 trace!("Processing received message...");
@@ -123,7 +122,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                 // store message
                 if let Some(message) = tangle.insert(message, message_id, metadata).await {
-                    if let Some(tx) = message_inserted_notifier {
+                    if let Some(tx) = notifier {
                         if let Err(e) = tx.send(Ok(message_id)) {
                             error!("Failed to return message id {}: {:?}.", message_id, e);
                         }

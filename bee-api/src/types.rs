@@ -17,6 +17,7 @@ impl<T: DataBody> DataResponse<T> {
     pub(crate) fn new(data: T) -> Self {
         Self { data }
     }
+    #[allow(dead_code)]
     /// Get the body of the response.
     pub(crate) fn body(&self) -> &T {
         &self.data
@@ -40,6 +41,7 @@ impl ErrorResponse {
     pub(crate) fn new(error: ErrorBody) -> Self {
         Self { error }
     }
+    #[allow(dead_code)]
     /// Get the body of the response.
     pub(crate) fn body(&self) -> &ErrorBody {
         &self.error

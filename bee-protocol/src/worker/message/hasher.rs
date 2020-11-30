@@ -6,7 +6,10 @@
 use crate::{
     packet::Message as MessagePacket,
     protocol::Protocol,
-    worker::message::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
+    worker::{
+        message::{HashCache, ProcessorWorker, ProcessorWorkerEvent},
+        message_submitter::MessageSubmitterError,
+    },
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
@@ -32,7 +35,6 @@ use futures::{
 use log::{info, trace, warn};
 use pin_project::pin_project;
 
-use crate::worker::message_submitter::MessageSubmitterError;
 use std::{any::TypeId, convert::Infallible, pin::Pin};
 
 // If a batch has less than this number of messages, the regular CurlP hasher is used instead of the batched one.
@@ -41,7 +43,7 @@ const BATCH_SIZE_THRESHOLD: usize = 3;
 pub(crate) struct HasherWorkerEvent {
     pub(crate) from: Option<PeerId>,
     pub(crate) message_packet: MessagePacket,
-    pub(crate) message_inserted_notifier: Option<Sender<Result<MessageId, MessageSubmitterError>>>,
+    pub(crate) notifier: Option<Sender<Result<MessageId, MessageSubmitterError>>>,
 }
 
 pub(crate) struct HasherWorker {
@@ -70,7 +72,7 @@ fn send_hashes(
         HasherWorkerEvent {
             from,
             message_packet,
-            message_inserted_notifier: message_inserted_tx,
+            notifier: message_inserted_tx,
         },
         hash,
     ) in events.drain(..).zip(hashes)
@@ -83,7 +85,7 @@ fn send_hashes(
             pow_score,
             from,
             message_packet,
-            message_inserted_notifier: message_inserted_tx,
+            notifier: message_inserted_tx,
         }) {
             warn!("Sending event to the processor worker failed: {}.", e);
         }

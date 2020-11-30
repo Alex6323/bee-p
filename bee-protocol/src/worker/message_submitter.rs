@@ -1,6 +1,11 @@
 // Copyright 2020 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{
+    packet::Message,
+    worker::{HasherWorker, HasherWorkerEvent},
+};
+
 use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
 use bee_common_ext::{node::Node, worker::Worker};
 use bee_message::MessageId;
@@ -9,10 +14,6 @@ use async_trait::async_trait;
 use futures::{channel::oneshot::Sender, stream::StreamExt};
 use log::{error, info};
 
-use crate::{
-    packet::Message,
-    worker::{HasherWorker, HasherWorkerEvent},
-};
 use std::{any::TypeId, fmt};
 
 #[derive(Debug)]
@@ -28,7 +29,7 @@ impl fmt::Display for MessageSubmitterError {
 
 pub struct MessageSubmitterWorkerEvent {
     pub buf: Vec<u8>,
-    pub message_inserted_notifier: Sender<Result<MessageId, MessageSubmitterError>>,
+    pub notifier: Sender<Result<MessageId, MessageSubmitterError>>,
 }
 
 pub struct MessageSubmitterWorker {
@@ -59,7 +60,7 @@ impl<N: Node> Worker<N> for MessageSubmitterWorker {
                 let event = HasherWorkerEvent {
                     from: None,
                     message_packet: Message::new(&event.buf),
-                    message_inserted_notifier: Some(event.message_inserted_notifier),
+                    notifier: Some(event.notifier),
                 };
 
                 if let Err(e) = hasher.send(event) {
