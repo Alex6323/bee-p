@@ -5,7 +5,7 @@ use crate::{
     milestone::MilestoneIndex,
     protocol::Protocol,
     tangle::MsTangle,
-    worker::{MilestoneRequesterWorker, RequestedMilestones, TangleWorker},
+    worker::{MilestoneRequesterWorker, MilestoneSolidifierWorker, RequestedMilestones, TangleWorker},
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
@@ -29,7 +29,13 @@ impl<N: Node> Worker<N> for KickstartWorker {
     type Error = Infallible;
 
     fn dependencies() -> &'static [TypeId] {
-        vec![TypeId::of::<MilestoneRequesterWorker>(), TypeId::of::<TangleWorker>()].leak()
+        vec![
+            TypeId::of::<MilestoneRequesterWorker>(),
+            TypeId::of::<TangleWorker>(),
+            // TODO Temporary until we find a better design for the kickstart
+            TypeId::of::<MilestoneSolidifierWorker>(),
+        ]
+        .leak()
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
