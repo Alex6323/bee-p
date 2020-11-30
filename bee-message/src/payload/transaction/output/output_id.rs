@@ -16,8 +16,6 @@ use crate::{
 
 use bee_common::packable::{Packable, Read, Write};
 
-use serde::{Deserialize, Serialize};
-
 use core::{
     convert::{From, TryInto},
     str::FromStr,
@@ -25,11 +23,13 @@ use core::{
 
 pub const OUTPUT_ID_LENGTH: usize = TRANSACTION_ID_LENGTH + std::mem::size_of::<u16>();
 
-#[derive(Clone, Copy, Eq, PartialEq, Deserialize, Serialize, Hash, Ord, PartialOrd)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct OutputId {
     transaction_id: TransactionId,
     index: u16,
 }
+
+string_serde_impl!(OutputId);
 
 impl From<[u8; OUTPUT_ID_LENGTH]> for OutputId {
     fn from(bytes: [u8; OUTPUT_ID_LENGTH]) -> Self {

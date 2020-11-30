@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 
 #[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize, Ord, PartialOrd)]
+#[serde(tag = "type", content = "data")]
 pub enum Output {
     SignatureLockedSingle(SignatureLockedSingleOutput),
 }

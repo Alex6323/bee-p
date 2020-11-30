@@ -14,15 +14,16 @@ use crate::Error;
 use bee_common::packable::{Packable, Read, Write};
 
 use bech32::{self, ToBase32};
-use serde::{Deserialize, Serialize};
 
 use alloc::{string::String, vec};
 use core::{convert::TryInto, str::FromStr};
 
 pub const ED25519_ADDRESS_LENGTH: usize = 32;
 
-#[derive(Clone, Eq, PartialEq, Deserialize, Serialize, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Ed25519Address([u8; ED25519_ADDRESS_LENGTH]);
+
+string_serde_impl!(Ed25519Address);
 
 impl From<[u8; ED25519_ADDRESS_LENGTH]> for Ed25519Address {
     fn from(bytes: [u8; ED25519_ADDRESS_LENGTH]) -> Self {
