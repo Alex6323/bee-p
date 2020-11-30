@@ -18,7 +18,7 @@ bee-message = { git = "https://github.com/iotaledger/bee.git", branch = "chrysal
 bee-network = { path = "../bee-network" }
 bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-snapshot = { path = "../bee-snapshot" }
-bee-storage = { path = "../bee-storage/bee-storage" }
+bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-tangle = { path = "../bee-tangle" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 

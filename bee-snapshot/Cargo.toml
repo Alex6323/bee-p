@@ -14,7 +14,7 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-common-ext = { path = "../bee-common-ext" }
 bee-message = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
-bee-storage = { path = "../bee-storage/bee-storage" }
+bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 
 async-trait = "0.1"
 bytemuck = "1.2"

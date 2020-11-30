@@ -16,7 +16,7 @@ bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-ledger = { path = "../../bee-ledger" }
 bee-message = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-protocol = { path = "../../bee-protocol" }
-bee-storage = { path = "../bee-storage" }
+bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-ternary = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 
 async-trait = "0.1"
