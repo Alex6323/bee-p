@@ -7,13 +7,13 @@ use crate::{
     protocol::Protocol,
     tangle::{MessageMetadata, MsTangle},
     worker::{
-        BroadcasterWorker, BroadcasterWorkerEvent, MessageRequesterWorker, MilestoneValidatorWorker,
-        MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent, RequestedMessages, TangleWorker,
+        message_submitter::MessageSubmitterError, BroadcasterWorker, BroadcasterWorkerEvent, MessageRequesterWorker,
+        MilestoneValidatorWorker, MilestoneValidatorWorkerEvent, PropagatorWorker, PropagatorWorkerEvent,
+        RequestedMessages, TangleWorker,
     },
 };
 
-use bee_common::{packable::Packable, shutdown_stream::ShutdownStream};
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common::{node::Node, packable::Packable, shutdown_stream::ShutdownStream, worker::Worker};
 use bee_message::{payload::Payload, Message, MessageId, MESSAGE_ID_LENGTH};
 use bee_network::PeerId;
 
@@ -22,15 +22,16 @@ use blake2::{
     digest::{Update, VariableOutput},
     VarBlake2b,
 };
-use futures::stream::StreamExt;
+use futures::{channel::oneshot::Sender, stream::StreamExt};
 use log::{error, info, trace, warn};
 
 use std::{any::TypeId, convert::Infallible};
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) pow_score: f64,
-    pub(crate) from: PeerId,
+    pub(crate) from: Option<PeerId>,
     pub(crate) message_packet: MessagePacket,
+    pub(crate) notifier: Option<Sender<Result<MessageId, MessageSubmitterError>>>,
 }
 
 pub(crate) struct ProcessorWorker {
@@ -73,6 +74,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                 pow_score,
                 from,
                 message_packet,
+                notifier,
             }) = receiver.next().await
             {
                 trace!("Processing received message...");
@@ -119,6 +121,12 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                 // store message
                 if let Some(message) = tangle.insert(message, message_id, metadata).await {
+                    if let Some(tx) = notifier {
+                        if let Err(e) = tx.send(Ok(message_id)) {
+                            error!("Failed to return message id {}: {:?}.", message_id, e);
+                        }
+                    }
+
                     // TODO this was temporarily moved from the tangle.
                     // Reason is that since the tangle is not a worker, it can't have access to the propagator tx.
                     // When the tangle is made a worker, this should be put back on.
@@ -157,7 +165,7 @@ impl<N: Node> Worker<N> for ProcessorWorker {
                         None => {
                             // Message was not requested.
                             if let Err(e) = broadcaster.send(BroadcasterWorkerEvent {
-                                source: Some(from),
+                                source: from,
                                 message: message_packet,
                             }) {
                                 warn!("Broadcasting message failed: {}.", e);

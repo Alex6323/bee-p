@@ -6,6 +6,7 @@
 mod broadcaster;
 mod heartbeater;
 mod message;
+mod message_submitter;
 mod message_validator;
 mod milestone_cone_updater;
 mod milestone_validator;
@@ -23,6 +24,7 @@ mod tip_pool_cleaner;
 pub(crate) use broadcaster::{BroadcasterWorker, BroadcasterWorkerEvent};
 pub(crate) use heartbeater::HeartbeaterWorker;
 pub(crate) use message::{HasherWorker, HasherWorkerEvent, ProcessorWorker};
+pub use message_submitter::{MessageSubmitterError, MessageSubmitterWorker, MessageSubmitterWorkerEvent};
 pub(crate) use message_validator::{MessageValidatorWorker, MessageValidatorWorkerEvent};
 pub(crate) use milestone_cone_updater::{MilestoneConeUpdaterWorker, MilestoneConeUpdaterWorkerEvent};
 pub(crate) use milestone_validator::{MilestoneValidatorWorker, MilestoneValidatorWorkerEvent};

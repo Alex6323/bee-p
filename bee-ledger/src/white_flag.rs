@@ -9,7 +9,7 @@ use crate::{
     storage::{self, Backend},
 };
 
-use bee_common_ext::node::{Node, ResHandle};
+use bee_common::node::{Node, ResHandle};
 use bee_message::{
     payload::{
         transaction::{Input, OutputId},

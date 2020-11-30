@@ -3,10 +3,12 @@
 
 use crate::{config::NodeConfig, plugin, storage::Backend, version_checker::VersionCheckerWorker};
 
-use bee_common::{shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::{
+use bee_api::config::RestApiConfig;
+use bee_common::{
     event::Bus,
     node::{Node, NodeBuilder, ResHandle},
+    shutdown,
+    shutdown_stream::ShutdownStream,
     worker::Worker,
 };
 use bee_network::{self, Event, Multiaddr, Network, PeerId, ShortId};
@@ -384,6 +386,9 @@ impl<B: Backend> NodeBuilder<BeeNode<B>> for BeeNodeBuilder<B> {
         );
 
         this = this.with_worker::<VersionCheckerWorker>();
+
+        info!("Initializing REST API...");
+        this = bee_api::init::<BeeNode<B>>(RestApiConfig::build().finish(), config.network_id.clone(), this).await; // TODO: Read config from file
 
         let mut node = BeeNode {
             workers: Map::new(),

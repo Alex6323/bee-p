@@ -3,8 +3,7 @@
 
 use crate::{tangle::MsTangle, worker::storage::StorageWorker, MilestoneIndex};
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common::{node::Node, shutdown_stream::ShutdownStream, worker::Worker};
 use bee_message::MessageId;
 use bee_snapshot::Snapshot;
 
