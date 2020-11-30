@@ -7,7 +7,6 @@ members = [
 	"bee-peering",
 	"bee-pow",
 	"bee-protocol",
-	"bee-snapshot",
 	"bee-storage/bee-storage-rocksdb",
 	"bee-tangle",
 	"bee-test",
