@@ -29,8 +29,8 @@ use futures::channel::oneshot;
 use log::{debug, error, info};
 use tokio::task::spawn;
 
-use std::sync::Arc;
 use crate::worker::MessageSubmitterWorker;
+use std::sync::Arc;
 
 static PROTOCOL: spin::RwLock<Option<&'static Protocol>> = spin::RwLock::new(None);
 

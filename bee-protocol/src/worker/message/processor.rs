@@ -25,9 +25,9 @@ use blake2::{
 use futures::stream::StreamExt;
 use log::{error, info, trace, warn};
 
-use std::{any::TypeId, convert::Infallible};
-use futures::channel::oneshot::Sender;
 use crate::worker::message_submitter::MessageSubmitterError;
+use futures::channel::oneshot::Sender;
+use std::{any::TypeId, convert::Infallible};
 
 pub(crate) struct ProcessorWorkerEvent {
     pub(crate) pow_score: f64,
@@ -123,7 +123,6 @@ impl<N: Node> Worker<N> for ProcessorWorker {
 
                 // store message
                 if let Some(message) = tangle.insert(message, message_id, metadata).await {
-
                     if let Some(tx) = message_inserted_notifier {
                         if let Err(e) = tx.send(Ok(message_id)) {
                             error!("Failed to return message id {}: {:?}.", message_id, e);
