@@ -154,7 +154,6 @@ impl Protocol {
 
     pub async fn register<N: Node>(
         node: &N,
-        config: &ProtocolConfig,
         id: PeerId,
         address: Multiaddr,
     ) -> (flume::Sender<Vec<u8>>, oneshot::Sender<()>) {

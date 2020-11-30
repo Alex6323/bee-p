@@ -31,7 +31,7 @@ pub enum LedgerWorkerEvent {
 }
 
 pub(crate) struct LedgerWorker {
-    pub(crate) tx: flume::Sender<LedgerWorkerEvent>,
+    // pub(crate) tx: flume::Sender<LedgerWorkerEvent>,
 }
 
 async fn confirm<N: Node>(
@@ -153,7 +153,7 @@ where
     }
 
     async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
-        let (tx, rx) = flume::unbounded();
+        let (_tx, rx) = flume::unbounded();
 
         let tangle = node.resource::<MsTangle<N::Backend>>();
         let storage = node.storage();
@@ -186,7 +186,7 @@ where
             info!("Stopped.");
         });
 
-        Ok(Self { tx })
+        Ok(Self {})
     }
 }
 

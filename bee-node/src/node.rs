@@ -56,6 +56,7 @@ pub struct BeeNode<B> {
     resources: Map<dyn AnyMapAny + Send + Sync>,
     worker_stops: HashMap<TypeId, Box<WorkerStop<Self>>>,
     worker_order: Vec<TypeId>,
+    #[allow(dead_code)]
     shutdown: Shutdown,
     phantom: PhantomData<B>,
 }
@@ -81,11 +82,8 @@ impl<B: Backend> BeeNode<B> {
 
         let mut network_events_stream = self.remove_resource::<NetworkEventStream>().unwrap();
 
-        let config = self.config();
-        let network = self.resource::<Network>();
         let mut runtime = NodeRuntime {
             peers: PeerList::default(),
-            config: &config,
             node: &self,
         };
 
@@ -112,7 +110,6 @@ impl<B: Backend> BeeNode<B> {
 
 struct NodeRuntime<'a, B: Backend> {
     peers: PeerList,
-    config: &'a NodeConfig<B>,
     node: &'a BeeNode<B>,
 }
 
@@ -141,8 +138,7 @@ impl<'a, B: Backend> NodeRuntime<'a, B> {
 
     #[inline]
     async fn peer_connected_handler(&mut self, id: PeerId, address: Multiaddr) {
-        let (receiver_tx, receiver_shutdown_tx) =
-            Protocol::register(self.node, &self.config.protocol, id.clone(), address).await;
+        let (receiver_tx, receiver_shutdown_tx) = Protocol::register(self.node, id.clone(), address).await;
 
         self.peers.insert(id, (receiver_tx, receiver_shutdown_tx));
     }

@@ -62,6 +62,7 @@ impl ProtocolMetrics {
         self.invalid_packets.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn invalid_packets_inc(&self) -> u64 {
         self.invalid_packets.fetch_add(1, Ordering::SeqCst)
     }
