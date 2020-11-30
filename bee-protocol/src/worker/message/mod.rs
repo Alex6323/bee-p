@@ -20,7 +20,7 @@ pub(crate) use processor::{ProcessorWorker, ProcessorWorkerEvent};
 //     };
 //
 //     use bee_common::shutdown_stream::ShutdownStream;
-//     use bee_common_ext::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
+//     use bee_common::{bee_node::BeeNode, event::Bus, node::Node, worker::Worker};
 //     use bee_crypto::ternary::Hash;
 //     use bee_network::{EndpointId, NetworkConfig};
 //

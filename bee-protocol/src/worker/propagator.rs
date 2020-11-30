@@ -12,7 +12,7 @@ use crate::{
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{event::Bus, node::Node, worker::Worker};
+use bee_common::{event::Bus, node::Node, worker::Worker};
 use bee_message::MessageId;
 
 use async_trait::async_trait;

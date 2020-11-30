@@ -19,7 +19,7 @@ use storage::Backend;
 use worker::LedgerWorker;
 pub use worker::LedgerWorkerEvent;
 
-use bee_common_ext::{
+use bee_common::{
     event::Bus,
     node::{Node, NodeBuilder},
 };

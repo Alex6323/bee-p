@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{handlers, NetworkId};
-use bee_common_ext::node::ResHandle;
+use bee_common::node::ResHandle;
 use serde::de::DeserializeOwned;
 use warp::{reject, Filter, Rejection};
 

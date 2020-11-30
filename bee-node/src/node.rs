@@ -5,7 +5,7 @@ use crate::{config::NodeConfig, plugin, storage::Backend, version_checker::Versi
 
 use bee_api::config::RestApiConfig;
 use bee_common::{shutdown, shutdown_stream::ShutdownStream};
-use bee_common_ext::{
+use bee_common::{
     event::Bus,
     node::{Node, NodeBuilder, ResHandle},
     shutdown_tokio::Shutdown,

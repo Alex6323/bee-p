@@ -7,7 +7,7 @@ use crate::{
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common::{node::Node, worker::Worker};
 
 use async_trait::async_trait;
 use futures::StreamExt;

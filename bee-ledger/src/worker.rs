@@ -7,7 +7,7 @@ use crate::{
 };
 
 use bee_common::shutdown_stream::ShutdownStream;
-use bee_common_ext::{
+use bee_common::{
     event::Bus,
     node::{Node, ResHandle},
     worker::Worker,

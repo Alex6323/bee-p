@@ -13,7 +13,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use bee_common::worker::Error as WorkerError;
-use bee_common_ext::{
+use bee_common::{
     node::{Node, NodeBuilder},
     worker::Worker,
 };

@@ -19,7 +19,7 @@ mod common;
 
 use common::*;
 
-use bee_common_ext::shutdown_tokio::Shutdown;
+use bee_common::shutdown_tokio::Shutdown;
 use bee_network::{Command::*, Event, EventReceiver, Keypair, Multiaddr, Network, NetworkConfig, PeerId};
 
 use futures::{

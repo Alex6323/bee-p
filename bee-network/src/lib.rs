@@ -35,7 +35,7 @@ use conns::ConnectionManager;
 use interaction::events::InternalEvent;
 use peers::{BannedAddrList, BannedPeerList, PeerList, PeerManager};
 
-use bee_common_ext::shutdown_tokio::Shutdown;
+use bee_common::shutdown_tokio::Shutdown;
 
 use futures::channel::oneshot;
 use libp2p::identity;

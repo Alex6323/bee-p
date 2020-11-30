@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use bee_common_ext::node::ResHandle;
+use bee_common::node::ResHandle;
 use bee_storage::storage::Backend;
 
 use futures::{channel::oneshot, future::FutureExt};

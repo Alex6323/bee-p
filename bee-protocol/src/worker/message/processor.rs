@@ -14,7 +14,7 @@ use crate::{
 };
 
 use bee_common::{packable::Packable, shutdown_stream::ShutdownStream};
-use bee_common_ext::{node::Node, worker::Worker};
+use bee_common::{node::Node, worker::Worker};
 use bee_message::{payload::Payload, Message, MessageId, MESSAGE_ID_LENGTH};
 use bee_network::PeerId;
 

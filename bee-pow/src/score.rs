@@ -1,7 +1,7 @@
 // Copyright 2020 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use bee_common_ext::b1t6;
+use bee_common::b1t6;
 use bee_crypto::ternary::{
     sponge::{CurlP81, Sponge},
     HASH_LENGTH,
