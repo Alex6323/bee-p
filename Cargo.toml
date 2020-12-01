@@ -3,7 +3,6 @@ members = [
 	"bee-api",
 	"bee-ledger",
 	"bee-node",
-	"bee-peering",
 	"bee-protocol",
 	"bee-storage/bee-storage-rocksdb",
 	"bee-test",

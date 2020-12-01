@@ -17,7 +17,7 @@ bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-ledger = { path = "../bee-ledger" }
 bee-message = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-network = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
-bee-peering = { path = "../bee-peering" }
+bee-peering = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-protocol = { path = "../bee-protocol" }
 bee-snapshot = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
