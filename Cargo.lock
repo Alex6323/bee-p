@@ -224,7 +224,7 @@ dependencies = [
 [[package]]
 name = "bee-common"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-storage",
@@ -263,7 +263,7 @@ dependencies = [
 [[package]]
 name = "bee-ledger"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -286,7 +286,7 @@ dependencies = [
 [[package]]
 name = "bee-message"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "bech32",
  "bee-common",
@@ -302,7 +302,7 @@ dependencies = [
 [[package]]
 name = "bee-network"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -351,7 +351,7 @@ dependencies = [
 [[package]]
 name = "bee-peering"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-network",
@@ -363,7 +363,7 @@ dependencies = [
 [[package]]
 name = "bee-protocol"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -409,7 +409,7 @@ dependencies = [
 [[package]]
 name = "bee-snapshot"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -428,7 +428,7 @@ dependencies = [
 [[package]]
 name = "bee-storage"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "futures",
@@ -438,6 +438,7 @@ dependencies = [
 [[package]]
 name = "bee-storage-rocksdb"
 version = "0.1.0-alpha"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -447,20 +448,18 @@ dependencies = [
  "bee-protocol",
  "bee-storage",
  "bee-ternary",
- "bee-test",
  "futures",
  "num_cpus",
  "pin-project 1.0.2",
  "rocksdb",
  "serde",
  "thiserror",
- "tokio",
 ]
 
 [[package]]
 name = "bee-tangle"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#9c07405f981aaf8a8f7bd3fa350551a9a702bc3d"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#3e2f0cd152f910e69ef576a7f10ab9dc520440cc"
 dependencies = [
  "async-trait",
  "bee-crypto",
@@ -3294,7 +3293,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.6.5",
  "static_assertions",
 ]
 

@@ -21,7 +21,7 @@ bee-peering = { git = "https://github.com/iotaledger/bee.git", branch = "chrysal
 bee-protocol = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-snapshot = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
-bee-storage-rocksdb = { path = "../bee-storage/bee-storage-rocksdb" }
+bee-storage-rocksdb = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 
 anymap = "0.12"
 async-trait = "0.1"
