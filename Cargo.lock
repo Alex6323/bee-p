@@ -224,7 +224,7 @@ dependencies = [
 [[package]]
 name = "bee-common"
 version = "0.1.1-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#7daa77bf3a8a53b92448f0225324d39ba91d7689"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#ff37ba9bc61cceec9ee185e5665765d56baa6126"
 dependencies = [
  "async-trait",
  "bee-storage",
@@ -287,7 +287,7 @@ dependencies = [
 [[package]]
 name = "bee-message"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#7daa77bf3a8a53b92448f0225324d39ba91d7689"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#ff37ba9bc61cceec9ee185e5665765d56baa6126"
 dependencies = [
  "bech32",
  "bee-common",
@@ -303,18 +303,16 @@ dependencies = [
 [[package]]
 name = "bee-network"
 version = "0.1.0-alpha"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#ff37ba9bc61cceec9ee185e5665765d56baa6126"
 dependencies = [
  "async-trait",
  "bee-common",
  "dashmap",
- "env_logger",
  "flume",
  "futures",
  "libp2p",
  "log",
- "pretty_env_logger",
  "serde",
- "structopt",
  "thiserror",
  "tokio",
  "url",
@@ -410,7 +408,7 @@ dependencies = [
 [[package]]
 name = "bee-snapshot"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#7daa77bf3a8a53b92448f0225324d39ba91d7689"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#ff37ba9bc61cceec9ee185e5665765d56baa6126"
 dependencies = [
  "async-trait",
  "bee-common",
@@ -429,7 +427,7 @@ dependencies = [
 [[package]]
 name = "bee-storage"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#7daa77bf3a8a53b92448f0225324d39ba91d7689"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#ff37ba9bc61cceec9ee185e5665765d56baa6126"
 dependencies = [
  "async-trait",
  "futures",
@@ -461,7 +459,7 @@ dependencies = [
 [[package]]
 name = "bee-tangle"
 version = "0.1.0-alpha"
-source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#7daa77bf3a8a53b92448f0225324d39ba91d7689"
+source = "git+https://github.com/iotaledger/bee.git?branch=chrysalis-pt-2#ff37ba9bc61cceec9ee185e5665765d56baa6126"
 dependencies = [
  "async-trait",
  "bee-crypto",
@@ -2245,16 +2243,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
 
 [[package]]
-name = "pretty_env_logger"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
-dependencies = [
- "env_logger",
- "log",
-]
-
-[[package]]
 name = "proc-macro-error"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3305,7 +3293,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.6.5",
  "static_assertions",
 ]
 

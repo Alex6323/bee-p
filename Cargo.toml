@@ -2,7 +2,6 @@
 members = [
 	"bee-api",
 	"bee-ledger",
-	"bee-network",
 	"bee-node",
 	"bee-peering",
 	"bee-protocol",

@@ -14,7 +14,7 @@ homepage = "https://www.iota.org"
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-message = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
-bee-network = { path = "../bee-network" }
+bee-network = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-signing = { git = "https://github.com/iotaledger/bee.git", branch = "dev" }
 bee-snapshot = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 bee-storage = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
