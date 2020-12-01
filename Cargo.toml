@@ -1,5 +1,4 @@
 [workspace]
 members = [
-	"bee-node",
 	"bee-test",
 ]
