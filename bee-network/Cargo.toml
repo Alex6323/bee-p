@@ -13,6 +13,7 @@ homepage = "https://www.iota.org"
 [dependencies]
 bee-common = { git = "https://github.com/iotaledger/bee.git", branch = "chrysalis-pt-2" }
 
+async-trait = "0.1"
 dashmap = "3.11"
 flume = "0.9"
 futures = "0.3"

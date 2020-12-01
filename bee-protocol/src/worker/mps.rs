@@ -3,8 +3,7 @@
 
 use crate::{event::TpsMetricsUpdated, protocol::Protocol};
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_common::{event::Bus, node::Node, worker::Worker};
+use bee_common::{event::Bus, node::Node, shutdown_stream::ShutdownStream, worker::Worker};
 
 use async_trait::async_trait;
 use futures::StreamExt;

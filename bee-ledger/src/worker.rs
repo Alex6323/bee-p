@@ -6,10 +6,10 @@ use crate::{
     storage::Backend, white_flag::visit_dfs,
 };
 
-use bee_common::shutdown_stream::ShutdownStream;
 use bee_common::{
     event::Bus,
     node::{Node, ResHandle},
+    shutdown_stream::ShutdownStream,
     worker::Worker,
 };
 use bee_message::{payload::Payload, MessageId};

@@ -80,9 +80,9 @@ pub async fn dial_peer(
 #[inline]
 fn log_dialing_peer(peer_id: &PeerId, peer_info: &PeerInfo) {
     if let Some(alias) = peer_info.alias.as_ref() {
-        info!("Dialing '{}/{}' [{}]...", alias, peer_id.short(), peer_info.address,);
+        info!("Dialing '{}/{}'...", alias, peer_id.short());
     } else {
-        info!("Dialing '{}' [{}]...", peer_id.short(), peer_info.address);
+        info!("Dialing '{}'...", peer_id.short());
     }
 }
 
@@ -99,7 +99,7 @@ pub async fn dial_address(
         return Err(Error::DialedBannedAddress(address.clone()));
     }
 
-    info!("Dialing [{}]...", address);
+    info!("Dialing...");
 
     let (peer_id, muxer) = build_transport(local_keys)
         .map_err(|_| Error::CreatingTransportFailed)?
@@ -136,11 +136,7 @@ pub async fn dial_address(
             .insert(peer_id.clone(), peer_info.clone(), PeerState::Disconnected)
             .map_err(|_| Error::DialedRejectedPeer(peer_id.short()))?;
 
-        info!(
-            "Allowing connection to unknown peer '{}' [{}]",
-            peer_id.short(),
-            peer_info.address
-        );
+        info!("Allowing connection to unknown peer '{}'", peer_id.short(),);
 
         peer_info
     };
@@ -163,16 +159,11 @@ pub async fn dial_address(
 fn log_outbound_connection_success(peer_id: &PeerId, peer_info: &PeerInfo) {
     if let Some(alias) = peer_info.alias.as_ref() {
         info!(
-            "Established (outbound) connection with '{}/{}' [{}].",
+            "Established (outbound) connection with '{}/{}'.",
             alias,
             peer_id.short(),
-            peer_info.address,
         )
     } else {
-        info!(
-            "Established (outbound) connection with '{}' [{:?}].",
-            peer_id.short(),
-            peer_info.address,
-        );
+        info!("Established (outbound) connection with '{}'.", peer_id.short(),);
     }
 }

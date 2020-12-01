@@ -8,8 +8,7 @@ use crate::{
     worker::{MessageRequesterWorker, MessageRequesterWorkerEvent, RequestedMessages, TangleWorker},
 };
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_common::{node::Node, worker::Worker};
+use bee_common::{node::Node, shutdown_stream::ShutdownStream, worker::Worker};
 use bee_storage::storage::Backend;
 use bee_tangle::traversal;
 

@@ -12,10 +12,9 @@ use crate::{
     types::{ErrorBody, ErrorResponse},
 };
 use async_trait::async_trait;
-use bee_common::worker::Error as WorkerError;
 use bee_common::{
     node::{Node, NodeBuilder},
-    worker::Worker,
+    worker::{Error as WorkerError, Worker},
 };
 use bee_protocol::{tangle::MsTangle, MessageSubmitterWorker, TangleWorker};
 use log::info;

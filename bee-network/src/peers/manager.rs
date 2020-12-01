@@ -13,13 +13,16 @@ use crate::{
 
 use super::{errors::Error, BannedAddrList, BannedPeerList, PeerInfo, PeerList};
 
-use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
+use bee_common::{node::Node, shutdown_stream::ShutdownStream, worker::Worker};
 
-use futures::{select, FutureExt, StreamExt};
+use async_trait::async_trait;
+use futures::StreamExt;
 use libp2p::{identity, Multiaddr, PeerId};
 use log::*;
+use tokio::time;
 
 use std::{
+    convert::Infallible,
     sync::atomic::{AtomicUsize, Ordering},
     time::Duration,
 };
@@ -29,117 +32,151 @@ type CommandReceiver = flume::Receiver<Command>;
 pub static NUM_COMMAND_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
 pub static NUM_EVENT_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
 
-pub struct PeerManager {
+#[derive(Default)]
+pub struct PeerManager {}
+
+pub struct PeerManagerConfig {
     local_keys: identity::Keypair,
-    command_receiver: flume::r#async::RecvStream<'static, Command>,
     event_sender: EventSender,
-    internal_event_receiver: flume::r#async::RecvStream<'static, InternalEvent>,
     internal_event_sender: InternalEventSender,
     peers: PeerList,
     banned_addrs: BannedAddrList,
     banned_peers: BannedPeerList,
-    shutdown_listener: ShutdownListener,
+    command_receiver: flume::r#async::RecvStream<'static, Command>,
+    internal_event_receiver: flume::r#async::RecvStream<'static, InternalEvent>,
 }
 
-impl PeerManager {
+impl PeerManagerConfig {
     pub fn new(
         local_keys: identity::Keypair,
-        command_receiver: CommandReceiver,
-        event_sender: EventSender,
-        internal_event_receiver: InternalEventReceiver,
-        internal_event_sender: InternalEventSender,
         peers: PeerList,
         banned_addrs: BannedAddrList,
         banned_peers: BannedPeerList,
-        shutdown_listener: ShutdownListener,
+        event_sender: EventSender,
+        internal_event_sender: InternalEventSender,
+        command_receiver: CommandReceiver,
+        internal_event_receiver: InternalEventReceiver,
     ) -> Self {
         Self {
             local_keys,
-            command_receiver: command_receiver.into_stream(),
-            event_sender,
-            internal_event_receiver: internal_event_receiver.into_stream(),
-            internal_event_sender,
             peers,
             banned_addrs,
             banned_peers,
-            shutdown_listener,
+            event_sender,
+            internal_event_sender,
+            command_receiver: command_receiver.into_stream(),
+            internal_event_receiver: internal_event_receiver.into_stream(),
         }
     }
+}
 
-    pub async fn run(self) -> Result<(), WorkerError> {
-        trace!("Peer Manager started.");
+#[async_trait]
+impl<N: Node> Worker<N> for PeerManager {
+    type Config = PeerManagerConfig;
+    type Error = Infallible;
 
-        let PeerManager {
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
+        let PeerManagerConfig {
             local_keys,
-            mut command_receiver,
-            event_sender,
-            mut internal_event_receiver,
-            internal_event_sender,
             peers,
             banned_addrs,
             banned_peers,
-            shutdown_listener,
-        } = self;
+            event_sender,
+            internal_event_sender,
+            command_receiver,
+            internal_event_receiver,
+        } = config;
 
-        spawn_reconnector_task(&peers, internal_event_sender.clone());
+        let local_keys_clone = local_keys.clone();
+        let peers_clone = peers.clone();
+        let banned_addrs_clone = banned_addrs.clone();
+        let banned_peers_clone = banned_peers.clone();
+        let event_sender_clone = event_sender.clone();
+        let internal_event_sender_clone = internal_event_sender.clone();
 
-        let mut fused_shutdown_listener = shutdown_listener.fuse();
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            trace!("Command processor started.");
 
-        loop {
-            select! {
-                _ = fused_shutdown_listener => {
-                    trace!("Peer Manager received shutdown signal.");
-                    break;
-                },
-                command = command_receiver.next() => {
-                    let command = if let Some(command) = command {
-                        command
-                    } else {
-                        error!("Fatal: Command channel unexpectedly stopped.");
-                        break;
-                    };
+            let mut commands = ShutdownStream::new(shutdown, command_receiver);
 
-                    if let Err(e) = process_command(
-                        command,
-                        &local_keys,
-                        &peers,
-                        &banned_addrs,
-                        &banned_peers,
-                        &event_sender,
-                        &internal_event_sender
-                    ).await {
-                        error!("Error processing command. Error: {}", e);
-                        NUM_COMMAND_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                        continue;
-                    }
-                },
-                internal_event = internal_event_receiver.next() => {
-                    let internal_event = if let Some(internal_event) = internal_event {
-                        internal_event
-                    } else {
-                        error!("Fatal: Internal event channel unexpectedly stopped.");
-                        break;
-                    };
-
-                    if let Err(e) = process_internal_event(
-                        internal_event,
-                        &local_keys,
-                        &peers,
-                        &banned_addrs,
-                        &banned_peers,
-                        &event_sender,
-                        &internal_event_sender
-                    ).await {
-                        error!("Error processing internal event. Error: {}", e);
-                        NUM_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                        continue;
-                    }
-                },
+            while let Some(command) = commands.next().await {
+                if let Err(e) = process_command(
+                    command,
+                    &local_keys_clone,
+                    &peers_clone,
+                    &banned_addrs_clone,
+                    &banned_peers_clone,
+                    &event_sender_clone,
+                    &internal_event_sender_clone,
+                )
+                .await
+                {
+                    error!("Error processing command. Cause: {}", e);
+                    NUM_COMMAND_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                    continue;
+                }
             }
-        }
 
-        trace!("Peer Manager stopped.");
-        Ok(())
+            trace!("Command processor stopped.");
+        });
+
+        let peers_clone = peers.clone();
+        let internal_event_sender_clone = internal_event_sender.clone();
+
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            trace!("Internal event processor started.");
+
+            let mut internal_events = ShutdownStream::new(shutdown, internal_event_receiver);
+
+            while let Some(internal_event) = internal_events.next().await {
+                if let Err(e) = process_internal_event(
+                    internal_event,
+                    &local_keys,
+                    &peers_clone,
+                    &banned_addrs,
+                    &banned_peers,
+                    &event_sender,
+                    &internal_event_sender_clone,
+                )
+                .await
+                {
+                    error!("Error processing internal event. Cause: {}", e);
+                    NUM_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                    continue;
+                }
+            }
+
+            trace!("Internal event processor stopped.");
+        });
+
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            trace!("Reconnector started.");
+
+            let mut connected_check = ShutdownStream::new(
+                shutdown,
+                time::interval(Duration::from_millis(RECONNECT_MILLIS.load(Ordering::Relaxed))),
+            );
+
+            while connected_check.next().await.is_some() {
+                // Check, if there are any disconnected known peers, and schedule a reconnect attempt for each of
+                // those.
+                for peer_id in peers.iter_if(|info, state| info.is_known() && state.is_disconnected()) {
+                    if let Err(e) = internal_event_sender
+                        .send_async(InternalEvent::ReconnectScheduled { peer_id })
+                        .await
+                        .map_err(|_| Error::InternalEventSendFailure("ReconnectScheduled"))
+                    {
+                        warn!("{:?}", e)
+                    }
+                }
+            }
+
+            trace!("Reconnector stopped.");
+        });
+
+        trace!("Peer Manager started.");
+
+        Ok(Self::default())
     }
 }
 
@@ -468,29 +505,6 @@ async fn dial_address(
     }
 
     Ok(())
-}
-
-fn spawn_reconnector_task(peers: &PeerList, internal_event_sender: InternalEventSender) {
-    let mut interval = tokio::time::interval(Duration::from_millis(RECONNECT_MILLIS.load(Ordering::Relaxed)));
-
-    let peers_clone = peers.clone();
-
-    tokio::spawn(async move {
-        loop {
-            let _ = interval.tick().await;
-
-            // Check, if there are any disconnected known peers, and schedule a reconnect attempt for each of those.
-            for peer_id in peers_clone.iter_if(|info, state| info.is_known() && state.is_disconnected()) {
-                if let Err(e) = internal_event_sender
-                    .send_async(InternalEvent::ReconnectScheduled { peer_id })
-                    .await
-                    .map_err(|_| Error::InternalEventSendFailure("ReconnectScheduled"))
-                {
-                    warn!("{:?}", e)
-                }
-            }
-        }
-    });
 }
 
 #[inline]

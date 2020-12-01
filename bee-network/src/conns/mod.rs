@@ -7,7 +7,7 @@ mod manager;
 
 pub use dial::*;
 pub use errors::Error;
-pub use manager::ConnectionManager;
+pub use manager::*;
 
 use crate::{
     interaction::events::{InternalEvent, InternalEventSender},

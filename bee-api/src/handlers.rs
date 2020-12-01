@@ -8,8 +8,7 @@ use crate::{
     NetworkId,
 };
 
-use bee_common::packable::Packable;
-use bee_common::node::ResHandle;
+use bee_common::{node::ResHandle, packable::Packable};
 use bee_ledger::spent::Spent;
 use bee_message::{payload::milestone::MilestoneEssence, prelude::*};
 use bee_protocol::{tangle::MsTangle, MessageSubmitterError, MessageSubmitterWorkerEvent, MilestoneIndex};

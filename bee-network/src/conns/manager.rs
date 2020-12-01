@@ -10,9 +10,10 @@ use crate::{
 
 use super::{errors::Error, spawn_connection_handler, Origin};
 
-use bee_common::{shutdown::ShutdownListener, worker::Error as WorkerError};
+use bee_common::{node::Node, shutdown_stream::ShutdownStream, worker::Worker};
 
-use futures::{prelude::*, select};
+use async_trait::async_trait;
+use futures::prelude::*;
 use libp2p::{
     core::{muxing::StreamMuxerBox, transport::ListenerEvent},
     identity, Transport,
@@ -20,6 +21,7 @@ use libp2p::{
 use log::*;
 
 use std::{
+    convert::Infallible,
     io,
     pin::Pin,
     sync::atomic::{AtomicUsize, Ordering},
@@ -30,25 +32,26 @@ type PeerListener = Pin<Box<dyn Stream<Item = Result<ListenerEvent<ListenerUpgra
 
 pub static NUM_LISTENER_EVENT_PROCESSING_ERRORS: AtomicUsize = AtomicUsize::new(0);
 
-pub struct ConnectionManager {
+#[derive(Default)]
+pub struct ConnectionManager {}
+
+pub struct ConnectionManagerConfig {
     pub listen_address: Multiaddr,
-    internal_event_sender: InternalEventSender,
     peers: PeerList,
     banned_addrs: BannedAddrList,
     banned_peers: BannedPeerList,
     peer_listener: PeerListener,
-    shutdown_listener: ShutdownListener,
+    internal_event_sender: InternalEventSender,
 }
 
-impl ConnectionManager {
+impl ConnectionManagerConfig {
     pub fn new(
         local_keys: identity::Keypair,
         bind_address: Multiaddr,
-        internal_event_sender: InternalEventSender,
-        shutdown_listener: ShutdownListener,
         peers: PeerList,
         banned_addrs: BannedAddrList,
         banned_peers: BannedPeerList,
+        internal_event_sender: InternalEventSender,
     ) -> Result<Self, Error> {
         // Create underlying Tcp connection and negotiate Noise and Mplex/Yamux
         let transport = build_transport(&local_keys).map_err(|_| Error::CreatingTransportFailed)?;
@@ -69,143 +72,160 @@ impl ConnectionManager {
 
         Ok(Self {
             listen_address,
-            internal_event_sender,
             peers,
             banned_peers,
             banned_addrs,
             peer_listener,
-            shutdown_listener,
+            internal_event_sender,
         })
     }
+}
 
-    pub async fn run(self) -> Result<(), WorkerError> {
-        trace!("Connection Manager started.");
+#[async_trait]
+impl<N: Node> Worker<N> for ConnectionManager {
+    type Config = ConnectionManagerConfig;
+    type Error = Infallible;
 
-        let ConnectionManager {
-            internal_event_sender,
+    async fn start(node: &mut N, config: Self::Config) -> Result<Self, Self::Error> {
+        let ConnectionManagerConfig {
             peers,
             banned_peers,
             banned_addrs,
             peer_listener,
-            shutdown_listener,
+            internal_event_sender,
             ..
-        } = self;
+        } = config;
 
-        let mut fused_incoming_streams = peer_listener.fuse();
-        let mut fused_shutdown_listener = shutdown_listener.fuse();
+        // let mut fused_incoming_streams = peer_listener.fuse();
 
-        loop {
-            select! {
-                _ = fused_shutdown_listener => {
-                    trace!("Connection Manager received shutdown signal.");
-                    break;
-                },
-                listener_event = fused_incoming_streams.next() => {
-                    if let Some(listener_event) = listener_event {
-                        if let Ok(listener_event) = listener_event {
-                            if let Some((upgrade, peer_address)) = listener_event.into_upgrade() {
+        node.spawn::<Self, _, _>(|shutdown| async move {
+            trace!("Peer listener started.");
 
-                                // TODO: try again to move this block into its own function (beware: lifetime issues ahead!!!)
+            let mut incoming = ShutdownStream::new(shutdown, peer_listener);
 
-                                // Prevent accepting from banned addresses.
-                                let peer_address_str = peer_address.to_string();
-                                if banned_addrs.contains(&peer_address_str) {
-                                    trace!("Ignoring peer. Cause: '{}' is banned.", peer_address_str);
-                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                    continue;
-                                }
+            while let Some(Ok(listener_event)) = incoming.next().await {
+                //
+                if let Some((upgrade, peer_address)) = listener_event.into_upgrade() {
+                    // TODO: try again to move this block into its own function (beware: lifetime issues ahead!!!)
 
-                                let (peer_id, muxer) = match upgrade.await {
-                                    Ok(u) => u,
-                                    Err(_) => {
-                                        trace!("Ignoring peer. Cause: Handshake failed.");
-                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                        continue;
-                                    }
-                                };
+                    // Prevent accepting from banned addresses.
+                    let peer_address_str = peer_address.to_string();
+                    if banned_addrs.contains(&peer_address_str) {
+                        trace!("Ignoring peer. Cause: '{}' is banned.", peer_address_str);
+                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
 
-                                // Prevent accepting duplicate connections.
-                                if let Ok(connected) = peers.is(&peer_id, |_, state| state.is_connected()) {
-                                    if connected {
-                                        trace!("Already connected to {}", peer_id);
-                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                        continue;
-                                    }
-                                }
-
-                                // Prevent accepting banned peers.
-                                if banned_peers.contains(&peer_id) {
-                                    trace!("Ignoring peer. Cause: '{}' is banned.", peer_id);
-                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                    continue;
-                                }
-
-                                let peer_info = if let Ok(peer_info) = peers.get_info(&peer_id) {
-                                    // If we have this peer id in our peerlist (but are not already connected to it),
-                                    // then we allow the connection.
-                                    peer_info
-                                } else {
-                                    let peer_info = PeerInfo {
-                                        address: peer_address,
-                                        alias: None,
-                                        relation: PeerRelation::Unknown
-                                    };
-
-                                    if peers.insert(peer_id.clone(), peer_info.clone(), PeerState::Disconnected).is_err() {
-                                        trace!("Ignoring peer. Cause: Denied by peerlist.");
-                                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                        continue;
-                                    } else {
-                                        // We also allow for a certain number of unknown peers.
-                                        info!("Allowing connection to unknown peer '{}' [{}]", peer_id.short(), peer_info.address);
-
-                                        peer_info
-                                    }
-                                };
-
-                                log_inbound_connection_success(&peer_id, &peer_info);
-
-                                if let Err(e) = spawn_connection_handler(peer_id, peer_info, muxer, Origin::Inbound, internal_event_sender.clone())
-                                .await
-                                {
-                                    error!("Error spawning connection handler. Error: {}", e);
-                                    NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                                    continue;
-                                }
-                            }
-                        } else {
-                            error!("Listener event stream failure.");
+                    let (peer_id, muxer) = match upgrade.await {
+                        Ok(u) => u,
+                        Err(_) => {
+                            trace!("Ignoring peer. Cause: Handshake failed.");
                             NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
                             continue;
                         }
-                    } else {
-                        error!("Fatal: Listener event stream stopped.");
-                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
-                        break;
-                    }
-                },
-            }
-        }
+                    };
 
-        trace!("Connection Manager stopped.");
-        Ok(())
+                    // Prevent accepting duplicate connections.
+                    if let Ok(connected) = peers.is(&peer_id, |_, state| state.is_connected()) {
+                        if connected {
+                            trace!("Already connected to {}", peer_id);
+                            NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                            continue;
+                        }
+                    }
+
+                    // Prevent accepting banned peers.
+                    if banned_peers.contains(&peer_id) {
+                        trace!("Ignoring peer. Cause: '{}' is banned.", peer_id);
+                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
+
+                    let peer_info = if let Ok(peer_info) = peers.get_info(&peer_id) {
+                        // If we have this peer id in our peerlist (but are not already connected to it),
+                        // then we allow the connection.
+                        peer_info
+                    } else {
+                        let peer_info = PeerInfo {
+                            address: peer_address,
+                            alias: None,
+                            relation: PeerRelation::Unknown,
+                        };
+
+                        if peers
+                            .insert(peer_id.clone(), peer_info.clone(), PeerState::Disconnected)
+                            .is_err()
+                        {
+                            trace!("Ignoring peer. Cause: Denied by peerlist.");
+                            NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                            continue;
+                        } else {
+                            // We also allow for a certain number of unknown peers.
+                            info!(
+                                "Allowing connection to unknown peer '{}' [{}]",
+                                peer_id.short(),
+                                peer_info.address
+                            );
+
+                            peer_info
+                        }
+                    };
+
+                    log_inbound_connection_success(&peer_id, &peer_info);
+
+                    if let Err(e) = spawn_connection_handler(
+                        peer_id,
+                        peer_info,
+                        muxer,
+                        Origin::Inbound,
+                        internal_event_sender.clone(),
+                    )
+                    .await
+                    {
+                        error!("Error spawning connection handler. Error: {}", e);
+                        NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+                        continue;
+                    }
+                }
+            }
+
+            trace!("Peer listener stopped.")
+        });
+
+        // loop {
+        //     select! {
+        //         _ = fused_shutdown_listener => {
+        //             trace!("Connection Manager received shutdown signal.");
+        //             break;
+        //         },
+        //         listener_event = fused_incoming_streams.next() => {
+        //             if let Some(listener_event) = listener_event {
+        //                 if let Ok(listener_event) = listener_event {
+        //                 } else {
+        //                     error!("Listener event stream failure.");
+        //                     NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+        //                     continue;
+        //                 }
+        //             } else {
+        //                 error!("Fatal: Listener event stream stopped.");
+        //                 NUM_LISTENER_EVENT_PROCESSING_ERRORS.fetch_add(1, Ordering::Relaxed);
+        //                 break;
+        //             }
+        //         },
+        //     }
+        // }
+
+        trace!("Connection Manager started.");
+
+        Ok(Self::default())
     }
 }
 
 #[inline]
 fn log_inbound_connection_success(peer_id: &PeerId, peer_info: &PeerInfo) {
     if let Some(alias) = peer_info.alias.as_ref() {
-        info!(
-            "Established (inbound) connection with '{}/{}' [{}].",
-            alias,
-            peer_id.short(),
-            peer_info.address,
-        )
+        info!("Established (inbound) connection with '{}/{}'.", alias, peer_id.short(),)
     } else {
-        info!(
-            "Established (inbound) connection with '{}' [{}].",
-            peer_id.short(),
-            peer_info.address,
-        );
+        info!("Established (inbound) connection with '{}'.", peer_id.short(),);
     }
 }

@@ -12,8 +12,7 @@ use crate::{
     },
 };
 
-use bee_common::shutdown_stream::ShutdownStream;
-use bee_common::{b1t6, node::Node, worker::Worker};
+use bee_common::{b1t6, node::Node, shutdown_stream::ShutdownStream, worker::Worker};
 use bee_crypto::ternary::{
     sponge::{BatchHasher, CurlPRounds, BATCH_SIZE},
     HASH_LENGTH,

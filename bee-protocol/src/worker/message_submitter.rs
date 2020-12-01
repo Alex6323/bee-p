@@ -6,8 +6,11 @@ use crate::{
     worker::{HasherWorker, HasherWorkerEvent},
 };
 
-use bee_common::{shutdown_stream::ShutdownStream, worker::Error as WorkerError};
-use bee_common::{node::Node, worker::Worker};
+use bee_common::{
+    node::Node,
+    shutdown_stream::ShutdownStream,
+    worker::{Error as WorkerError, Worker},
+};
 use bee_message::MessageId;
 
 use async_trait::async_trait;
