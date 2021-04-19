@@ -15,8 +15,9 @@ use crate::bundled::{
     Timestamp, Value,
 };
 
-use bee_crypto::ternary::Hash;
 use bee_ternary::{Btrit, T1B1Buf, TritBuf};
+
+use crypto::hashes::ternary::Hash;
 
 #[derive(Default)]
 pub struct BundledTransactionBuilder {

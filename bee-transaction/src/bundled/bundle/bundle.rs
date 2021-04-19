@@ -14,7 +14,7 @@ use crate::{
     Vertex,
 };
 
-use bee_crypto::ternary::Hash;
+use crypto::hashes::ternary::Hash;
 
 use std::collections::HashMap;
 

@@ -20,8 +20,9 @@ use crate::{
     Vertex,
 };
 
-use bee_crypto::ternary::Hash;
 use bee_ternary::{convert::Error as ConvertError, raw::RawEncoding, Btrit, T1B1Buf, TritBuf, Trits, T1B1};
+
+use crypto::hashes::ternary::Hash;
 
 use core::convert::TryFrom;
 

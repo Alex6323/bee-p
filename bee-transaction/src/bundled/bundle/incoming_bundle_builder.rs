@@ -9,17 +9,19 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+#![allow(deprecated)]
+
 use crate::{
     bundled::{constants::IOTA_SUPPLY, Bundle, BundledTransaction, BundledTransactionField, BundledTransactions},
     Vertex,
 };
 
-use bee_crypto::ternary::{
-    sponge::{Kerl, Sponge},
-    Hash,
-};
-use bee_signing::ternary::{wots::WotsPublicKey, PublicKey, Signature};
 use bee_ternary::{T1B1Buf, TritBuf};
+
+use crypto::{
+    hashes::ternary::{kerl::Kerl, Hash, Sponge},
+    signatures::ternary::{wots::WotsPublicKey, PublicKey, Signature},
+};
 
 use std::marker::PhantomData;
 
@@ -235,7 +237,7 @@ mod tests {
 
     use crate::bundled::{Address, BundledTransactionBuilder, Index, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_crypto::ternary::Hash;
+    use crypto::hashes::ternary::Hash;
 
     #[allow(dead_code)]
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {

@@ -9,22 +9,25 @@
 // an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+#![allow(deprecated)]
+
 use crate::bundled::{
     constants::{IOTA_SUPPLY, PAYLOAD_TRIT_LEN},
     Address, Bundle, BundledTransactionBuilder, BundledTransactionBuilders, BundledTransactionError,
     BundledTransactionField, BundledTransactions, Index, Payload, Tag,
 };
 
-use bee_crypto::ternary::{
-    sponge::{Kerl, Sponge},
-    Hash,
-};
-use bee_signing::ternary::{
-    seed::Seed,
-    wots::{normalize, WotsSecurityLevel, WotsSpongePrivateKeyGeneratorBuilder},
-    PrivateKey, PrivateKeyGenerator, Signature,
-};
 use bee_ternary::Btrit;
+
+use crypto::{
+    hashes::ternary::{kerl::Kerl, Hash, Sponge},
+    keys::ternary::{
+        seed::Seed,
+        wots::{sponge::WotsSpongePrivateKeyGeneratorBuilder, WotsSecurityLevel},
+        PrivateKeyGenerator,
+    },
+    signatures::ternary::{wots::normalize, PrivateKey, Signature},
+};
 
 use std::marker::PhantomData;
 
@@ -361,8 +364,24 @@ mod tests {
 
     use crate::bundled::{Address, Nonce, Payload, Tag, Timestamp, Value};
 
-    use bee_signing::ternary::{seed::Seed, wots::WotsSignature, PublicKey, RecoverableSignature};
     use bee_ternary::{T1B1Buf, TritBuf};
+
+    use crypto::{
+        hashes::ternary::{kerl::Kerl, Hash},
+        keys::ternary::{
+            seed::Seed,
+            wots::{sponge::WotsSpongePrivateKeyGeneratorBuilder, WotsSecurityLevel},
+            PrivateKeyGenerator,
+        },
+        signatures::ternary::{
+            wots::{normalize, WotsSignature},
+            PrivateKey, PublicKey, RecoverableSignature, Signature,
+        },
+    };
+
+    use std::str::FromStr;
+
+    const SEED: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9ABCDEFGHIJKLMNOPQRSTUVWXYZ9";
 
     fn default_transaction_builder(index: usize, last_index: usize) -> BundledTransactionBuilder {
         BundledTransactionBuilder::new()
@@ -386,7 +405,7 @@ mod tests {
     fn bundle_builder_signature_check(security: WotsSecurityLevel) -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::default();
-        let seed = Seed::rand();
+        let seed = Seed::from_str(&SEED).unwrap();
         let privkey = WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
             .with_security_level(security)
             .build()
@@ -441,7 +460,7 @@ mod tests {
     fn bundle_builder_different_security_check() -> Result<(), OutgoingBundleBuilderError> {
         let bundle_size = 4;
         let mut bundle_builder = OutgoingBundleBuilder::default();
-        let seed = Seed::rand();
+        let seed = Seed::from_str(&SEED).unwrap();
         let address_low = Address::from_inner_unchecked(
             WotsSpongePrivateKeyGeneratorBuilder::<Kerl>::default()
                 .with_security_level(WotsSecurityLevel::Low)
