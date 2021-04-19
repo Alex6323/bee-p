@@ -11,8 +11,8 @@ keywords = ["iota", "tangle", "bee", "framework", "transaction"]
 homepage = "https://www.iota.org"
 
 [dependencies]
-iota-crypto = { git = "https://github.com/thibault-martinez/crypto.rs", branch = "wots", features = ["wots_deprecated_do_not_use", "kerl_deprecated_do_not_use"] }
 bee-ternary = { version = "0.4.2-alpha", features = ["serde1"] }
 
+iota-crypto = { version = "0.5.0", features = ["wots_deprecated_do_not_use", "kerl_deprecated_do_not_use"] }
 serde = "1.0"
 thiserror = "1.0"
